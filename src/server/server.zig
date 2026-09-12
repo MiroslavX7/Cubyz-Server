@@ -31,7 +31,122 @@ pub const storage = @import("storage.zig");
 pub const permission = @import("permission.zig");
 pub const players = @import("players.zig");
 pub const BlockDrop = @import("BlockDrop.zig");
-pub const config = @import("config/config.zig");
+
+pub const ServerConfig = struct {
+    port: u16 = 47649,
+    maxPlayers: u16 = 32,
+    serverName: []const u8 = "Cubyz Dedicated Server",
+    motd: []const u8 = "Welcome to Cubyz!",
+    pvpEnabled: bool = true,
+    difficulty: u8 = 2,
+    seed: ?i64 = null,
+    defaultGamemode: u8 = 0,
+    renderDistance: u16 = 8,
+    simulationDistance: u16 = 4,
+    tickRate: u32 = 20,
+    autoSaveInterval: u32 = 45,
+    spawnProtectionRadius: u16 = 16,
+    bindAddress: []const u8 = "",
+    debugLogging: bool = false,
+    rconPassword: ?[]const u8 = null,
+    rconPort: ?u16 = null,
+    worldDirectory: []const u8 = "world",
+    playersDirectory: []const u8 = "players",
+    logsDirectory: []const u8 = "logs",
+};
+
+var globalServerConfig: ServerConfig = .{};
+
+pub fn loadServerConfig(allocator: std.mem.Allocator) void {
+    const file = std.fs.cwd().openFile("serverConfig.zon", .{}) catch {
+        std.log.warn("serverConfig.zon not found. Using default values.", .{});
+        waitForUserInput();
+        return;
+    };
+    defer file.close();
+
+    const content = file.readAllAlloc(allocator, 1024 * 1024) catch |err| {
+        std.log.err("Failed to read serverConfig.zon: {}", .{err});
+        std.log.warn("Using default configuration values.", .{});
+        waitForUserInput();
+        return;
+    };
+    defer allocator.free(content);
+
+    // Simple ZON parser for key-value pairs
+    var lines = std.mem.splitScalar(u8, content, '\n');
+    while (lines.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t\r");
+        if (trimmed.len == 0 or trimmed[0] == '/') continue; // Skip empty lines and comments
+        
+        // Parse key = value
+        if (std.mem.indexOfScalar(u8, trimmed, '=')) |eq_pos| {
+            const key = std.mem.trim(u8, trimmed[0..eq_pos], " \t");
+            const value = std.mem.trim(u8, trimmed[eq_pos + 1 ..], " \t");
+            
+            // Remove quotes from string values
+            const unquotedValue = if (value.len >= 2 and value[0] == '"' and value[value.len - 1] == '"') 
+                value[1 .. value.len - 1] 
+            else 
+                value;
+            
+            inline for (@typeInfo(ServerConfig).Struct.fields) |field| {
+                if (std.mem.eql(u8, key, field.name)) {
+                    const field_ptr = @fieldPtr(&globalServerConfig, field.name);
+                    switch (@TypeOf(field_ptr.*)) {
+                        u16 => field_ptr.* = std.fmt.parseInt(u16, unquotedValue, 10) catch continue,
+                        u32 => field_ptr.* = std.fmt.parseInt(u32, unquotedValue, 10) catch continue,
+                        u8 => field_ptr.* = std.fmt.parseInt(u8, unquotedValue, 10) catch continue,
+                        bool => field_ptr.* = std.mem.eql(u8, unquotedValue, "true"),
+                        i64 => field_ptr.* = std.fmt.parseInt(i64, unquotedValue, 10) catch continue,
+                        []const u8 => field_ptr.* = allocator.dupe(u8, unquotedValue) catch continue,
+                        ?[]const u8 => {
+                            if (std.mem.eql(u8, unquotedValue, "null")) {
+                                field_ptr.* = null;
+                            } else {
+                                field_ptr.* = allocator.dupe(u8, unquotedValue) catch continue;
+                            }
+                        },
+                        ?u16 => {
+                            if (std.mem.eql(u8, unquotedValue, "null")) {
+                                field_ptr.* = null;
+                            } else {
+                                field_ptr.* = std.fmt.parseInt(u16, unquotedValue, 10) catch continue;
+                            }
+                        },
+                        else => continue,
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    
+    std.log.info("Configuration loaded successfully from serverConfig.zon", .{});
+}
+
+fn waitForUserInput() void {
+    std.debug.print("\nPress any key to continue with default configuration...\n", .{});
+    
+    // Cross-platform wait for key press
+    if (@import("builtin").os.tag == .windows) {
+        const windows = std.os.windows;
+        const stdin = windows.GetStdHandle(windows.STD_INPUT_HANDLE);
+        var event: windows.INPUT_RECORD = undefined;
+        var events_read: u32 = 0;
+        
+        while (true) {
+            windows.ReadConsoleInputA(stdin, &event, 1, &events_read) catch break;
+            if (events_read > 0 and event.EventType == windows.KEY_EVENT and event.Event.KeyEvent.bKeyDown != 0) {
+                break;
+            }
+        }
+    } else {
+        // For Linux/Mac, just wait for a newline
+        var buf: [1]u8 = undefined;
+        std.io.getStdIn().read(&buf) catch {};
+    }
+}
 
 pub const command = @import("command.zig");
 
@@ -730,17 +845,14 @@ pub fn startFromNewThread(name: []const u8, port: ?u16, mode: ServerWorld.Mode) 
 pub fn startFromExistingThread(name: []const u8, port: ?u16, mode: ServerWorld.Mode) void {
 std.debug.assert(!running.load(.monotonic)); // There can only be one server.
 
-// Initialize configuration with error handling
-config.ServerConfig.init(main.globalAllocator) catch {
-// Error already logged, continue with defaults after user input
-};
-defer config.ServerConfig.deinit();
+// Load configuration from file with error handling
+loadServerConfig(main.globalAllocator);
 
 const worldName: []const u8 = main.globalAllocator.dupe(u8, name);
 defer main.globalAllocator.free(worldName);
 
 // Use port from config if not specified
-const actualPort = port orelse config.ServerConfig.port;
+const actualPort = port orelse globalServerConfig.port;
 
 connectionManager = ConnectionManager.init(actualPort, .{.allowNewConnections = mode == .multiplayer}) catch |err| {
 std.log.err("Couldn't create socket: {s}", .{@errorName(err)});
