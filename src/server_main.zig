@@ -151,9 +151,13 @@ pub fn main() !void {
 pub const io = io;
 pub const timestamp = timestamp;
 pub const initThreadLocals = initThreadLocals;
+pub const deinitThreadLocals = deinitThreadLocals;
 pub const random = std.crypto.random;
+pub const seed = seed;
+pub const threadPool = threadPool;
 pub const List = utils.List;
 pub const ListManaged = utils.ListManaged;
+pub const MultiArray = utils.MultiArray;
 pub const NeverFailingAllocator = heap.NeverFailingAllocator;
 pub const ErrorHandlingAllocator = heap.ErrorHandlingAllocator;
 pub const vec = vec;
@@ -176,3 +180,27 @@ pub const block_entity = block_entity;
 pub const renderer = struct {
     pub const Frustum = struct {};
 };
+pub const entity = entity;
+pub const entityComponent = @import("entityComponent/entityComponent.zig");
+pub const files = files;
+pub const fmt = @import("fmt.zig");
+pub const itemdrop = itemdrop;
+pub const particles = particles;
+pub const physics = @import("physics.zig");
+pub const rotation = rotation;
+pub const server = server;
+pub const assets = assets;
+pub const migrations = @import("migrations.zig");
+pub const callbacks = @import("callbacks/callbacks.zig");
+pub const argparse = @import("argparse.zig");
+pub const log = log;
+pub const audio = struct {};
+pub const graphics = struct {};
+pub const gui = struct {
+    pub const Window = struct {};
+};
+pub const KeyBoard = struct {};
+pub const Window = struct {};
+pub const lastFrameTime: f64 = 0;
+pub const lastDeltaTime: f64 = 0;
+pub fn exitToMenu() void {}
