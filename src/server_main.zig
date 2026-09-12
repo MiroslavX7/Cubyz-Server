@@ -148,13 +148,7 @@ pub fn main() !void {
 }
 
 // Export all necessary modules so they can be accessed via @import("main").module_name
-pub const io = io;
-pub const timestamp = timestamp;
-pub const initThreadLocals = initThreadLocals;
-pub const deinitThreadLocals = deinitThreadLocals;
 pub const random = std.crypto.random;
-pub const seed = seed;
-pub const threadPool = threadPool;
 pub const List = utils.List;
 pub const ListManaged = utils.ListManaged;
 pub const MultiArray = utils.MultiArray;

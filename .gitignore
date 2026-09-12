@@ -1,7 +1,5 @@
 ```
-# Build artifacts
 zig-cache/
-zig-out/
 *.o
 *.obj
 *.exe
@@ -9,24 +7,4 @@ zig-out/
 *.so
 *.a
 *.out
-
-# Dependencies
-.zig-cache/
-zig-cache/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Environment
-.env
-.env.local
-*.env.*
 ```
