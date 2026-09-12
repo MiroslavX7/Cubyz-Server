@@ -92,7 +92,7 @@ pub fn loadServerConfig(allocator: std.mem.Allocator) void {
             
             inline for (@typeInfo(ServerConfig).Struct.fields) |field| {
                 if (std.mem.eql(u8, key, field.name)) {
-                    const field_ptr = @fieldPtr(&globalServerConfig, field.name);
+                    const field_ptr = &@field(globalServerConfig, field.name);
                     switch (@TypeOf(field_ptr.*)) {
                         u16 => field_ptr.* = std.fmt.parseInt(u16, unquotedValue, 10) catch continue,
                         u32 => field_ptr.* = std.fmt.parseInt(u32, unquotedValue, 10) catch continue,
