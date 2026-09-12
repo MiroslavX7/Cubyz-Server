@@ -31,6 +31,7 @@ pub const storage = @import("storage.zig");
 pub const permission = @import("permission.zig");
 pub const players = @import("players.zig");
 pub const BlockDrop = @import("BlockDrop.zig");
+pub const config = @import("config/config.zig");
 
 pub const command = @import("command.zig");
 

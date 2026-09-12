@@ -6,6 +6,9 @@ Cubyz has a bunch of interesting/unique features such as:
 - 3D Chunks (→ There is no height or depth limit.)
 - Procedural Crafting (→ There are infinite possibilites for tool crafting.)
 
+> **Note:** This fork is being developed with the help of an LLM (Large Language Model).
+
+
 # About
 Cubyz is written in <img src="https://github.com/PixelGuys/Cubyz/assets/43880493/04dc89ca-3ef2-4167-9e1a-e23f25feb67c" width="20" height="20">
 [Zig](https://ziglang.org/), a rather small language with some cool features and a focus on readability.
@@ -26,10 +29,11 @@ However, both of them lost interest at some point, and now Cubyz is maintained b
 
 # Run Cubyz
 ### This section is about compiling a dev version, if you just want a precompiled version, go to [releases](https://github.com/PixelGuys/Cubyz/releases)
+
 ## The Easy Way (no tools needed)
 1. Download the latest [source code](https://codeload.github.com/PixelGuys/Cubyz/zip/refs/heads/master)
 2. Extract the zip file
-3. Go into the extraced folder and double click the `run_linux.sh` or `run_windows.bat` depending on your operating system.
+3. Go into the extracted folder and double click the `run_linux.sh` or `run_windows.bat` depending on your operating system.
 4. Congratulations: You just compiled your first program!
 
 ### It doesn't work?
@@ -43,6 +47,70 @@ However, both of them lost interest at some point, and now Cubyz is maintained b
 3. Run `run_linux.sh` or `run_windows.bat`, if you already have Zig installed on your computer (it must be a compatible version) you can also just use `zig build run`
 4. When you want to update your local version you can use `git pull`. This keeps everything in one place, avoiding repeatedly downloading the compiler on every update.
 
+## Compiling the Dedicated Server
+
+This fork includes support for running Cubyz as a dedicated server. Here's how to compile and run it:
+
+### Prerequisites
+- Zig compiler (version compatible with this project)
+- Git (for cloning the repository)
+
+### Build Instructions
+
+#### Build the Client (default)
+```bash
+zig build
+```
+The compiled executable will be in `zig-out/bin/`.
+
+#### Build the Dedicated Server
+```bash
+zig build -Dtarget=x86_64-linux
+```
+Or for Windows:
+```bash
+zig build -Dtarget=x86_64-windows
+```
+
+#### Run the Server
+```bash
+./zig-out/bin/Cubyz --headless
+```
+
+### Server Configuration
+
+1. Copy the example configuration file:
+```bash
+cp serverConfig.zon.example serverConfig.zon
+```
+
+2. Edit `serverConfig.zon` to customize your server settings (port, max players, MOTD, etc.)
+
+3. Start the server:
+```bash
+./zig-out/bin/Cubyz --headless --config=serverConfig.zon
+```
+
+### Server Commands
+
+Once the server is running, you can use these commands in the terminal:
+- `/help` - Show available commands
+- `/config <key>` - Get a configuration value
+- `/config <key> <value>` - Set a configuration value
+- `/config list` - List all configuration keys
+- `/config save` - Save current configuration to file
+- `/config reload` - Reload configuration from file
+- `/stop` - Stop the server
+- `/restart` - Restart the server
+
+### Command Line Options
+
+- `--port=<number>` - Override server port from config
+- `--config=<path>` - Path to config file (default: serverConfig.zon)
+- `--help` - Show help message
+
+For more information about converting Cubyz to a dedicated server, see [Server Refactoring Guide](docs/server/SERVER_REFACTOR.md).
+
 # Contributing
 ### Code
 Check out the [Contributing Guidelines](https://github.com/PixelGuys/Cubyz/blob/master/docs/CONTRIBUTING.md)
@@ -52,3 +120,11 @@ Check out the [Game Design Principles](https://github.com/PixelGuys/Cubyz/blob/m
 
 ### Content Additions
 Check out the [Content Guidelines](https://github.com/PixelGuys/Cubyz/blob/master/docs/CONTENT_SUGGESTIONS.md)
+
+## Documentation
+
+- [Server Refactoring Guide](docs/server/SERVER_REFACTOR.md) - How to convert Cubyz into a dedicated server
+- [GitHub for Beginners](docs/GITHUB_FOR_BEGINNERS.md) - Git/GitHub basics (bilingual: English/Russian)
+- [Contributing Guidelines](docs/CONTRIBUTING.md)
+- [Game Design Principles](docs/GAME_DESIGN_PRINCIPLES.md)
+- [Content Suggestions](docs/CONTENT_SUGGESTIONS.md)
