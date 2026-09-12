@@ -728,51 +728,60 @@ pub fn startFromNewThread(name: []const u8, port: ?u16, mode: ServerWorld.Mode) 
 }
 
 pub fn startFromExistingThread(name: []const u8, port: ?u16, mode: ServerWorld.Mode) void {
-	std.debug.assert(!running.load(.monotonic)); // There can only be one server.
+std.debug.assert(!running.load(.monotonic)); // There can only be one server.
 
-	const worldName: []const u8 = main.globalAllocator.dupe(u8, name);
-	defer main.globalAllocator.free(worldName);
+// Initialize configuration with error handling
+config.ServerConfig.init(main.globalAllocator) catch {
+// Error already logged, continue with defaults after user input
+};
+defer config.ServerConfig.deinit();
 
-	connectionManager = ConnectionManager.init(main.settings.defaultPort, .{.allowNewConnections = mode == .multiplayer}) catch |err| {
-		std.log.err("Couldn't create socket: {s}", .{@errorName(err)});
-		@panic("Could not open Server.");
-	}; // TODO Configure the second argument in the server settings.
-	userDeinitList = .init(main.globalAllocator, 16);
-	userConnectList = .init(main.globalAllocator, 16);
+const worldName: []const u8 = main.globalAllocator.dupe(u8, name);
+defer main.globalAllocator.free(worldName);
 
-	defer {
-		connectionManager.deinit();
-		connectionManager = undefined;
+// Use port from config if not specified
+const actualPort = port orelse config.ServerConfig.port;
 
-		while (userDeinitList.popFront()) |user| {
-			user.privateDeinit();
-		}
+connectionManager = ConnectionManager.init(actualPort, .{.allowNewConnections = mode == .multiplayer}) catch |err| {
+std.log.err("Couldn't create socket: {s}", .{@errorName(err)});
+@panic("Could not open Server.");
+};
+userDeinitList = .init(main.globalAllocator, 16);
+userConnectList = .init(main.globalAllocator, 16);
 
-		userDeinitList.deinit();
-		userConnectList.deinit();
-	}
+defer {
+connectionManager.deinit();
+connectionManager = undefined;
 
-	restart = true;
-	while (restart) {
-		restart = false;
+while (userDeinitList.popFront()) |user| {
+user.privateDeinit();
+}
 
-		init(worldName, port, mode);
-		defer deinit();
+userDeinitList.deinit();
+userConnectList.deinit();
+}
 
-		running.store(true, .release);
-		while (running.load(.monotonic)) {
-			main.heap.GarbageCollection.syncPoint();
-			const newTime = main.timestamp();
-			if (lastTime.durationTo(newTime).nanoseconds < updateTime.nanoseconds) {
-				main.io.sleep(newTime.durationTo(lastTime.addDuration(updateTime)), .awake) catch {};
-				lastTime = lastTime.addDuration(updateTime);
-			} else {
-				std.log.warn("The server is lagging behind by {d:.1} ms", .{@as(f32, @floatFromInt(newTime.nanoseconds -% lastTime.nanoseconds -% updateTime.nanoseconds))/1000000.0});
-				lastTime = newTime;
-			}
-			update();
-		}
-	}
+restart = true;
+while (restart) {
+restart = false;
+
+init(worldName, actualPort, mode);
+defer deinit();
+
+running.store(true, .release);
+while (running.load(.monotonic)) {
+main.heap.GarbageCollection.syncPoint();
+const newTime = main.timestamp();
+if (lastTime.durationTo(newTime).nanoseconds < updateTime.nanoseconds) {
+main.io.sleep(newTime.durationTo(lastTime.addDuration(updateTime)), .awake) catch {};
+lastTime = lastTime.addDuration(updateTime);
+} else {
+std.log.warn("The server is lagging behind by {d:.1} ms", .{@as(f32, @floatFromInt(newTime.nanoseconds -% lastTime.nanoseconds -% updateTime.nanoseconds))/1000000.0});
+lastTime = newTime;
+}
+update();
+}
+}
 }
 
 pub const StopType = enum { stop, restart };
