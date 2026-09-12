@@ -1,22 +1,21 @@
 ```
-# Zig build artifacts
+# Build artifacts
 zig-cache/
 zig-out/
 *.o
 *.obj
-*.a
-*.lib
-*.so
-*.dylib
+*.exe
 *.dll
+*.so
+*.a
+*.out
 
 # Dependencies
-.zigmod/
+.zig-cache/
+deps/
 
-# Logs and temp files
+# Logs
 *.log
-*.tmp
-*.swp
 
 # Environment
 .env
@@ -29,7 +28,12 @@ zig-out/
 *.swp
 *.swo
 
-# OS
-.DS_Store
-Thumbs.db
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Temporary files
+*.tmp
+*~
 ```

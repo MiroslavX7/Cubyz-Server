@@ -64,7 +64,7 @@ fn hasMatchingTag(tags: []const root.Tag, target: []const u8) bool {
 }
 
 fn initContent() void {
-	const vertical_list = VerticalList.init(.{padding, padding}, 300, 0);
+	const root_component = VerticalList.init(.{padding, padding}, 300, 0);
 	{
 		const list = VerticalList.init(.{0, padding + padding}, 48, 0);
 		const row = HorizontalList.init();
@@ -76,7 +76,7 @@ fn initContent() void {
 		row.add(searchInput);
 		list.add(row);
 		list.finish(.center);
-		vertical_list.add(list);
+		root_component.add(list);
 	}
 	{
 		const list = VerticalList.init(.{0, padding}, 144, 0);
@@ -116,10 +116,10 @@ fn initContent() void {
 			list.add(row);
 		}
 		list.finish(.center);
-		root.add(list);
+		root_component.add(list);
 	}
-	root.finish(.center);
-	window.rootComponent = root.toComponent();
+	root_component.finish(.center);
+	window.rootComponent = root_component.toComponent();
 	window.contentSize = window.rootComponent.?.pos() + window.rootComponent.?.size() + @as(Vec2f, @splat(padding));
 	gui.updateWindowPositions();
 }
