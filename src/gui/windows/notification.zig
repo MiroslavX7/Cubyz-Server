@@ -19,13 +19,13 @@ const width: f32 = 256;
 var text: []const u8 = "";
 
 pub fn deinit() void {
-	main.globalAllocator.free(text);
+	root.globalAllocator.free(text);
 	text = "";
 }
 
 fn setNotificationText(comptime formatText: []const u8, args: anytype) void {
-	main.globalAllocator.free(text);
-	text = main.globalAllocator.print(formatText, args);
+	root.globalAllocator.free(text);
+	text = root.globalAllocator.print(formatText, args);
 }
 
 pub fn raiseNotification(comptime formatText: []const u8, args: anytype) void {

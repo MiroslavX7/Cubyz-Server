@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveMap = terrain.CaveMap;
 const CaveBiomeMap = terrain.CaveBiomeMap;
 const noise = terrain.noise;
@@ -25,7 +25,7 @@ pub fn init(parameters: ZonElement) void {
 	_ = parameters;
 }
 
-pub fn generate(_: u64, chunk: *main.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
+pub fn generate(_: u64, chunk: *root.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
 	const structureMap = terrain.StructureMap.getOrGenerateFragment(chunk.super.pos.wx, chunk.super.pos.wy, chunk.super.pos.wz, chunk.super.pos.voxelSize);
 	structureMap.generateStructuresInChunk(chunk, caveMap, biomeMap);
 }

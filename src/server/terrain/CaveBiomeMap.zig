@@ -1,14 +1,14 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array3D = main.utils.Array3D;
-const Cache = main.utils.Cache;
-const ServerChunk = main.chunk.ServerChunk;
-const ChunkPosition = main.chunk.ChunkPosition;
+const Array3D = root.utils.Array3D;
+const Cache = root.utils.Cache;
+const ServerChunk = root.chunk.ServerChunk;
+const ChunkPosition = root.chunk.ChunkPosition;
 const ZonElement = main.ZonElement;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const terrain = @import("terrain.zig");
 const GeneratorState = terrain.GeneratorState;
@@ -28,12 +28,12 @@ pub const CaveBiomeMapFragment = struct { // MARK: caveBiomeMapFragment
 	pub const caveBiomeMapSize = 1 << caveBiomeMapShift;
 	pub const caveBiomeMapMask = caveBiomeMapSize - 1;
 
-	pos: main.chunk.ChunkPosition,
+	pos: root.chunk.ChunkPosition,
 	biomeMap: [1 << 3*(caveBiomeMapShift - caveBiomeShift)][2]*const Biome = undefined,
 
 	pub fn init(self: *CaveBiomeMapFragment, wx: i32, wy: i32, wz: i32) void {
 		self.* = .{
-			.pos = main.chunk.ChunkPosition{
+			.pos = root.chunk.ChunkPosition{
 				.wx = wx,
 				.wy = wy,
 				.wz = wz,
@@ -47,7 +47,7 @@ pub const CaveBiomeMapFragment = struct { // MARK: caveBiomeMapFragment
 	}
 
 	pub fn deferredDeinit(self: *CaveBiomeMapFragment) void {
-		main.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = main.meta.castFunctionSelfToAnyopaque(privateDeinit)});
+		root.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = root.meta.castFunctionSelfToAnyopaque(privateDeinit)});
 	}
 
 	const rotationMatrixShift = 30;
@@ -145,7 +145,7 @@ pub const CaveBiomeMapView = struct { // MARK: CaveBiomeMapView
 	width: i32,
 	allocator: NeverFailingAllocator,
 
-	pub fn init(allocator: main.heap.NeverFailingAllocator, pos: ChunkPosition, width: u31, margin: u31) CaveBiomeMapView {
+	pub fn init(allocator: root.heap.NeverFailingAllocator, pos: ChunkPosition, width: u31, margin: u31) CaveBiomeMapView {
 		const center = Vec3i{
 			pos.wx +% width/2,
 			pos.wy +% width/2,
@@ -465,7 +465,7 @@ pub const CaveBiomeMapView = struct { // MARK: CaveBiomeMapView
 
 		if (getSeed) {
 			// A good old "I don't know what I'm doing" hash (TODO: Use some standard hash maybe):
-			seed.* = @as(u64, @bitCast(@as(i64, gridPoint[0]) << 48 ^ @as(i64, gridPoint[1]) << 23 ^ @as(i64, gridPoint[2]) << 11 ^ @as(i64, gridPoint[0]) >> 5 ^ @as(i64, gridPoint[1]) << 3 ^ @as(i64, gridPoint[2]) ^ @as(i64, map)*5427642781)) ^ main.server.world.?.settings.seed;
+			seed.* = @as(u64, @bitCast(@as(i64, gridPoint[0]) << 48 ^ @as(i64, gridPoint[1]) << 23 ^ @as(i64, gridPoint[2]) << 11 ^ @as(i64, gridPoint[0]) >> 5 ^ @as(i64, gridPoint[1]) << 3 ^ @as(i64, gridPoint[2]) ^ @as(i64, map)*5427642781)) ^ root.server.world.?.settings.seed;
 		}
 
 		return self._getBiome(gridPoint[0], gridPoint[1], gridPoint[2], map);
@@ -483,7 +483,7 @@ pub const CaveBiomeMapView = struct { // MARK: CaveBiomeMapView
 
 		if (getSeed) {
 			// A good old "I don't know what I'm doing" hash (TODO: Use some standard hash maybe):
-			seed.* = @as(u64, @bitCast(@as(i64, gridPoint[0]) << 48 ^ @as(i64, gridPoint[1]) << 23 ^ @as(i64, gridPoint[2]) << 11 ^ @as(i64, gridPoint[0]) >> 5 ^ @as(i64, gridPoint[1]) << 3 ^ @as(i64, gridPoint[2]) ^ @as(i64, map)*5427642781)) ^ main.server.world.?.settings.seed;
+			seed.* = @as(u64, @bitCast(@as(i64, gridPoint[0]) << 48 ^ @as(i64, gridPoint[1]) << 23 ^ @as(i64, gridPoint[2]) << 11 ^ @as(i64, gridPoint[0]) >> 5 ^ @as(i64, gridPoint[1]) << 3 ^ @as(i64, gridPoint[2]) ^ @as(i64, map)*5427642781)) ^ root.server.world.?.settings.seed;
 		}
 
 		return self._getBiome(gridPoint[0], gridPoint[1], gridPoint[2], map);
@@ -534,7 +534,7 @@ var cache: Cache(CaveBiomeMapFragment, cacheSize, associativity, CaveBiomeMapFra
 
 var profile: TerrainGenerationProfile = undefined;
 
-var memoryPool: main.heap.MemoryPool(CaveBiomeMapFragment) = .init(main.globalArena);
+var memoryPool: root.heap.MemoryPool(CaveBiomeMapFragment) = .init(root.globalArena);
 
 pub fn init(_profile: TerrainGenerationProfile) void {
 	profile = _profile;

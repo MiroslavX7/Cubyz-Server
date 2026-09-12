@@ -4,9 +4,9 @@ const root = @import("root");
 const Blueprint = main.blueprint.Blueprint;
 const Mask = main.blueprint.Mask;
 const Pattern = main.blueprint.Pattern;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ListManaged = main.ListManaged;
-const User = main.server.User;
+const User = root.server.User;
 pub const commandList = @import("command/_list.zig");
 
 pub const Source = union(enum) {
@@ -22,7 +22,7 @@ pub const Source = union(enum) {
 
 	pub fn hasPermission(self: Source, permissionPath: []const u8) bool {
 		return switch (self) {
-			.user => |user| main.entity.components.@"cubyz:permissions".server.hasPermission(user.id, permissionPath),
+			.user => |user| root.entity.components.@"cubyz:permissions".server.hasPermission(user.id, permissionPath),
 			.server => true,
 		};
 	}
@@ -42,8 +42,8 @@ fn initExecutionFn(comptime name: []const u8) *const fn (args: []const u8, sourc
 	const ArgPaser = main.argparse.Parser(@field(commandList, name).Args, .{.commandName = name});
 	return struct {
 		fn exec(msg: []const u8, source: Source) void {
-			const arena: main.heap.NeverFailingAllocator = .createArena(main.stackAllocator);
-			defer main.stackAllocator.destroyArena(arena);
+			const arena: root.heap.NeverFailingAllocator = .createArena(root.stackAllocator);
+			defer root.stackAllocator.destroyArena(arena);
 			var errorMessage: main.ListManaged(u8) = .init(arena);
 			const result = ArgPaser.parse(arena, msg, &errorMessage) catch {
 				source.sendMessage("#ff0000{s}", .{errorMessage.items});
@@ -55,7 +55,7 @@ fn initExecutionFn(comptime name: []const u8) *const fn (args: []const u8, sourc
 }
 
 pub fn init() void {
-	commands = .init(main.globalAllocator.allocator);
+	commands = .init(root.globalAllocator.allocator);
 	inline for (@typeInfo(commandList).@"struct".decls) |decl| {
 		commands.put(decl.name, .{
 			.name = decl.name,
@@ -167,7 +167,7 @@ pub const Target = struct {
 			.user = source.user,
 		};
 		return .{
-			.user = main.server.getUserByIndex(playerIndex.index) orelse {
+			.user = root.server.getUserByIndex(playerIndex.index) orelse {
 				source.sendMessage("#ff0000Player with index {d} not found or not online", .{playerIndex.index});
 				return error.InvalidArg;
 			},
@@ -211,11 +211,11 @@ pub const KeyString = struct {
 			errorMessage.print("Expected a public key of the form \"<keyType>:<base64>\" for <{s}>, found \"{s}\"", .{name, arg});
 			return error.ParseError;
 		};
-		const keyType = std.meta.stringToEnum(main.network.authentication.KeyTypeEnum, arg[0..colonIndex]) orelse {
+		const keyType = std.meta.stringToEnum(root.network.authentication.KeyTypeEnum, arg[0..colonIndex]) orelse {
 			errorMessage.print("Unknown key type \"{s}\" for <{s}>", .{arg[0..colonIndex], name});
 			return error.ParseError;
 		};
-		_ = main.network.authentication.PublicKey.initFromBase64(arg[colonIndex + 1 ..], keyType) catch {
+		_ = root.network.authentication.PublicKey.initFromBase64(arg[colonIndex + 1 ..], keyType) catch {
 			errorMessage.print("Invalid public key \"{s}\" for <{s}>", .{arg, name});
 			return error.ParseError;
 		};
@@ -224,10 +224,10 @@ pub const KeyString = struct {
 };
 
 pub const BiomeId = struct {
-	biome: *const main.server.terrain.biomes.Biome,
+	biome: *const root.server.terrain.biomes.Biome,
 
 	pub fn parse(_: NeverFailingAllocator, name: []const u8, args: []const u8, errorMessage: *ListManaged(u8)) error{ParseError}!@This() {
-		return .{.biome = main.server.terrain.biomes.getByIdOptional(args) orelse {
+		return .{.biome = root.server.terrain.biomes.getByIdOptional(args) orelse {
 			errorMessage.print("Couldn't find biome for <{s}> with id \"{s}\"", .{name, args});
 			return error.ParseError;
 		}};
@@ -235,10 +235,10 @@ pub const BiomeId = struct {
 };
 
 pub const BlockId = struct {
-	block: main.blocks.Block,
+	block: root.blocks.Block,
 
 	pub fn parse(_: NeverFailingAllocator, name: []const u8, args: []const u8, errorMessage: *ListManaged(u8)) error{ParseError}!@This() {
-		const blockTyp = main.blocks.getBlockById(args) catch {
+		const blockTyp = root.blocks.getBlockById(args) catch {
 			errorMessage.print("Couldn't find block for <{s}> with id \"{s}\"", .{name, args});
 			return error.ParseError;
 		};

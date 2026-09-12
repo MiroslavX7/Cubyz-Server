@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const ConnectionManager = main.network.ConnectionManager;
+const ConnectionManager = root.network.ConnectionManager;
 const settings = main.settings;
 const Vec2f = main.vec.Vec2f;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const Texture = main.graphics.Texture;
 
 const gui = @import("../gui.zig");
@@ -22,11 +22,11 @@ pub var window = GuiWindow{
 
 const padding: f32 = 8;
 const width: f32 = 160;
-var buttonNameArena: main.heap.NeverFailingArenaAllocator = undefined;
+var buttonNameArena: root.heap.NeverFailingArenaAllocator = undefined;
 
 pub var needsUpdate: bool = false;
 
-pub var mode: main.server.ServerWorld.Mode = undefined;
+pub var mode: root.server.ServerWorld.Mode = undefined;
 
 var deleteIcon: Texture = undefined;
 var fileExplorerIcon: Texture = undefined;
@@ -55,20 +55,20 @@ pub fn openWorld(name: []const u8) void {
 	};
 
 	std.log.info("Opening world {s}", .{name});
-	main.server.thread = std.Thread.spawn(.{}, main.server.startFromNewThread, .{name, clientConnection.localPort, mode}) catch |err| {
+	root.server.thread = std.Thread.spawn(.{}, root.server.startFromNewThread, .{name, clientConnection.localPort, mode}) catch |err| {
 		std.log.err("Encountered error while starting server thread: {s}", .{@errorName(err)});
 		return;
 	};
-	main.server.thread.?.setName(main.io, "Server") catch |err| {
+	root.server.thread.?.setName(main.io, "Server") catch |err| {
 		std.log.err("Failed to rename Server thread: {s}", .{@errorName(err)});
 	};
 
-	while (!main.server.running.load(.acquire)) {
+	while (!root.server.running.load(.acquire)) {
 		main.io.sleep(.fromMilliseconds(1), .awake) catch {};
-		main.heap.GarbageCollection.syncPoint();
+		root.heap.GarbageCollection.syncPoint();
 	}
-	const ipPort = main.stackAllocator.print("127.0.0.1:{}", .{main.server.connectionManager.localPort});
-	defer main.stackAllocator.free(ipPort);
+	const ipPort = root.stackAllocator.print("127.0.0.1:{}", .{root.server.connectionManager.localPort});
+	defer root.stackAllocator.free(ipPort);
 	const zon = main.game.testWorld.init(ipPort, clientConnection) catch |err| {
 		std.log.err("Encountered error while opening world: {s}", .{@errorName(err)});
 		return;
@@ -94,10 +94,10 @@ fn deleteWorld(index: usize) void {
 }
 
 fn openFolder(index: usize) void {
-	const path = main.stackAllocator.print("{s}/saves/{s}", .{main.files.cubyzDirStr(), worldList.items[index].fileName});
-	defer main.stackAllocator.free(path);
+	const path = root.stackAllocator.print("{s}/saves/{s}", .{root.files.cubyzDirStr(), worldList.items[index].fileName});
+	defer root.stackAllocator.free(path);
 
-	main.files.openDirInWindow(path);
+	root.files.openDirInWindow(path);
 }
 
 pub fn update() void {
@@ -109,12 +109,12 @@ pub fn update() void {
 }
 
 pub fn onOpen() void {
-	buttonNameArena = main.heap.NeverFailingArenaAllocator.init(main.globalAllocator);
+	buttonNameArena = root.heap.NeverFailingArenaAllocator.init(root.globalAllocator);
 	const list = VerticalList.init(.{padding, 16 + padding}, 300, 8);
 	list.add(Label.init(.{0, 0}, width, if (mode == .singleplayer) "**Select World**" else "**Select World to Host**", .center));
 	list.add(Button.initText(.{0, 0}, 128, "Create New World", .{.onAction = gui.openWindowCallback("save_creation")}));
 	readingSaves: {
-		var dir = main.files.cubyzDir().openIterableDir("saves") catch |err| {
+		var dir = root.files.cubyzDir().openIterableDir("saves") catch |err| {
 			list.add(Label.init(.{0, 0}, 128, "Encountered error while trying to open saves folder:", .center));
 			list.add(Label.init(.{0, 0}, 128, @errorName(err), .center));
 			break :readingSaves;
@@ -128,18 +128,18 @@ pub fn onOpen() void {
 			break :readingSaves;
 		}) |entry| {
 			if (entry.kind == .directory) {
-				const worldInfoPath = main.stackAllocator.print("saves/{s}/world.zig.zon", .{entry.name});
-				defer main.stackAllocator.free(worldInfoPath);
-				const worldInfo = main.files.cubyzDir().readToZon(main.stackAllocator, worldInfoPath) catch |err| {
+				const worldInfoPath = root.stackAllocator.print("saves/{s}/world.zig.zon", .{entry.name});
+				defer root.stackAllocator.free(worldInfoPath);
+				const worldInfo = root.files.cubyzDir().readToZon(root.stackAllocator, worldInfoPath) catch |err| {
 					std.log.err("Couldn't open save {s}: {s}", .{worldInfoPath, @errorName(err)});
 					continue;
 				};
-				defer worldInfo.deinit(main.stackAllocator);
+				defer worldInfo.deinit(root.stackAllocator);
 
-				worldList.append(main.globalAllocator, .{
-					.fileName = main.globalAllocator.dupe(u8, entry.name),
+				worldList.append(root.globalAllocator, .{
+					.fileName = root.globalAllocator.dupe(u8, entry.name),
 					.lastUsedTime = worldInfo.get(i64, "lastUsedTime") orelse 0,
-					.name = main.globalAllocator.dupe(u8, worldInfo.get([]const u8, "name") orelse entry.name),
+					.name = root.globalAllocator.dupe(u8, worldInfo.get([]const u8, "name") orelse entry.name),
 				});
 			}
 		}
@@ -168,10 +168,10 @@ pub fn onOpen() void {
 
 pub fn onClose() void {
 	for (worldList.items) |worldInfo| {
-		main.globalAllocator.free(worldInfo.fileName);
-		main.globalAllocator.free(worldInfo.name);
+		root.globalAllocator.free(worldInfo.fileName);
+		root.globalAllocator.free(worldInfo.name);
 	}
-	worldList.clearAndFree(main.globalAllocator);
+	worldList.clearAndFree(root.globalAllocator);
 	buttonNameArena.deinit();
 	if (window.rootComponent) |*comp| {
 		comp.deinit();

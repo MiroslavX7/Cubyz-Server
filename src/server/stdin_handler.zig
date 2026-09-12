@@ -27,9 +27,9 @@ pub fn update() void {
 		return;
 	}
 	if (msg[0] == '/') {
-		main.server.command.execute(msg[1..], .server);
+		root.server.command.execute(msg[1..], .server);
 	} else {
-		main.server.sendMessage("<Server> {s}", .{msg});
+		root.server.sendMessage("<Server> {s}", .{msg});
 	}
 }
 

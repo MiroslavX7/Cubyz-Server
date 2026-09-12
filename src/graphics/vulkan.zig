@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
@@ -206,8 +206,8 @@ const validationLayers: []const [*:0]const u8 = &.{
 };
 
 fn checkValidationLayerSupport() bool {
-	const availableLayers = enumerateInstanceLayerProperties(main.stackAllocator);
-	defer main.stackAllocator.free(availableLayers);
+	const availableLayers = enumerateInstanceLayerProperties(root.stackAllocator);
+	defer root.stackAllocator.free(availableLayers);
 	for (validationLayers) |layerName| continueOuter: {
 		for (availableLayers) |layerProperties| {
 			if (std.mem.eql(u8, std.mem.span(layerName), std.mem.span(@as([*:0]const u8, @ptrCast(&layerProperties.layerName))))) {
@@ -235,15 +235,15 @@ pub fn createInstance() void {
 		@panic("glfwGetRequiredInstanceExtensions returned a null pointer. This may be a problem with your Vulkan driver.");
 	}
 
-	const availableExtensions = enumerateInstanceExtensionProperties(main.stackAllocator, null);
-	defer main.stackAllocator.free(availableExtensions);
+	const availableExtensions = enumerateInstanceExtensionProperties(root.stackAllocator, null);
+	defer root.stackAllocator.free(availableExtensions);
 	std.log.debug("Availabe vulkan instance extensions:", .{});
 	for (availableExtensions) |ext| {
 		std.log.debug("\t{s}", .{@as([*:0]const u8, @ptrCast(&ext.extensionName))});
 	}
 
 	var createFlags: u32 = 0;
-	var extensions: main.ListManaged([*c]const u8) = .init(main.stackAllocator);
+	var extensions: main.ListManaged([*c]const u8) = .init(root.stackAllocator);
 	defer extensions.deinit();
 	extensions.appendSlice(glfwExtensions[0..glfwExtensionCount]);
 
@@ -340,8 +340,8 @@ const QueueFamilyIndidices = struct {
 
 fn findQueueFamilies(dev: c.VkPhysicalDevice) QueueFamilyIndidices {
 	var result: QueueFamilyIndidices = .{};
-	const queueFamilies = getPhysicalDeviceQueueFamilyProperties(main.stackAllocator, dev);
-	defer main.stackAllocator.free(queueFamilies);
+	const queueFamilies = getPhysicalDeviceQueueFamilyProperties(root.stackAllocator, dev);
+	defer root.stackAllocator.free(queueFamilies);
 	for (queueFamilies, 0..) |family, i| {
 		if (family.queueFlags & c.VK_QUEUE_GRAPHICS_BIT != 0 and family.queueFlags & c.VK_QUEUE_COMPUTE_BIT != 0) {
 			result.graphicsFamily = @intCast(i);
@@ -356,8 +356,8 @@ fn findQueueFamilies(dev: c.VkPhysicalDevice) QueueFamilyIndidices {
 }
 
 fn checkDeviceExtensionSupport(dev: c.VkPhysicalDevice) bool {
-	const availableExtension = enumerateDeviceExtensionProperties(main.stackAllocator, dev, null);
-	defer main.stackAllocator.free(availableExtension);
+	const availableExtension = enumerateDeviceExtensionProperties(root.stackAllocator, dev, null);
+	defer root.stackAllocator.free(availableExtension);
 	for (deviceExtensions) |requiredName| continueOuter: {
 		for (availableExtension) |available| {
 			if (std.mem.eql(u8, std.mem.span(requiredName), std.mem.span(@as([*:0]const u8, @ptrCast(&available.extensionName))))) {
@@ -385,8 +385,8 @@ fn getDeviceScore(dev: c.VkPhysicalDevice) f32 {
 		else => 0.1,
 	};
 
-	const availableExtension = enumerateDeviceExtensionProperties(main.stackAllocator, dev, null);
-	defer main.stackAllocator.free(availableExtension);
+	const availableExtension = enumerateDeviceExtensionProperties(root.stackAllocator, dev, null);
+	defer root.stackAllocator.free(availableExtension);
 	std.log.debug("Device extensions:", .{});
 	for (availableExtension) |ext| {
 		std.log.debug("\t{s}", .{@as([*:0]const u8, @ptrCast(&ext.extensionName))});
@@ -408,8 +408,8 @@ fn getDeviceScore(dev: c.VkPhysicalDevice) f32 {
 }
 
 fn pickPhysicalDevice() !void {
-	const devices = enumeratePhysicalDevices(main.stackAllocator);
-	defer main.stackAllocator.free(devices);
+	const devices = enumeratePhysicalDevices(root.stackAllocator);
+	defer root.stackAllocator.free(devices);
 	if (devices.len == 0) {
 		return error.NoDevicesFound;
 	}
@@ -430,8 +430,8 @@ fn pickPhysicalDevice() !void {
 	c.vkGetPhysicalDeviceProperties(physicalDevice, &properties);
 	version = @bitCast(properties.apiVersion);
 
-	const availableExtension = enumerateDeviceExtensionProperties(main.stackAllocator, physicalDevice, null);
-	defer main.stackAllocator.free(availableExtension);
+	const availableExtension = enumerateDeviceExtensionProperties(root.stackAllocator, physicalDevice, null);
+	defer root.stackAllocator.free(availableExtension);
 	for (availableExtension) |ext| {
 		inline for (comptime std.meta.fieldNames(@TypeOf(interestingExtensions))) |extensionName| {
 			if (std.mem.eql(u8, ext.extensionName[0..extensionName.len], extensionName)) {
@@ -448,11 +448,11 @@ fn pickPhysicalDevice() !void {
 fn createLogicalDevice() void {
 	const indices = findQueueFamilies(physicalDevice);
 	var uniqueFamilies: std.AutoHashMapUnmanaged(u32, void) = .{};
-	defer uniqueFamilies.deinit(main.stackAllocator.allocator);
-	_ = uniqueFamilies.getOrPut(main.stackAllocator.allocator, indices.graphicsFamily.?) catch unreachable;
-	_ = uniqueFamilies.getOrPut(main.stackAllocator.allocator, indices.presentFamily.?) catch unreachable;
+	defer uniqueFamilies.deinit(root.stackAllocator.allocator);
+	_ = uniqueFamilies.getOrPut(root.stackAllocator.allocator, indices.graphicsFamily.?) catch unreachable;
+	_ = uniqueFamilies.getOrPut(root.stackAllocator.allocator, indices.presentFamily.?) catch unreachable;
 
-	var queueCreateInfos: main.ListManaged(c.VkDeviceQueueCreateInfo) = .init(main.stackAllocator);
+	var queueCreateInfos: main.ListManaged(c.VkDeviceQueueCreateInfo) = .init(root.stackAllocator);
 	defer queueCreateInfos.deinit();
 	var iterator = uniqueFamilies.keyIterator();
 	while (iterator.next()) |queueFamily| {
@@ -639,8 +639,8 @@ pub const SwapChain = struct { // MARK: SwapChain
 	}
 
 	fn init() void {
-		const support = SupportDetails.init(main.stackAllocator, physicalDevice);
-		defer support.deinit(main.stackAllocator);
+		const support = SupportDetails.init(root.stackAllocator, physicalDevice);
+		defer support.deinit(root.stackAllocator);
 
 		const surfaceFormat = support.chooseFormat();
 		imageFormat = surfaceFormat.format;
@@ -676,10 +676,10 @@ pub const SwapChain = struct { // MARK: SwapChain
 		checkResult(c.vkCreateSwapchainKHR(device, &createInfo, null, &swapChain));
 		var newImageCount = imageCount;
 		checkResult(c.vkGetSwapchainImagesKHR(device, swapChain, &newImageCount, null));
-		images = main.globalArena.alloc(c.VkImage, newImageCount);
+		images = root.globalArena.alloc(c.VkImage, newImageCount);
 		checkResult(c.vkGetSwapchainImagesKHR(device, swapChain, &newImageCount, images.ptr));
 
-		imageViews = main.globalArena.alloc(c.VkImageView, newImageCount);
+		imageViews = root.globalArena.alloc(c.VkImageView, newImageCount);
 		for (0..images.len) |i| {
 			imageViews[i] = createImageView(images[i]);
 		}
@@ -1053,7 +1053,7 @@ pub const gpu_garbage_collection = struct {
 					inline else => |item| item.privateDeinit(),
 				}
 			}
-			list.deinit(main.globalAllocator);
+			list.deinit(root.globalAllocator);
 		}
 	}
 
@@ -1069,7 +1069,7 @@ pub const gpu_garbage_collection = struct {
 	}
 
 	pub fn deferredFree(entry: Entry) void {
-		lists[currentList].append(main.globalAllocator, entry);
+		lists[currentList].append(root.globalAllocator, entry);
 	}
 };
 

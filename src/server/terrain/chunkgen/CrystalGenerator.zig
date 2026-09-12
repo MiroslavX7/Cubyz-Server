@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveMap = terrain.CaveMap;
 const CaveBiomeMap = terrain.CaveBiomeMap;
 const vec = main.vec;
@@ -33,20 +33,20 @@ pub fn init(parameters: ZonElement) void {
 	// Find all the glow crystal ores:
 	inline for (crystalColor[0..], glowCrystals[0..]) |color, *block| {
 		const oreID = "cubyz:glow_crystal/" ++ color;
-		block.* = main.blocks.getTypeById(oreID);
+		block.* = root.blocks.getTypeById(oreID);
 	}
 }
 
-pub fn generate(worldSeed: u64, chunk: *main.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
+pub fn generate(worldSeed: u64, chunk: *root.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
 	if (chunk.super.pos.voxelSize > 2) return;
 	const size = chunk.super.width;
 	// Generate caves from all nearby chunks:
-	var x = chunk.super.pos.wx -% main.chunk.chunkSize;
-	while (x != chunk.super.pos.wx +% size +% main.chunk.chunkSize) : (x +%= main.chunk.chunkSize) {
-		var y = chunk.super.pos.wy -% main.chunk.chunkSize;
-		while (y != chunk.super.pos.wy +% size +% main.chunk.chunkSize) : (y +%= main.chunk.chunkSize) {
-			var z = chunk.super.pos.wz -% main.chunk.chunkSize;
-			while (z != chunk.super.pos.wz +% size +% main.chunk.chunkSize) : (z +%= main.chunk.chunkSize) {
+	var x = chunk.super.pos.wx -% root.chunk.chunkSize;
+	while (x != chunk.super.pos.wx +% size +% root.chunk.chunkSize) : (x +%= root.chunk.chunkSize) {
+		var y = chunk.super.pos.wy -% root.chunk.chunkSize;
+		while (y != chunk.super.pos.wy +% size +% root.chunk.chunkSize) : (y +%= root.chunk.chunkSize) {
+			var z = chunk.super.pos.wz -% root.chunk.chunkSize;
+			while (z != chunk.super.pos.wz +% size +% root.chunk.chunkSize) : (z +%= root.chunk.chunkSize) {
 				var seed = random.initSeed3D(worldSeed, .{x, y, z});
 				considerCoordinates(x, y, z, chunk, caveMap, biomeMap, &seed);
 			}
@@ -58,7 +58,7 @@ fn distSqr(x: f32, y: f32, z: f32) f32 {
 	return x*x + y*y + z*z;
 }
 
-fn considerCrystal(x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, seed: *u64, useNeedles: bool, types: []u16) void {
+fn considerCrystal(x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, seed: *u64, useNeedles: bool, types: []u16) void {
 	const relX: f32 = @floatFromInt(x -% chunk.super.pos.wx);
 	const relY: f32 = @floatFromInt(y -% chunk.super.pos.wy);
 	const relZ: f32 = @floatFromInt(z -% chunk.super.pos.wz);
@@ -102,7 +102,7 @@ fn considerCrystal(x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, seed:
 						const dist = distSqr(@as(f32, @floatFromInt(x3)) - x2, @as(f32, @floatFromInt(y3)) - y2, @as(f32, @floatFromInt(z3)) - z2);
 						if (dist < size*size) {
 							if (x3 >= 0 and x3 < chunk.super.width and y3 >= 0 and y3 < chunk.super.width and z3 >= 0 and z3 < chunk.super.width) {
-								const block: main.blocks.Block = chunk.getBlock(x3, y3, z3);
+								const block: root.blocks.Block = chunk.getBlock(x3, y3, z3);
 								if (block.typ == 0 or block.degradable()) {
 									chunk.updateBlockInGeneration(x3, y3, z3, .{.typ = typ, .data = 0});
 								}
@@ -118,9 +118,9 @@ fn considerCrystal(x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, seed:
 	}
 }
 
-fn considerCoordinates(x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView, seed: *u64) void {
+fn considerCoordinates(x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView, seed: *u64) void {
 	const oldSeed = seed.*;
-	const crystalSpawns = biomeMap.getBiomeAndSeed(x +% main.chunk.chunkSize/2 -% chunk.super.pos.wx, y +% main.chunk.chunkSize/2 -% chunk.super.pos.wy, z +% main.chunk.chunkSize/2 -% chunk.super.pos.wz, true, seed).crystals;
+	const crystalSpawns = biomeMap.getBiomeAndSeed(x +% root.chunk.chunkSize/2 -% chunk.super.pos.wx, y +% root.chunk.chunkSize/2 -% chunk.super.pos.wy, z +% root.chunk.chunkSize/2 -% chunk.super.pos.wz, true, seed).crystals;
 	random.scrambleSeed(seed);
 	var differendColors: u32 = 1;
 	if (random.nextInt(u1, seed) != 0) {
@@ -139,15 +139,15 @@ fn considerCoordinates(x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, c
 	seed.* = oldSeed;
 	for (0..crystalSpawns) |_| {
 		// Choose some in world coordinates to start generating:
-		const worldX = x + random.nextIntBounded(u31, seed, main.chunk.chunkSize);
-		const worldY = y + random.nextIntBounded(u31, seed, main.chunk.chunkSize);
-		const worldZ = z + random.nextIntBounded(u31, seed, main.chunk.chunkSize);
+		const worldX = x + random.nextIntBounded(u31, seed, root.chunk.chunkSize);
+		const worldY = y + random.nextIntBounded(u31, seed, root.chunk.chunkSize);
+		const worldZ = z + random.nextIntBounded(u31, seed, root.chunk.chunkSize);
 		const relX = worldX -% chunk.super.pos.wx;
 		const relY = worldY -% chunk.super.pos.wy;
 		const relZ = worldZ -% chunk.super.pos.wz;
 		if (caveMap.isSolid(relX, relY, relZ)) { // Only start crystal in solid blocks
 			// Only start crystal when they are close to the surface (±SURFACE_DIST blocks)
-			if ((worldX - x >= surfaceDist and !caveMap.isSolid(relX - surfaceDist, relY, relZ)) or (worldX - x < main.chunk.chunkSize - surfaceDist and !caveMap.isSolid(relX + surfaceDist, relY, relZ)) or (worldY - y >= surfaceDist and !caveMap.isSolid(relX, relY - surfaceDist, relZ)) or (worldY - y < main.chunk.chunkSize - surfaceDist and !caveMap.isSolid(relX, relY + surfaceDist, relZ)) or (worldZ - z >= surfaceDist and !caveMap.isSolid(relX, relY, relZ - surfaceDist)) or (worldZ - z < main.chunk.chunkSize - surfaceDist and !caveMap.isSolid(relX, relY, relZ + surfaceDist))) {
+			if ((worldX - x >= surfaceDist and !caveMap.isSolid(relX - surfaceDist, relY, relZ)) or (worldX - x < root.chunk.chunkSize - surfaceDist and !caveMap.isSolid(relX + surfaceDist, relY, relZ)) or (worldY - y >= surfaceDist and !caveMap.isSolid(relX, relY - surfaceDist, relZ)) or (worldY - y < root.chunk.chunkSize - surfaceDist and !caveMap.isSolid(relX, relY + surfaceDist, relZ)) or (worldZ - z >= surfaceDist and !caveMap.isSolid(relX, relY, relZ - surfaceDist)) or (worldZ - z < root.chunk.chunkSize - surfaceDist and !caveMap.isSolid(relX, relY, relZ + surfaceDist))) {
 				// Generate the crystal:
 				considerCrystal(worldX, worldY, worldZ, chunk, seed, useNeedles, colors);
 			}

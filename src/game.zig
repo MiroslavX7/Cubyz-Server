@@ -23,7 +23,7 @@ const graphics = @import("graphics.zig");
 const Fog = graphics.Fog;
 const renderer = @import("renderer.zig");
 const settings = @import("settings.zig");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const physics = main.physics;
 const KeyBoard = main.KeyBoard;
 
@@ -57,11 +57,11 @@ pub const DamageType = enum(u8) {
 
 	pub fn sendMessage(self: DamageType, name: []const u8) void {
 		switch (self) {
-			.heal => main.server.sendMessage("{s}§#ffffff was healed", .{name}),
-			.kill => main.server.sendMessage("{s}§#ffffff was killed", .{name}),
-			.fall => main.server.sendMessage("{s}§#ffffff died of fall damage", .{name}),
-			.heat => main.server.sendMessage("{s}§#ffffff burned to death", .{name}),
-			.spiky => main.server.sendMessage("{s}§#ffffff experienced death by 1000 needles", .{name}),
+			.heal => root.server.sendMessage("{s}§#ffffff was healed", .{name}),
+			.kill => root.server.sendMessage("{s}§#ffffff was killed", .{name}),
+			.fall => root.server.sendMessage("{s}§#ffffff died of fall damage", .{name}),
+			.heat => root.server.sendMessage("{s}§#ffffff burned to death", .{name}),
+			.spiky => root.server.sendMessage("{s}§#ffffff experienced death by 1000 needles", .{name}),
 		}
 	}
 };
@@ -78,15 +78,15 @@ pub const Player = struct { // MARK: Player
 		},
 		desiredPos: Vec3d = .{0, 0, 1.7 - standingBoundingBoxExtent[2]},
 	};
-	pub var super: main.server.Entity = .{};
+	pub var super: root.server.Entity = .{};
 	pub var eye: EyeData = .{};
 	pub var crouching: bool = false;
-	pub var id: main.entity.Entity = .noValue;
+	pub var id: root.entity.Entity = .noValue;
 	pub var gamemode: Atomic(Gamemode) = .init(.creative);
 	pub var isFlying: Atomic(bool) = .init(false);
 	pub var isGhost: Atomic(bool) = .init(false);
 	pub var hyperSpeed: Atomic(bool) = .init(false);
-	pub var mutex: main.utils.Mutex = .{};
+	pub var mutex: root.utils.Mutex = .{};
 	pub const inventorySize = 32;
 	pub var inventory: ClientInventory = undefined;
 	pub var selectedSlot: u32 = 0;
@@ -280,14 +280,14 @@ pub const World = struct { // MARK: World
 	entityModelPalette: *assets.Palette = undefined,
 	entityComponentPalette: *assets.Palette = undefined,
 	itemDrops: ClientItemDropManager = undefined,
-	playerBiome: Atomic(*const main.server.terrain.biomes.Biome) = undefined,
+	playerBiome: Atomic(*const root.server.terrain.biomes.Biome) = undefined,
 
 	shouldRestart: std.atomic.Value(bool) = .init(false),
 	shouldReload: bool = false,
 
 	fn connect(self: *World) !ZonElement {
-		main.heap.allocators.createWorldArena();
-		errdefer main.heap.allocators.destroyWorldArena();
+		root.heap.allocators.createWorldArena();
+		errdefer root.heap.allocators.destroyWorldArena();
 
 		self.conn.handShakeState.store(if (self.shouldReload) .reload else .start, .monotonic);
 
@@ -321,11 +321,11 @@ pub const World = struct { // MARK: World
 	}
 
 	pub fn deinit(self: *World) void {
-		main.server.stop(.stop);
+		root.server.stop(.stop);
 
-		if (main.server.thread) |serverThread| {
+		if (root.server.thread) |serverThread| {
 			serverThread.join();
-			main.server.thread = null;
+			root.server.thread = null;
 		}
 
 		self.conn.deinit();
@@ -345,11 +345,11 @@ pub const World = struct { // MARK: World
 		main.gui.inventory.deinit();
 		main.gui.deinit();
 		main.gui.init();
-		Player.inventory.deinit(main.globalAllocator);
-		main.sync.client.reset();
+		Player.inventory.deinit(root.globalAllocator);
+		root.sync.client.reset();
 
 		Player.super.deinit(.client);
-		main.entity.client.clear();
+		root.entity.client.clear();
 		main.systems.client.clear();
 		self.itemDrops.deinit();
 		self.blockPalette.deinit();
@@ -361,48 +361,48 @@ pub const World = struct { // MARK: World
 		renderer.mesh_storage.deinit();
 		renderer.mesh_storage.init();
 		assets.unloadAssets();
-		main.heap.allocators.destroyWorldArena();
+		root.heap.allocators.destroyWorldArena();
 	}
 
 	pub fn finishHandshake(self: *World, zon: ZonElement) !void {
 		self.conn.manager.world = self;
 		main.game.world = self;
-		errdefer main.heap.allocators.destroyWorldArena();
+		errdefer root.heap.allocators.destroyWorldArena();
 		errdefer self.conn.deinit();
-		self.itemDrops.init(main.globalAllocator);
+		self.itemDrops.init(root.globalAllocator);
 		errdefer self.itemDrops.deinit();
 
 		// TODO: Consider using a per-world allocator.
-		self.blockPalette = try assets.Palette.init(main.globalAllocator, zon.getChild("blockPalette"), "cubyz:air");
+		self.blockPalette = try assets.Palette.init(root.globalAllocator, zon.getChild("blockPalette"), "cubyz:air");
 		errdefer self.blockPalette.deinit();
-		self.biomePalette = try assets.Palette.init(main.globalAllocator, zon.getChild("biomePalette"), null);
+		self.biomePalette = try assets.Palette.init(root.globalAllocator, zon.getChild("biomePalette"), null);
 		errdefer self.biomePalette.deinit();
-		self.itemPalette = try assets.Palette.init(main.globalAllocator, zon.getChild("itemPalette"), null);
+		self.itemPalette = try assets.Palette.init(root.globalAllocator, zon.getChild("itemPalette"), null);
 		errdefer self.itemPalette.deinit();
-		self.proceduralItemPalette = try assets.Palette.init(main.globalAllocator, zon.getChild("toolPalette"), null);
+		self.proceduralItemPalette = try assets.Palette.init(root.globalAllocator, zon.getChild("toolPalette"), null);
 		errdefer self.proceduralItemPalette.deinit();
-		self.entityModelPalette = try assets.Palette.init(main.globalAllocator, zon.getChild("entityModelPalette"), "cubyz:missing");
+		self.entityModelPalette = try assets.Palette.init(root.globalAllocator, zon.getChild("entityModelPalette"), "cubyz:missing");
 		errdefer self.entityModelPalette.deinit();
-		self.entityComponentPalette = try assets.Palette.init(main.globalAllocator, zon.getChild("entityComponentPalette"), null);
+		self.entityComponentPalette = try assets.Palette.init(root.globalAllocator, zon.getChild("entityComponentPalette"), null);
 		errdefer self.entityComponentPalette.deinit();
 
-		const path = main.stackAllocator.print("{s}/serverAssets", .{main.files.cubyzDirStr()});
-		defer main.stackAllocator.free(path);
+		const path = root.stackAllocator.print("{s}/serverAssets", .{root.files.cubyzDirStr()});
+		defer root.stackAllocator.free(path);
 		try assets.loadWorldAssets(path, self.blockPalette, self.itemPalette, self.proceduralItemPalette, self.biomePalette, self.entityModelPalette, self.entityComponentPalette);
-		Player.id = @enumFromInt(zon.get(u32, "player_id") orelse @intFromEnum(main.entity.Entity.noValue));
-		Player.inventory = ClientInventory.init(main.globalAllocator, Player.inventorySize, .serverShared, .{.playerInventory = Player.id}, .{});
+		Player.id = @enumFromInt(zon.get(u32, "player_id") orelse @intFromEnum(root.entity.Entity.noValue));
+		Player.inventory = ClientInventory.init(root.globalAllocator, Player.inventorySize, .serverShared, .{.playerInventory = Player.id}, .{});
 		Player.setGamemode(std.enums.fromInt(Gamemode, zon.get(u8, "gamemode") orelse return error.Invalid) orelse return error.Invalid);
-		self.playerBiome = .init(main.server.terrain.biomes.getPlaceholderBiome());
+		self.playerBiome = .init(root.server.terrain.biomes.getPlaceholderBiome());
 		main.audio.setMusic(self.playerBiome.raw.preferredMusic);
 
 		main.Window.setMouseGrabbed(true);
-		main.blocks.meshes.generateTextureArray();
+		root.blocks.meshes.generateTextureArray();
 		main.particles.ParticleManager.generateTextureArray();
 		main.models.uploadModels();
 		main.entityModel.loadModelsAndTexture();
 
 		try Player.loadFrom(zon.getChild("player"));
-		main.network.protocols.handShake.signalLoadedAssets();
+		root.network.protocols.handShake.signalLoadedAssets();
 
 		self.paused = false;
 	}
@@ -615,11 +615,11 @@ pub fn hyperSpeedToggle(_: main.Window.Key.Modifiers) void {
 	Player.hyperSpeed.store(!Player.hyperSpeed.load(.monotonic), .monotonic);
 }
 
-pub fn getBlockWithSide(comptime side: main.sync.Side, x: i32, y: i32, z: i32) ?Block {
+pub fn getBlockWithSide(comptime side: root.sync.Side, x: i32, y: i32, z: i32) ?Block {
 	if (side == .client) {
 		return main.renderer.mesh_storage.getBlockFromRenderThread(x, y, z);
 	} else {
-		return main.server.world.?.getBlock(x, y, z);
+		return root.server.world.?.getBlock(x, y, z);
 	}
 }
 
@@ -807,7 +807,7 @@ pub fn update(deltaTime: f64) void { // MARK: update()
 				const velocityChange = @abs(@abs(prevVel[2]) - @abs(Player.super.vel[2]));
 				const damage: f32 = @floatCast(@round(@max((velocityChange*velocityChange)/(2*physics.baseGravity) - 7, 0))/2);
 				if (damage > 0.01) {
-					main.sync.addHealth(-damage, .fall, .client, Player.id);
+					root.sync.addHealth(-damage, .fall, .client, Player.id);
 				}
 			}
 			physics.calculateVerticalCollisionEyeMovement(deltaTime, &Player.eye, didCollide, Player.onGround, wasOnGround, prevPos, Player.super.pos, prevVel, Player.super.vel, motion, Player.steppingHeight()[2]);

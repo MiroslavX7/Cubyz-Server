@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ModifierRestriction = main.items.ModifierRestriction;
 const ProceduralItem = main.items.ProceduralItem;
 const ZonElement = main.ZonElement;

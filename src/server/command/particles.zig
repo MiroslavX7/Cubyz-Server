@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 const particles = main.particles;
-const User = main.server.User;
+const User = root.server.User;
 
 pub const description = "Spawns particles.";
 pub const usage =
@@ -38,10 +38,10 @@ pub const Args = union(enum) {
 };
 
 pub fn execute(args: Args, source: Source) void {
-	const users = main.server.getUserList(main.stackAllocator);
-	defer main.stackAllocator.free(users);
+	const users = root.server.getUserList(root.stackAllocator);
+	defer root.stackAllocator.free(users);
 	for (users) |user| {
-		main.network.protocols.genericUpdate.sendParticles(
+		root.network.protocols.genericUpdate.sendParticles(
 			user.conn,
 			args.@"/particles <id> <x> <y> <z> <collides> <count> <spawnDataZon>".id,
 			command.resolveCoordinates(

@@ -63,7 +63,7 @@ pub const RotationMode = struct { // MARK: RotationMode
 			const modelData = modelIndex.model();
 			var minimum: ?f32 = null;
 			var normal: ?Vec3f = null;
-			var quadList: main.ListManaged(main.models.QuadInfo) = .init(main.stackAllocator);
+			var quadList: main.ListManaged(main.models.QuadInfo) = .init(root.stackAllocator);
 			defer quadList.deinit();
 			modelData.getRawFaces(&quadList);
 			for (quadList.items) |quad| {
@@ -223,7 +223,7 @@ fn rayTriangleIntersection(origin: Vec3f, direction: Vec3f, triangle: [3]Vec3f) 
 // MARK: init/register
 
 pub fn init() void {
-	rotationModes = .init(main.globalAllocator.allocator);
+	rotationModes = .init(root.globalAllocator.allocator);
 	inline for (@typeInfo(rotations).@"struct".decls) |declaration| {
 		register(declaration.name, @field(rotations, declaration.name));
 	}

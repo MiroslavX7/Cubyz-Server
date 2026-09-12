@@ -50,8 +50,8 @@ pub fn update() void {
 			button.disabled = false;
 			button.child.label.updateText("Continue");
 		} else {
-			const newText = main.stackAllocator.print("Continue ({})", .{remainTimeSeconds});
-			defer main.stackAllocator.free(newText);
+			const newText = root.stackAllocator.print("Continue ({})", .{remainTimeSeconds});
+			defer root.stackAllocator.free(newText);
 			button.child.label.updateText(newText);
 		}
 	}

@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
@@ -11,7 +11,7 @@ const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const id = "cubyz:boulder";
 
@@ -19,21 +19,21 @@ pub const generationMode = .floor;
 
 const Boulder = @This();
 
-block: main.blocks.Block,
+block: root.blocks.Block,
 size: f32,
 sizeVariation: f32,
 
 pub fn loadModel(parameters: ZonElement) ?*Boulder {
-	const self = main.worldArena.create(Boulder);
+	const self = root.worldArena.create(Boulder);
 	self.* = .{
-		.block = main.blocks.parseBlock(parameters.get([]const u8, "block") orelse "cubyz:slate/smooth"),
+		.block = root.blocks.parseBlock(parameters.get([]const u8, "block") orelse "cubyz:slate/smooth"),
 		.size = parameters.get(f32, "size") orelse 4,
 		.sizeVariation = parameters.get(f32, "size_variation") orelse 1,
 	};
 	return self;
 }
 
-pub fn generate(self: *Boulder, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
+pub fn generate(self: *Boulder, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
 	_ = caveMap;
 	const radius = self.size + self.sizeVariation*(random.nextFloat(seed)*2 - 1);
 	// My basic idea is to use a point cloud and a potential function to achieve somewhat smooth boulders without being a sphere.

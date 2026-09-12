@@ -236,7 +236,7 @@ pub fn renderWorld(world: *World, ambientLight: Vec3f, skyColor: Vec3f, playerPo
 
 	chunk_meshing.beginRender();
 
-	var chunkLists: [main.settings.highestSupportedLod + 1]main.ListManaged(u32) = @splat(main.ListManaged(u32).init(main.stackAllocator));
+	var chunkLists: [main.settings.highestSupportedLod + 1]main.ListManaged(u32) = @splat(main.ListManaged(u32).init(root.stackAllocator));
 	defer for (chunkLists) |list| list.deinit();
 	for (meshes) |mesh| {
 		mesh.prepareRendering(&chunkLists);
@@ -549,49 +549,49 @@ pub const MenuBackGround = struct { // MARK: MenuBackGround
 
 		vao = .init(MenuBackgroundVertex, &rawData, &indices);
 
-		const backgroundPath = chooseBackgroundImagePath(main.stackAllocator) catch |err| {
+		const backgroundPath = chooseBackgroundImagePath(root.stackAllocator) catch |err| {
 			std.log.err("Couldn't open background path: {s}", .{@errorName(err)});
 			texture = .{.textureID = 0, .vulkanImage = null};
 			return;
 		};
-		defer main.stackAllocator.free(backgroundPath);
+		defer root.stackAllocator.free(backgroundPath);
 		texture = graphics.Texture.initFromFile(backgroundPath);
 	}
 
-	fn chooseBackgroundImagePath(allocator: main.heap.NeverFailingAllocator) ![]const u8 {
-		var dir = try main.files.cubyzDir().openIterableDir("backgrounds");
+	fn chooseBackgroundImagePath(allocator: root.heap.NeverFailingAllocator) ![]const u8 {
+		var dir = try root.files.cubyzDir().openIterableDir("backgrounds");
 		defer dir.close();
 
 		// Whenever the version changes copy over the new background image and display it.
 		if (!std.mem.eql(u8, settings.lastVersionString, settings.version.version)) {
-			const defaultImageData = try main.files.cwd().read(main.stackAllocator, "assets/cubyz/default_background.png");
-			defer main.stackAllocator.free(defaultImageData);
+			const defaultImageData = try root.files.cwd().read(root.stackAllocator, "assets/cubyz/default_background.png");
+			defer root.stackAllocator.free(defaultImageData);
 			try dir.write("default_background.png", defaultImageData);
 
-			return allocator.print("{s}/backgrounds/default_background.png", .{main.files.cubyzDirStr()});
+			return allocator.print("{s}/backgrounds/default_background.png", .{root.files.cubyzDirStr()});
 		}
 
 		// Otherwise load a random texture from the backgrounds folder. The player may make their own pictures which can be chosen as well.
-		var walker = dir.walk(main.stackAllocator);
+		var walker = dir.walk(root.stackAllocator);
 		defer walker.deinit();
 		var fileList: main.List([]const u8) = .empty;
 		defer {
 			for (fileList.items) |fileName| {
-				main.stackAllocator.free(fileName);
+				root.stackAllocator.free(fileName);
 			}
-			fileList.deinit(main.stackAllocator);
+			fileList.deinit(root.stackAllocator);
 		}
 
 		while (try walker.next(main.io)) |entry| {
 			if (entry.kind == .file and std.ascii.endsWithIgnoreCase(entry.basename, ".png")) {
-				fileList.append(main.stackAllocator, main.stackAllocator.dupe(u8, entry.path));
+				fileList.append(root.stackAllocator, root.stackAllocator.dupe(u8, entry.path));
 			}
 		}
 		if (fileList.items.len == 0) {
 			return error.NoBackgroundImagesFound;
 		}
 		const theChosenOne = main.random.nextIntBounded(u32, &main.seed, @as(u32, @intCast(fileList.items.len)));
-		return allocator.print("{s}/backgrounds/{s}", .{main.files.cubyzDirStr(), fileList.items[theChosenOne]});
+		return allocator.print("{s}/backgrounds/{s}", .{root.files.cubyzDirStr(), fileList.items[theChosenOne]});
 	}
 
 	pub fn deinit() void {
@@ -626,8 +626,8 @@ pub const MenuBackGround = struct { // MARK: MenuBackGround
 
 	pub fn takeBackgroundImage() void {
 		const size: usize = 1024; // Use a power of 2 here, to reduce video memory waste.
-		const pixels: []u32 = main.stackAllocator.alloc(u32, size*size);
-		defer main.stackAllocator.free(pixels);
+		const pixels: []u32 = root.stackAllocator.alloc(u32, size*size);
+		defer root.stackAllocator.free(pixels);
 
 		// Change the viewport and the matrices to render 4 cube faces:
 
@@ -653,8 +653,8 @@ pub const MenuBackGround = struct { // MARK: MenuBackGround
 		const angles = [_]f32{std.math.pi/2.0, std.math.pi, std.math.pi*3/2.0, std.math.pi*2};
 
 		// All 4 sides are stored in a single image.
-		const image = graphics.Image.init(main.stackAllocator, 4*size, size);
-		defer image.deinit(main.stackAllocator);
+		const image = graphics.Image.init(root.stackAllocator, 4*size, size);
+		defer image.deinit(root.stackAllocator);
 
 		for (0..4) |i| {
 			c.glDepthFunc(c.GL_LESS);
@@ -679,8 +679,8 @@ pub const MenuBackGround = struct { // MARK: MenuBackGround
 		}
 		c.glBindFramebuffer(c.GL_FRAMEBUFFER, 0);
 
-		const fileName = main.stackAllocator.print("{s}/backgrounds/{s}_{}.png", .{main.files.cubyzDirStr(), game.world.?.name, game.world.?.gameTime.load(.monotonic)});
-		defer main.stackAllocator.free(fileName);
+		const fileName = root.stackAllocator.print("{s}/backgrounds/{s}_{}.png", .{root.files.cubyzDirStr(), game.world.?.name, game.world.?.gameTime.load(.monotonic)});
+		defer root.stackAllocator.free(fileName);
 		image.exportToFile(fileName) catch |err| {
 			std.log.err("Cannot write file {s} due to {s}", .{fileName, @errorName(err)});
 		};
@@ -727,11 +727,11 @@ pub const Skybox = struct { // MARK: Skybox
 	}
 
 	fn init() void {
-		const starColorImage = graphics.Image.readFromFile(main.stackAllocator, "assets/cubyz/star.png", .{.orientation = .openGl}) catch |err| {
+		const starColorImage = graphics.Image.readFromFile(root.stackAllocator, "assets/cubyz/star.png", .{.orientation = .openGl}) catch |err| {
 			std.log.err("Failed to load star image: {s}", .{@errorName(err)});
 			return;
 		};
-		defer starColorImage.deinit(main.stackAllocator);
+		defer starColorImage.deinit(root.stackAllocator);
 
 		starPipeline = graphics.Pipeline.init(
 			"assets/cubyz/shaders/skybox/star.vert",
@@ -986,7 +986,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 		// TODO: Test entities
 	}
 
-	fn canPlaceBlock(pos: Vec3i, block: main.blocks.Block) bool {
+	fn canPlaceBlock(pos: Vec3i, block: root.blocks.Block) bool {
 		if (main.physics.collision.collideWithBlock(block, pos[0], pos[1], pos[2], main.game.Player.getPosBlocking() + main.game.Player.outerBoundingBox.center(), main.game.Player.outerBoundingBox.extent(), .{0, 0, 0}) != null) {
 			return false;
 		}
@@ -1043,7 +1043,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 					}
 					if (std.mem.eql(u8, baseItem.id(), "cubyz:selection_wand")) {
 						game.Player.selectionPosition2 = selectedPos;
-						main.network.protocols.genericUpdate.sendWorldEditPos(main.game.world.?.conn, .selectedPos2, selectedPos);
+						root.network.protocols.genericUpdate.sendWorldEditPos(main.game.world.?.conn, .selectedPos2, selectedPos);
 						return;
 					}
 				},
@@ -1061,7 +1061,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 			const isSelectionWand = stack.item == .baseItem and std.mem.eql(u8, stack.item.baseItem.id(), "cubyz:selection_wand");
 			if (isSelectionWand) {
 				game.Player.selectionPosition1 = selectedPos;
-				main.network.protocols.genericUpdate.sendWorldEditPos(main.game.world.?.conn, .selectedPos1, selectedPos);
+				root.network.protocols.genericUpdate.sendWorldEditPos(main.game.world.?.conn, .selectedPos1, selectedPos);
 				return;
 			}
 
@@ -1078,7 +1078,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 
 			const relPos: Vec3f = @floatCast(lastPos - @as(Vec3d, @floatFromInt(selectedPos)));
 
-			main.sync.client.mutex.lock();
+			root.sync.client.mutex.lock();
 			if (!game.Player.isCreative()) {
 				var damage: f32 = main.game.Player.defaultBlockDamage;
 				const isProceduralItem = stack.item == .proceduralItem;
@@ -1111,7 +1111,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 						if (currentBlockProgress != 0) {
 							mesh_storage.addBreakingAnimation(lastSelectedBlockPos, currentBlockProgress);
 						}
-						main.sync.client.mutex.unlock();
+						root.sync.client.mutex.unlock();
 
 						return;
 					} else {
@@ -1121,7 +1121,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 						currentSwingTime = 0;
 					}
 				} else {
-					main.sync.client.mutex.unlock();
+					root.sync.client.mutex.unlock();
 					return;
 				}
 			} else {
@@ -1130,7 +1130,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 
 			var newBlock = block;
 			block.mode().onBlockBreaking(inventory.getStack(slot).item, relPos, lastDir, &newBlock);
-			main.sync.client.mutex.unlock();
+			root.sync.client.mutex.unlock();
 
 			if (newBlock != block) {
 				updateBlockAndSendUpdate(inventory, slot, selectedPos, block, newBlock);
@@ -1139,7 +1139,7 @@ pub const MeshSelection = struct { // MARK: MeshSelection
 	}
 
 	fn updateBlockAndSendUpdate(source: main.items.Inventory.ClientInventory, slot: u32, pos: Vec3i, oldBlock: blocks.Block, newBlock: blocks.Block) void {
-		main.sync.client.executeCommand(.{
+		root.sync.client.executeCommand(.{
 			.updateBlock = .{
 				.source = .{.inv = source.super, .slot = slot},
 				.pos = pos,

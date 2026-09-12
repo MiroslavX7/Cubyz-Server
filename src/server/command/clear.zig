@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Source = main.server.command.Source;
+const Source = root.server.command.Source;
 
 pub const description = "Clears your inventory/chat";
 pub const usage = "/clear <inventory/chat>";
@@ -18,6 +18,6 @@ pub fn execute(args: Args, source: Source) void {
 	const user = source.user;
 	switch (args.@"/clear <target>".target) {
 		.inventory => main.items.Inventory.server.clearPlayerInventory(user),
-		.chat => main.network.protocols.genericUpdate.sendClear(user.conn, .chat),
+		.chat => root.network.protocols.genericUpdate.sendClear(user.conn, .chat),
 	}
 }

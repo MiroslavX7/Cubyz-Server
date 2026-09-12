@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Invite a player";
@@ -12,7 +12,7 @@ pub const Args = union(enum) {
 };
 
 pub fn execute(args: Args, source: Source) void {
-	_ = main.server.User.init(main.server.connectionManager, args.@"/invite <ip>".ip) catch |err| {
+	_ = root.server.User.init(root.server.connectionManager, args.@"/invite <ip>".ip) catch |err| {
 		std.log.err("Error while trying to connect: {s}", .{@errorName(err)});
 		source.sendMessage("#ff0000Error while trying to connect: {s}", .{@errorName(err)});
 	};

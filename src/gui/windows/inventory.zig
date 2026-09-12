@@ -48,7 +48,7 @@ pub fn onOpen() void {
 	{
 		const row = HorizontalList.init();
 		blk: {
-			row.add(GuiComponent.BagSlot.init(.{0, 0}, main.entity.components.@"cubyz:bag".client.getBag(main.game.Player.id) orelse break :blk));
+			row.add(GuiComponent.BagSlot.init(.{0, 0}, root.entity.components.@"cubyz:bag".client.getBag(main.game.Player.id) orelse break :blk));
 		}
 		row.add(Button.initIcon(.{32, 0}, .{32, 32}, craftingIcon, .{.onAction = gui.openWindowCallback("inventory_crafting")}));
 		list.add(row);

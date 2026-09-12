@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const graphics = main.graphics;
 const vulkan = graphics.vulkan;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
@@ -21,7 +21,7 @@ const Shader = struct { // MARK: Shader
 		const versionLine = source[0..versionLineEnd];
 		const sourceLines = source[versionLineEnd..];
 
-		var sourceWithDefines: main.ListManaged(u8) = .init(main.stackAllocator);
+		var sourceWithDefines: main.ListManaged(u8) = .init(root.stackAllocator);
 		defer sourceWithDefines.deinit();
 		sourceWithDefines.appendSlice(versionLine);
 		sourceWithDefines.appendSlice(defines);
@@ -72,12 +72,12 @@ const Shader = struct { // MARK: Shader
 		return result;
 	}
 
-	fn loadShaderFile(allocator: main.heap.NeverFailingAllocator, filename: []const u8, defines: []const u8) ![]const u8 {
+	fn loadShaderFile(allocator: root.heap.NeverFailingAllocator, filename: []const u8, defines: []const u8) ![]const u8 {
 		var result: main.ListManaged(u8) = .init(allocator);
 		errdefer result.deinit();
 
-		const arena = main.stackAllocator.createArena();
-		defer main.stackAllocator.destroyArena(arena);
+		const arena = root.stackAllocator.createArena();
+		defer root.stackAllocator.destroyArena(arena);
 
 		const includePaths: [3]?[]const u8 = .{
 			blk: {
@@ -91,7 +91,7 @@ const Shader = struct { // MARK: Shader
 			"assets/cubyz/shaders/include",
 		};
 
-		var source = main.files.cwd().read(arena, filename) catch |err| {
+		var source = root.files.cwd().read(arena, filename) catch |err| {
 			std.log.err("Couldn't read shader file: {s}", .{filename});
 			return err;
 		};
@@ -112,11 +112,11 @@ const Shader = struct { // MARK: Shader
 			next = next[includeEnd + 1 ..];
 
 			for (includePaths) |includePath| {
-				const fullPath = main.stackAllocator.print("{s}/{s}", .{includePath orelse continue, includeFilename});
-				defer main.stackAllocator.free(fullPath);
-				if (main.files.cwd().hasFile(fullPath)) {
-					const code = try loadShaderFile(main.stackAllocator, fullPath, &.{});
-					defer main.stackAllocator.free(code);
+				const fullPath = root.stackAllocator.print("{s}/{s}", .{includePath orelse continue, includeFilename});
+				defer root.stackAllocator.free(fullPath);
+				if (root.files.cwd().hasFile(fullPath)) {
+					const code = try loadShaderFile(root.stackAllocator, fullPath, &.{});
+					defer root.stackAllocator.free(code);
 					result.appendSlice(code);
 					break;
 				}
@@ -129,10 +129,10 @@ const Shader = struct { // MARK: Shader
 	}
 
 	fn addShader(self: *const Shader, filename: []const u8, defines: []const u8, shaderStage: c_uint) !void {
-		const extraDefines = std.mem.concat(main.stackAllocator.allocator, u8, &.{defines, "#define gl_VertexIndex gl_VertexID\n#define OPEN_GL\n"}) catch unreachable;
-		defer main.stackAllocator.free(extraDefines);
-		const source = try loadShaderFile(main.stackAllocator, filename, extraDefines);
-		defer main.stackAllocator.free(source);
+		const extraDefines = std.mem.concat(root.stackAllocator.allocator, u8, &.{defines, "#define gl_VertexIndex gl_VertexID\n#define OPEN_GL\n"}) catch unreachable;
+		defer root.stackAllocator.free(extraDefines);
+		const source = try loadShaderFile(root.stackAllocator, filename, extraDefines);
+		defer root.stackAllocator.free(source);
 
 		const shader = c.glCreateShader(shaderStage);
 		defer c.glDeleteShader(shader);
@@ -207,11 +207,11 @@ const Shader = struct { // MARK: Shader
 	}
 
 	fn createShaderModule(path: []const u8, defines: []const u8, stage: ShaderStage) !c.VkShaderModule {
-		const source = try loadShaderFile(main.stackAllocator, path, defines);
-		defer main.stackAllocator.free(source);
+		const source = try loadShaderFile(root.stackAllocator, path, defines);
+		defer root.stackAllocator.free(source);
 
-		const spirv = try compileToSpirV(main.stackAllocator, source, path, defines, stage);
-		defer main.stackAllocator.free(spirv);
+		const spirv = try compileToSpirV(root.stackAllocator, source, path, defines, stage);
+		defer root.stackAllocator.free(spirv);
 
 		const createInfo = c.VkShaderModuleCreateInfo{
 			.sType = c.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -692,15 +692,15 @@ pub const Pipeline = struct { // MARK: Pipeline
 		const rasterState = self.rasterState.toVulkan();
 		const multisampleState = self.multisampleState.toVulkan();
 		const depthStencilState = self.depthStencilState.toVulkan();
-		const attachments = main.stackAllocator.alloc(c.VkPipelineColorBlendAttachmentState, self.blendState.attachments.len);
-		defer main.stackAllocator.free(attachments);
+		const attachments = root.stackAllocator.alloc(c.VkPipelineColorBlendAttachmentState, self.blendState.attachments.len);
+		defer root.stackAllocator.free(attachments);
 		for (attachments, self.blendState.attachments) |*dest, src| {
 			dest.* = src.toVulkan();
 		}
 		const blendState = self.blendState.toVulkan(attachments);
 
 		var descriptorSetLayouts: main.List(c.VkDescriptorSetLayout) = .empty;
-		defer descriptorSetLayouts.deinit(main.stackAllocator);
+		defer descriptorSetLayouts.deinit(root.stackAllocator);
 
 		if (options.bindings.len != 0) {
 			self.descriptorSetLayout = @as(c.VkDescriptorSetLayout, undefined);
@@ -712,10 +712,10 @@ pub const Pipeline = struct { // MARK: Pipeline
 				.pBindings = @ptrCast(options.bindings.ptr),
 			};
 			try vulkan.checkResultErr(c.vkCreateDescriptorSetLayout(vulkan.device, &descriptorSetLayoutInfo, null, &self.descriptorSetLayout.?));
-			descriptorSetLayouts.append(main.stackAllocator, self.descriptorSetLayout.?);
+			descriptorSetLayouts.append(root.stackAllocator, self.descriptorSetLayout.?);
 		}
 
-		descriptorSetLayouts.append(main.stackAllocator, frameUniformDescriptorSetLayout);
+		descriptorSetLayouts.append(root.stackAllocator, frameUniformDescriptorSetLayout);
 
 		std.debug.assert(options.pushConstantSize <= 128); // Some devices have a limit of just 128 bytes for push constants
 		const pipelineLayoutInfo = c.VkPipelineLayoutCreateInfo{ // TODO: Configure push constants
@@ -732,8 +732,8 @@ pub const Pipeline = struct { // MARK: Pipeline
 		try vulkan.checkResultErr(c.vkCreatePipelineLayout(vulkan.device, &pipelineLayoutInfo, null, &self.pipelineLayout));
 		errdefer c.vkDestroyPipelineLayout(vulkan.device, self.pipelineLayout, null);
 
-		const formats = main.stackAllocator.alloc(c.VkFormat, self.blendState.formats.len);
-		defer main.stackAllocator.free(formats);
+		const formats = root.stackAllocator.alloc(c.VkFormat, self.blendState.formats.len);
+		defer root.stackAllocator.free(formats);
 
 		for (self.blendState.formats, 0..) |format, i| {
 			formats[i] = switch (format) {

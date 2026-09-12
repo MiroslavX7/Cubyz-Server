@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Source = main.server.command.Source;
+const Source = root.server.command.Source;
 const Vec3i = main.vec.Vec3i;
 
 pub const description = "Select the player position as position 1.";
@@ -20,7 +20,7 @@ pub fn execute(_: Args, source: Source) void {
 	const pos: Vec3i = @floor(user.player().pos);
 
 	user.worldEditData.selectionPosition1 = pos;
-	main.network.protocols.genericUpdate.sendWorldEditPos(user.conn, .selectedPos1, pos);
+	root.network.protocols.genericUpdate.sendWorldEditPos(user.conn, .selectedPos1, pos);
 
 	user.sendMessage("Position 1: {}", .{pos});
 }

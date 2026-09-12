@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const blocks = main.blocks;
-const Neighbor = main.chunk.Neighbor;
+const Neighbor = root.chunk.Neighbor;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 const Vec3d = vec.Vec3d;
@@ -23,8 +23,8 @@ pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.
 	var neighborSupportive: [6]bool = undefined;
 
 	for (Neighbor.iterable) |neighbor| {
-		const neighborBlock: Block = main.server.world.?.getBlock(wx +% neighbor.relX(), wy +% neighbor.relY(), wz +% neighbor.relZ()) orelse .{.typ = 0, .data = 0};
-		const neighborModel = main.blocks.meshes.model(neighborBlock).model();
+		const neighborBlock: Block = root.server.world.?.getBlock(wx +% neighbor.relX(), wy +% neighbor.relY(), wz +% neighbor.relZ()) orelse .{.typ = 0, .data = 0};
+		const neighborModel = root.blocks.meshes.model(neighborBlock).model();
 		neighborSupportive[neighbor.toInt()] = !neighborBlock.replaceable() and neighborModel.neighborFacingQuads[neighbor.reverse().toInt()].len != 0;
 	}
 
@@ -42,7 +42,7 @@ pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.
 
 	if (newBlock == params.block) return .ignored;
 
-	if (main.server.world.?.cmpxchgBlock(wx, wy, wz, params.block, newBlock) == null) {
+	if (root.server.world.?.cmpxchgBlock(wx, wy, wz, params.block, newBlock) == null) {
 		const dropAmount = params.block.mode().itemDropsOnChange(params.block, newBlock);
 		const drops = params.block.blockDrops();
 		for (0..dropAmount) |_| {
@@ -59,7 +59,7 @@ pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.
 							@as(f32, @floatFromInt(wy)) + model.min[1] + main.random.nextFloat(&main.seed)*(model.max[1] - model.min[1]),
 							@as(f32, @floatFromInt(wz)) + model.min[2] + main.random.nextFloat(&main.seed)*(model.max[2] - model.min[2]),
 						};
-						main.server.world.?.drop(stack.clone(), pos, dir, 1);
+						root.server.world.?.drop(stack.clone(), pos, dir, 1);
 					}
 				}
 			}

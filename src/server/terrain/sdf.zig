@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const terrain = main.server.terrain;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const vec = main.vec;
 const Vec3f = vec.Vec3f;
@@ -49,11 +49,11 @@ pub const SdfModel = struct { // MARK: SdfModel
 		};
 	}
 
-	pub fn generate(self: SdfModel, sdf: main.utils.Array3D(f32), biomeMap: *const CaveBiomeMapView, interpolationSmoothness: main.utils.Array3D(f32), sdfPos: Vec3i, biomePos: Vec3i, seed: *u64, perimeter: comptime_int, voxelSize: u31, voxelSizeShift: u5) void {
+	pub fn generate(self: SdfModel, sdf: root.utils.Array3D(f32), biomeMap: *const CaveBiomeMapView, interpolationSmoothness: root.utils.Array3D(f32), sdfPos: Vec3i, biomePos: Vec3i, seed: *u64, perimeter: comptime_int, voxelSize: u31, voxelSizeShift: u5) void {
 		const amount: usize = @floor(self.minAmount + main.random.nextFloat(seed)*(self.maxAmount - self.minAmount) + main.random.nextFloat(seed));
 		for (0..amount) |_| {
-			const arena = main.stackAllocator.createArena();
-			defer main.stackAllocator.destroyArena(arena);
+			const arena = root.stackAllocator.createArena();
+			defer root.stackAllocator.destroyArena(arena);
 			const offsetDir = blk: while (true) {
 				const offset = main.random.nextFloatVectorSigned(3, seed);
 				if (vec.lengthSquare(offset) < 1) break :blk offset;
@@ -78,7 +78,7 @@ pub const SdfModel = struct { // MARK: SdfModel
 			const Generator = @field(sdf_models, decls[i].name);
 			generators[i] = .{Generator.id, .{
 				.initAndGetExtend = Generator.initAndGetExtend,
-				.instantiate = main.meta.castFunctionSelfToAnyopaque(Generator.instantiate),
+				.instantiate = root.meta.castFunctionSelfToAnyopaque(Generator.instantiate),
 			}};
 		}
 		break :blk generators;
@@ -92,7 +92,7 @@ pub const SdfInstance = struct { // MARK: SdfInstance
 	maxBounds: Vec3i,
 	centerPosOffset: Vec3f,
 
-	pub fn generate(self: SdfInstance, sdf: main.utils.Array3D(f32), interpolationSmoothness: main.utils.Array3D(f32), perimeter: comptime_int, voxelSize: u31, voxelSizeShift: u5) void {
+	pub fn generate(self: SdfInstance, sdf: root.utils.Array3D(f32), interpolationSmoothness: root.utils.Array3D(f32), perimeter: comptime_int, voxelSize: u31, voxelSizeShift: u5) void {
 		const dimVector: Vec3i = @intCast(@Vector(3, u32){sdf.width*voxelSize, sdf.depth*voxelSize, sdf.height*voxelSize});
 		const mask: @Vector(3, u31) = @splat(voxelSize - 1);
 		const min = @max(Vec3i{0, 0, 0}, self.minBounds -% @as(Vec3i, @splat(perimeter))) & ~mask;

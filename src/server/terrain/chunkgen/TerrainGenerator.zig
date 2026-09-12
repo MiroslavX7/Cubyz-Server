@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveMap = terrain.CaveMap;
 const CaveBiomeMap = terrain.CaveBiomeMap;
 const Biome = terrain.biomes.Biome;
@@ -20,25 +20,25 @@ pub const generatorSeed = 0x65c7f9fdc0641f94;
 
 pub const defaultState = .enabled;
 
-var air: main.blocks.Block = undefined;
-var stone: main.blocks.Block = undefined;
-var water: main.blocks.Block = undefined;
+var air: root.blocks.Block = undefined;
+var stone: root.blocks.Block = undefined;
+var water: root.blocks.Block = undefined;
 
 pub fn init(parameters: ZonElement) void {
 	_ = parameters;
-	air = main.blocks.parseBlock("cubyz:air");
-	stone = main.blocks.parseBlock("cubyz:slate/smooth");
-	water = main.blocks.parseBlock("cubyz:water");
+	air = root.blocks.parseBlock("cubyz:air");
+	stone = root.blocks.parseBlock("cubyz:slate/smooth");
+	water = root.blocks.parseBlock("cubyz:water");
 }
 
-pub fn generate(worldSeed: u64, chunk: *main.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
+pub fn generate(worldSeed: u64, chunk: *root.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
 	if (chunk.super.pos.voxelSize >= 8) {
 		var maxHeight: i32 = 0;
 		var minHeight: i32 = std.math.maxInt(i32);
 		var dx: i32 = -1;
-		while (dx < main.chunk.chunkSize + 1) : (dx += 1) {
+		while (dx < root.chunk.chunkSize + 1) : (dx += 1) {
 			var dy: i32 = -1;
-			while (dy < main.chunk.chunkSize + 1) : (dy += 1) {
+			while (dy < root.chunk.chunkSize + 1) : (dy += 1) {
 				const height = biomeMap.getSurfaceHeight(chunk.super.pos.wx +% dx*chunk.super.pos.voxelSize, chunk.super.pos.wy +% dy*chunk.super.pos.voxelSize);
 				maxHeight = @max(maxHeight, height);
 				minHeight = @min(minHeight, height - chunk.super.pos.voxelSize);

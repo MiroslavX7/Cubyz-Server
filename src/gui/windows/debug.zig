@@ -5,7 +5,7 @@ const graphics = main.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
 const Vec2f = main.vec.Vec2f;
-const TaskType = main.utils.ThreadPool.TaskType;
+const TaskType = root.utils.ThreadPool.TaskType;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -29,13 +29,13 @@ pub var window = GuiWindow{
 
 pub fn render() void {
 	var y: f32 = 0;
-	const fpsCapText = if (main.settings.fpsCap) |fpsCap| main.stackAllocator.print(" (limit: {d:.0} Hz)", .{fpsCap}) else "";
-	defer main.stackAllocator.allocator.free(fpsCapText);
-	const fpsLimit = main.stackAllocator.print("{s}{s}", .{
+	const fpsCapText = if (main.settings.fpsCap) |fpsCap| root.stackAllocator.print(" (limit: {d:.0} Hz)", .{fpsCap}) else "";
+	defer root.stackAllocator.allocator.free(fpsCapText);
+	const fpsLimit = root.stackAllocator.print("{s}{s}", .{
 		fpsCapText,
 		if (main.settings.vsync) " (vsync)" else "",
 	});
-	defer main.stackAllocator.allocator.free(fpsLimit);
+	defer root.stackAllocator.allocator.free(fpsLimit);
 	draw.print("fps: {d:.0} Hz{s}", .{1.0/main.lastDeltaTime.load(.monotonic), fpsLimit}, 0, y, 8);
 	y += 8;
 	draw.print("frameTime: {d:.1} ms", .{main.lastFrameTime.load(.monotonic)*1000.0}, 0, y, 8);
@@ -99,9 +99,9 @@ pub fn render() void {
 		}
 		{
 			const biome = main.game.world.?.playerBiome.load(.monotonic);
-			var tags = main.ListManaged(u8).init(main.stackAllocator);
+			var tags = main.ListManaged(u8).init(root.stackAllocator);
 			defer tags.deinit();
-			inline for (comptime std.meta.fieldNames(main.server.terrain.biomes.Biome.GenerationProperties)) |name| {
+			inline for (comptime std.meta.fieldNames(root.server.terrain.biomes.Biome.GenerationProperties)) |name| {
 				if (@field(biome.properties, name)) {
 					if (tags.items.len != 0) tags.appendSlice(", ");
 					tags.appendSlice(name);
@@ -116,7 +116,7 @@ pub fn render() void {
 		y += 8;
 		draw.print("Particle count: {}/{}", .{main.particles.ParticleSystem.getParticleCount(), main.particles.ParticleSystem.maxCapacity}, 0, y, 8);
 		y += 8;
-		draw.print("items: {} entities: {}", .{main.game.world.?.itemDrops.super.size, main.client.entity_manager.entities.len}, 0, y, 8);
+		draw.print("items: {} entities: {}", .{main.game.world.?.itemDrops.super.size, root.client.entity_manager.entities.len}, 0, y, 8);
 		y += 8;
 	}
 }

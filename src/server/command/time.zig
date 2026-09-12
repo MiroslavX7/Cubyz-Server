@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Source = main.server.command.Source;
+const Source = root.server.command.Source;
 
 pub const description = "Get or set the server time.";
 pub const usage =
@@ -21,8 +21,8 @@ pub const Args = union(enum) {
 pub fn execute(args: Args, source: Source) void {
 	const gameTime: i64 = switch (args) {
 		.@"/time" => time: {
-			source.sendMessage("#ffff00{}", .{main.server.world.?.gameTime});
-			break :time main.server.world.?.gameTime;
+			source.sendMessage("#ffff00{}", .{root.server.world.?.gameTime});
+			break :time root.server.world.?.gameTime;
 		},
 		.@"/time <number>" => |params| params.number,
 		.@"/time <phase>" => |params| switch (params.phase) {
@@ -34,17 +34,17 @@ pub fn execute(args: Args, source: Source) void {
 		.@"/time <subcommand>" => |params| {
 			switch (params.subcommand) {
 				.start => {
-					main.server.world.?.doGameTimeCycle = true;
+					root.server.world.?.doGameTimeCycle = true;
 					source.sendMessage("#ffff00Time started.", .{});
 					return;
 				},
 				.stop => {
-					main.server.world.?.doGameTimeCycle = false;
+					root.server.world.?.doGameTimeCycle = false;
 					source.sendMessage("#ffff00Time stopped.", .{});
 					return;
 				},
 			}
 		},
 	};
-	main.server.world.?.gameTime = gameTime;
+	root.server.world.?.gameTime = gameTime;
 }

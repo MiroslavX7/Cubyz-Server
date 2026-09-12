@@ -2,8 +2,8 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const ListManaged = main.ListManaged;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const ListManaged = root.ListManaged;
 
 pub const ZonElement = union(enum) { // MARK: ZonElement
 	int: i128,
@@ -235,7 +235,7 @@ pub const ZonElement = union(enum) { // MARK: ZonElement
 			},
 			.vector => {
 				const len = @typeInfo(@TypeOf(value)).vector.len;
-				const result = initArray(main.heap.NeverFailingAllocator{.allocator = allocator, .IAssertThatTheProvidedAllocatorCantFail = {}});
+				const result = initArray(root.heap.NeverFailingAllocator{.allocator = allocator, .IAssertThatTheProvidedAllocatorCantFail = {}});
 				result.array.ensureCapacity(len);
 				inline for (0..len) |i| {
 					result.array.appendAssumeCapacity(createElementFromRandomType(value[i], allocator));
@@ -883,7 +883,7 @@ test "number parsing" {
 }
 
 test "element parsing" {
-	var wrap = main.heap.ErrorHandlingAllocator.init(std.testing.allocator);
+	var wrap = root.heap.ErrorHandlingAllocator.init(std.testing.allocator);
 	const allocator = wrap.allocator();
 	// Integers:
 	var index: u32 = 0;
@@ -954,7 +954,7 @@ test "element parsing" {
 }
 
 test "merging" {
-	var wrap = main.heap.ErrorHandlingAllocator.init(std.testing.allocator);
+	var wrap = root.heap.ErrorHandlingAllocator.init(std.testing.allocator);
 	const allocator = wrap.allocator();
 
 	const zon1 = ZonElement.parseFromString(allocator, null, ".{.object1 = \"\", .object2 = .{}, .object3 = 1.0e4, @\"\nobject1\" = .{}, @\"\tobject1θ\" = .{}}");

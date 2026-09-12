@@ -6,7 +6,7 @@ dps: f32,
 damageType: main.game.DamageType,
 
 pub fn init(zon: main.ZonElement, _: main.callbacks.Creator) ?*@This() {
-	const result = main.worldArena.create(@This());
+	const result = root.worldArena.create(@This());
 	result.* = .{
 		.dps = zon.get(f32, "dps") orelse {
 			std.log.err("Missing field \"dps\" for hurt event", .{});
@@ -26,6 +26,6 @@ pub fn init(zon: main.ZonElement, _: main.callbacks.Creator) ?*@This() {
 pub fn run(self: *@This(), params: main.callbacks.BlockTouchCallback.Params) main.callbacks.Result {
 	std.debug.assert(params.entity == &main.game.Player.super); // TODO: Implement on the server side
 	const damage = self.dps*@as(f32, @floatCast(params.deltaTime));
-	main.sync.addHealth(-damage, self.damageType, .client, main.game.Player.id);
+	root.sync.addHealth(-damage, self.damageType, .client, main.game.Player.id);
 	return .handled;
 }

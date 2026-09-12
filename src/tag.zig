@@ -32,13 +32,13 @@ pub const Tag = enum(u32) {
 	pub fn find(tag: []const u8) Tag {
 		if (tagIds.get(tag)) |res| return res;
 		const result: Tag = @enumFromInt(tagList.items.len);
-		const dupedTag = main.worldArena.dupe(u8, tag);
-		tagList.append(main.worldArena, dupedTag);
-		tagIds.put(main.worldArena.allocator, dupedTag, result) catch unreachable;
+		const dupedTag = root.worldArena.dupe(u8, tag);
+		tagList.append(root.worldArena, dupedTag);
+		tagIds.put(root.worldArena.allocator, dupedTag, result) catch unreachable;
 		return result;
 	}
 
-	pub fn loadTagsFromZon(_allocator: main.heap.NeverFailingAllocator, zon: main.ZonElement) []Tag {
+	pub fn loadTagsFromZon(_allocator: root.heap.NeverFailingAllocator, zon: main.ZonElement) []Tag {
 		const result = _allocator.alloc(Tag, zon.toSlice().len);
 		for (zon.toSlice(), 0..) |tagZon, i| {
 			result[i] = Tag.find(tagZon.as([]const u8) orelse blk: {

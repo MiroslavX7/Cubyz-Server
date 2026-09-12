@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
@@ -12,7 +12,7 @@ const Vec2f = vec.Vec2f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const id = "cubyz:stalagmite";
 
@@ -20,17 +20,17 @@ pub const generationMode = .floor_and_ceiling;
 
 const Stalagmite = @This();
 
-block: main.blocks.Block,
+block: root.blocks.Block,
 size: f32,
 sizeVariation: f32,
 topSlope: f32,
 baseSlope: f32,
 
 pub fn loadModel(parameters: ZonElement) ?*Stalagmite {
-	const self = main.worldArena.create(Stalagmite);
+	const self = root.worldArena.create(Stalagmite);
 	const baseSlope = parameters.get(f32, "baseSlope") orelse 4.0;
 	self.* = .{
-		.block = main.blocks.parseBlock(parameters.get([]const u8, "block") orelse "cubyz:stalagmite"),
+		.block = root.blocks.parseBlock(parameters.get([]const u8, "block") orelse "cubyz:stalagmite"),
 		.size = parameters.get(f32, "size") orelse 12,
 		.sizeVariation = parameters.get(f32, "size_variation") orelse 8,
 		.baseSlope = baseSlope,
@@ -39,7 +39,7 @@ pub fn loadModel(parameters: ZonElement) ?*Stalagmite {
 	return self;
 }
 
-pub fn generate(self: *Stalagmite, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, _: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
+pub fn generate(self: *Stalagmite, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, _: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
 	const relX: f32 = @as(f32, @floatFromInt(x)) + main.random.nextFloat(seed)*0.6 - 0.3;
 	const relY: f32 = @as(f32, @floatFromInt(y)) + main.random.nextFloat(seed)*0.6 - 0.3;
 	const relZ: f32 = @as(f32, @floatFromInt(z)) + main.random.nextFloat(seed)*0.6 - 0.3;
@@ -92,7 +92,7 @@ pub fn generate(self: *Stalagmite, _: GenerationMode, x: i32, y: i32, z: i32, ch
 				var z3: i32 = zMin;
 				while (z3 <= zMax) : (z3 += 1) {
 					if (z3 >= 0 and z3 < chunk.super.width) {
-						const block: main.blocks.Block = chunk.getBlock(x3, y3, z3);
+						const block: root.blocks.Block = chunk.getBlock(x3, y3, z3);
 						if (block.typ == 0 or block.degradable()) {
 							chunk.updateBlockInGeneration(x3, y3, z3, self.block);
 						}

@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const biomes = terrain.biomes;
 const noise = terrain.noise;
 const StructureMapFragment = terrain.StructureMap.StructureMapFragment;
@@ -12,7 +12,7 @@ const MapFragment = SurfaceMap.MapFragment;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const SbbGen = @import("../simple_structures/SbbGen.zig");
-const ServerChunk = main.chunk.ServerChunk;
+const ServerChunk = root.chunk.ServerChunk;
 const SimpleStructureGen = @import("SimpleStructureGen.zig");
 const SimpleStructure = SimpleStructureGen.SimpleStructure;
 const StructureBuildingBlock = terrain.sbb.StructureBuildingBlock;
@@ -29,17 +29,17 @@ pub const generatorSeed = 0x7568492764892;
 
 pub const defaultState = .disabled;
 
-var sbbList: []main.server.terrain.biomes.SimpleStructureModel = undefined;
-var signBlock: main.blocks.Block = undefined;
+var sbbList: []root.server.terrain.biomes.SimpleStructureModel = undefined;
+var signBlock: root.blocks.Block = undefined;
 
 pub fn init(parameters: ZonElement) void {
 	_ = parameters;
 
 	const Entry = struct { sbb: *const StructureBuildingBlock, hasParent: bool, reachable: bool };
 	var localSbbList: main.List(Entry) = .empty;
-	defer localSbbList.deinit(main.stackAllocator);
+	defer localSbbList.deinit(root.stackAllocator);
 	for (terrain.sbb.list()) |*entry| {
-		localSbbList.append(main.stackAllocator, .{.sbb = entry, .hasParent = false, .reachable = false});
+		localSbbList.append(root.stackAllocator, .{.sbb = entry, .hasParent = false, .reachable = false});
 	}
 
 	{ // Mark all SBBs that are children of other SBBs.
@@ -55,11 +55,11 @@ pub fn init(parameters: ZonElement) void {
 			}
 		}
 	}
-	var rootSbbList: main.List(*const StructureBuildingBlock) = .initCapacity(main.stackAllocator, localSbbList.items.len);
-	defer rootSbbList.deinit(main.stackAllocator);
+	var rootSbbList: main.List(*const StructureBuildingBlock) = .initCapacity(root.stackAllocator, localSbbList.items.len);
+	defer rootSbbList.deinit(root.stackAllocator);
 	{ // Ensure that every structure was reachable (in case of recursion)
-		var unreachables: main.List(*Entry) = .initCapacity(main.stackAllocator, localSbbList.items.len);
-		defer unreachables.deinit(main.stackAllocator);
+		var unreachables: main.List(*Entry) = .initCapacity(root.stackAllocator, localSbbList.items.len);
+		defer unreachables.deinit(root.stackAllocator);
 
 		for (localSbbList.items) |*candidate| {
 			if (candidate.hasParent) {
@@ -102,10 +102,10 @@ pub fn init(parameters: ZonElement) void {
 		}
 	}.lessThanFn);
 
-	sbbList = main.worldArena.alloc(main.server.terrain.biomes.SimpleStructureModel, rootSbbList.items.len);
+	sbbList = root.worldArena.alloc(root.server.terrain.biomes.SimpleStructureModel, rootSbbList.items.len);
 
 	for (rootSbbList.items, 0..) |sbb, i| {
-		const structureData = main.worldArena.create(SbbGen);
+		const structureData = root.worldArena.create(SbbGen);
 		structureData.* = .{
 			.structureRef = sbb,
 			.placeMode = .all,
@@ -116,7 +116,7 @@ pub fn init(parameters: ZonElement) void {
 			.generationMode = .floor,
 			.priority = 1.0,
 			.vtable = .{
-				.generate = main.meta.castFunctionSelfToAnyopaque(SbbGen.generate),
+				.generate = root.meta.castFunctionSelfToAnyopaque(SbbGen.generate),
 				.generationMode = .floor,
 				.hashFunction = undefined,
 				.loadModel = undefined,
@@ -125,7 +125,7 @@ pub fn init(parameters: ZonElement) void {
 		};
 	}
 
-	signBlock.typ = main.blocks.getBlockById("cubyz:sign/oak") catch |err| blk: {
+	signBlock.typ = root.blocks.getBlockById("cubyz:sign/oak") catch |err| blk: {
 		std.log.err("Could not find sign with id cubyz:sign/oak: {s}", .{@errorName(err)});
 		break :blk 0;
 	};
@@ -161,7 +161,7 @@ pub fn generate(map: *StructureMapFragment, worldSeed: u64) void {
 					map.addStructure(.{
 						.internal = .{
 							.data = structure,
-							.generateFn = main.meta.castFunctionSelfToConstAnyopaque(SignGenerator.generate),
+							.generateFn = root.meta.castFunctionSelfToConstAnyopaque(SignGenerator.generate),
 						},
 						.priority = sbb.priority,
 					}, .{px, py, structure.wz -% map.pos.wz}, .{px +% 1, py +% 1, structure.wz -% map.pos.wz +% 1});
@@ -178,7 +178,7 @@ pub fn generate(map: *StructureMapFragment, worldSeed: u64) void {
 					map.addStructure(.{
 						.internal = .{
 							.data = structure,
-							.generateFn = main.meta.castFunctionSelfToConstAnyopaque(SimpleStructure.generate),
+							.generateFn = root.meta.castFunctionSelfToConstAnyopaque(SimpleStructure.generate),
 						},
 						.priority = sbb.priority,
 					}, .{px -% margin, py -% margin, structure.wz -% map.pos.wz -% marginZ}, .{px +% margin, py +% margin, structure.wz -% map.pos.wz +% marginZ});
@@ -201,7 +201,7 @@ const SignGenerator = struct {
 		const relZ = self.wz - chunk.super.pos.wz;
 		if (signBlock.blockEntity()) |blockEntity| {
 			chunk.updateBlockIfDegradable(relX, relY, relZ, signBlock);
-			var reader: main.utils.BinaryReader = .init(self.id);
+			var reader: root.utils.BinaryReader = .init(self.id);
 			blockEntity.onLoadServer(.{self.wx, self.wy, self.wz}, &chunk.super, &reader) catch |err| {
 				std.log.err("Error while loading id to sign: {s}", .{@errorName(err)});
 			};

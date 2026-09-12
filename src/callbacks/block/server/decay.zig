@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const blocks = main.blocks;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
@@ -10,7 +10,7 @@ const Vec3f = vec.Vec3f;
 const ZonElement = main.ZonElement;
 const server = main.server;
 const branch = main.rotation.rotations.@"cubyz:branch";
-const BlockDrop = main.server.BlockDrop;
+const BlockDrop = root.server.BlockDrop;
 
 decayReplacement: blocks.Block,
 prevention: []const main.Tag,
@@ -25,11 +25,11 @@ pub fn init(zon: ZonElement, creator: main.callbacks.Creator) ?*@This() {
 		// return null;
 		// },
 	};
-	const result = main.worldArena.create(@This());
+	const result = root.worldArena.create(@This());
 	// replacement
 	if (zon.get([]const u8, "replacement")) |blockname| {
-		result.decayReplacement = main.blocks.parseBlock(blockname);
-	} else result.decayReplacement = main.blocks.Block.air;
+		result.decayReplacement = root.blocks.parseBlock(blockname);
+	} else result.decayReplacement = root.blocks.Block.air;
 	// custom drop
 	if (zon.getChildOrNull("drops")) |_| {
 		result.blockDrops = blocks.loadBlockDrop(block.id(), zon);
@@ -38,7 +38,7 @@ pub fn init(zon: ZonElement, creator: main.callbacks.Creator) ?*@This() {
 	result.prevention = &.{};
 	if (zon.getChildOrNull("prevention")) |tagNames| {
 		if (tagNames == .array) {
-			var prevention = main.List(main.Tag).initCapacity(main.worldArena, tagNames.array.items.len);
+			var prevention = main.List(main.Tag).initCapacity(root.worldArena, tagNames.array.items.len);
 			for (tagNames.array.items) |value| {
 				const tagName = value.as([]const u8) orelse {
 					std.log.err("Invalid TagName for decay prevention.", .{});
@@ -76,7 +76,7 @@ fn foundWayToLog(self: *@This(), world: *server.ServerWorld, leaf: Block, wx: i3
 	}
 
 	// queue for breadth-first search
-	var queue = main.utils.CircularBufferQueue(Vec3i).init(main.stackAllocator, 32);
+	var queue = root.utils.CircularBufferQueue(Vec3i).init(root.stackAllocator, 32);
 	defer queue.deinit();
 
 	queue.pushBack(Vec3i{0, 0, 0});
@@ -98,7 +98,7 @@ fn foundWayToLog(self: *@This(), world: *server.ServerWorld, leaf: Block, wx: i3
 			if (sourceIsBranch and log.mode() != branchRotation and !log.viewThrough()) return true;
 			const branchData = branch.BranchData.init(log.data);
 
-			for (main.chunk.Neighbor.iterable) |offset| {
+			for (root.chunk.Neighbor.iterable) |offset| {
 				const relativePosition = value + offset.relPos();
 
 				// out of range
@@ -147,7 +147,7 @@ pub fn run(self: *@This(), params: main.callbacks.ServerBlockCallback.Params) ma
 								@as(f32, @floatFromInt(wy)) + model.min[1] + main.random.nextFloat(&main.seed)*(model.max[1] - model.min[1]),
 								@as(f32, @floatFromInt(wz)) + model.min[2] + main.random.nextFloat(&main.seed)*(model.max[2] - model.min[2]),
 							};
-							main.server.world.?.drop(stack.clone(), pos, dir, 1);
+							root.server.world.?.drop(stack.clone(), pos, dir, 1);
 						}
 					}
 				}

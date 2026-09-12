@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array2D = main.utils.Array2D;
+const Array2D = root.utils.Array2D;
 const random = main.random;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 // TODO: Simplify with Vec2f and Vec2i.
 
@@ -144,8 +144,8 @@ pub fn generateSmoothNoise(allocator: NeverFailingAllocator, x: i32, y: i32, wid
 		context.resolutionMask = scale - 1;
 		const x0 = x & ~context.resolutionMask;
 		const y0 = y & ~context.resolutionMask;
-		context.calculateGridPoints(main.stackAllocator, x, y, width, height, scale);
-		defer context.freeGridPoints(main.stackAllocator);
+		context.calculateGridPoints(root.stackAllocator, x, y, width, height, scale);
+		defer context.freeGridPoints(root.stackAllocator);
 
 		var x1 = x;
 		while (x1 -% width -% x < 0) : (x1 +%= voxelSize) {

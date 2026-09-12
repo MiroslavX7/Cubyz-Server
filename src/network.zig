@@ -7,7 +7,7 @@ const root = @import("root");
 const game = main.game;
 const settings = main.settings;
 const utils = main.utils;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const authentication = @import("network/authentication.zig");
 pub const protocols = @import("network/protocols.zig");
@@ -298,7 +298,7 @@ pub const SocketAddress = struct {
 const Request = struct {
 	address: SocketAddress,
 	data: []const u8,
-	requestNotifier: main.utils.Condition = .{},
+	requestNotifier: root.utils.Condition = .{},
 };
 
 /// Implements parts of the STUN(Session Traversal Utilities for NAT) protocol to discover public IP+Port
@@ -426,8 +426,8 @@ const stun = struct { // MARK: stun
 				std.log.warn("Cannot resolve STUN server address: {s}, error: {s}", .{server, @errorName(err)});
 				continue;
 			};
-			if (connection.sendRequest(main.globalAllocator, &data, serverAddress, .fromMilliseconds(500))) |answer| {
-				defer main.globalAllocator.free(answer);
+			if (connection.sendRequest(root.globalAllocator, &data, serverAddress, .fromMilliseconds(500))) |answer| {
+				defer root.globalAllocator.free(answer);
 				verifyHeader(answer, data[8..20]) catch |err| {
 					std.log.err("Header verification failed with {s} for STUN server: {s} data: {any}", .{@errorName(err), server, answer});
 					continue;
@@ -520,8 +520,8 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 	connections: main.List(*Connection) = .empty,
 	requests: main.List(*Request) = .empty,
 
-	mutex: main.utils.Mutex = .{},
-	waitingToFinishReceive: main.utils.Condition = .{},
+	mutex: root.utils.Mutex = .{},
+	waitingToFinishReceive: root.utils.Condition = .{},
 	allowNewConnections: bool,
 
 	receiveBuffer: [Connection.maxMtu]u8 = undefined,
@@ -543,8 +543,8 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 	};
 
 	pub fn init(localPort: u16, options: struct { allowNewConnections: bool = false }) !*ConnectionManager {
-		const result: *ConnectionManager = main.globalAllocator.create(ConnectionManager);
-		errdefer main.globalAllocator.destroy(result);
+		const result: *ConnectionManager = root.globalAllocator.create(ConnectionManager);
+		errdefer root.globalAllocator.destroy(result);
 		result.* = .{
 			.allowNewConnections = options.allowNewConnections,
 		};
@@ -588,8 +588,8 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		}
 
 		self.socket.deinit();
-		self.connections.deinit(main.globalAllocator);
-		main.globalAllocator.destroy(self);
+		self.connections.deinit(root.globalAllocator);
+		root.globalAllocator.destroy(self);
 	}
 	pub fn pause(self: *ConnectionManager) void {
 		std.debug.assert(self.running.load(.monotonic));
@@ -603,12 +603,12 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		for (self.requests.items) |request| {
 			request.requestNotifier.signal();
 		}
-		self.requests.deinit(main.globalAllocator);
+		self.requests.deinit(root.globalAllocator);
 
 		while (self.packetSendRequests.pop()) |packet| {
-			main.globalAllocator.free(packet.data);
+			root.globalAllocator.free(packet.data);
 		}
-		self.packetSendRequests.deinit(main.globalAllocator.allocator);
+		self.packetSendRequests.deinit(root.globalAllocator.allocator);
 
 		for (self.connections.items) |conn| {
 			conn.pause();
@@ -626,8 +626,8 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		if (nanoTime) |time| {
 			self.mutex.lock();
 			defer self.mutex.unlock();
-			self.packetSendRequests.push(main.globalAllocator.allocator, .{
-				.data = main.globalAllocator.dupe(u8, data),
+			self.packetSendRequests.push(root.globalAllocator.allocator, .{
+				.data = root.globalAllocator.dupe(u8, data),
 				.target = target,
 				.time = time,
 			}) catch unreachable;
@@ -642,7 +642,7 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		{
 			self.mutex.lock();
 			defer self.mutex.unlock();
-			self.requests.append(main.globalAllocator, &request);
+			self.requests.append(root.globalAllocator, &request);
 
 			request.requestNotifier.timedWait(&self.mutex, timeout) catch {};
 
@@ -658,11 +658,11 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		if (request.data.ptr == data.ptr) {
 			return null;
 		} else {
-			if (allocator.allocator.ptr == main.globalAllocator.allocator.ptr) {
+			if (allocator.allocator.ptr == root.globalAllocator.allocator.ptr) {
 				return request.data;
 			} else {
 				const result = allocator.dupe(u8, request.data);
-				main.globalAllocator.free(request.data);
+				root.globalAllocator.free(request.data);
 				return result;
 			}
 		}
@@ -674,7 +674,7 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		for (self.connections.items) |other| {
 			if (other.remoteAddress.address.eql(&conn.remoteAddress.address)) return error.AlreadyConnected;
 		}
-		self.connections.append(main.globalAllocator, conn);
+		self.connections.append(root.globalAllocator, conn);
 	}
 
 	pub fn finishCurrentReceive(self: *ConnectionManager) void {
@@ -718,7 +718,7 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 			// Check if it's part of an active request:
 			for (self.requests.items) |request| {
 				if (request.address.address.eql(&source.address)) {
-					request.data = main.globalAllocator.dupe(u8, data);
+					request.data = root.globalAllocator.dupe(u8, data);
 					request.requestNotifier.signal();
 					return;
 				}
@@ -727,9 +727,9 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		}
 		if (self.allowNewConnections or source.address.eql(&IpAddress{.ip4 = .loopback(source.address.getPort())})) {
 			if (data.len != 0 and data[0] == @intFromEnum(Connection.ChannelId.init)) {
-				const ip = main.stackAllocator.print("{f}", .{source});
-				defer main.stackAllocator.free(ip);
-				const user = main.server.User.init(main.server.connectionManager, ip) catch |err| {
+				const ip = root.stackAllocator.print("{f}", .{source});
+				defer root.stackAllocator.free(ip);
+				const user = root.server.User.init(root.server.connectionManager, ip) catch |err| {
 					std.log.err("Cannot connect user from external IP {f}: {s}", .{source, @errorName(err)});
 					return;
 				};
@@ -750,7 +750,7 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		var lastTime: i64 = networkTimestamp();
 		var lastExternalPacketTime = lastTime;
 		while (self.running.load(.monotonic)) {
-			main.heap.GarbageCollection.syncPoint();
+			root.heap.GarbageCollection.syncPoint();
 			self.waitingToFinishReceive.broadcast();
 			var source: SocketAddress = undefined;
 			if (self.socket.receive(&self.receiveBuffer, 1, &source)) |data| {
@@ -771,7 +771,7 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 				while (self.packetSendRequests.peek() != null and self.packetSendRequests.peek().?.time -% curTime <= 0) {
 					const packet = self.packetSendRequests.pop().?;
 					self.socket.send(packet.data, packet.target);
-					main.globalAllocator.free(packet.data);
+					root.globalAllocator.free(packet.data);
 				}
 			}
 
@@ -916,8 +916,8 @@ pub const Connection = struct { // MARK: Connection
 		ranges: RangeBuffer,
 		availablePosition: SequenceIndex = undefined,
 		currentReadPosition: SequenceIndex = undefined,
-		decryptedBuffer: main.utils.FixedSizeCircularBuffer(u8, receiveBufferSize),
-		buffer: main.utils.FixedSizeCircularBuffer(u8, receiveBufferSize),
+		decryptedBuffer: root.utils.FixedSizeCircularBuffer(u8, receiveBufferSize),
+		buffer: root.utils.FixedSizeCircularBuffer(u8, receiveBufferSize),
 		header: ?Header = null,
 		protocolBuffer: main.List(u8) = .empty,
 		channelId: ChannelId,
@@ -925,25 +925,25 @@ pub const Connection = struct { // MARK: Connection
 		pub fn init(channelId: ChannelId) ReceiveBuffer {
 			return .{
 				.ranges = .init(),
-				.decryptedBuffer = .init(main.globalAllocator),
-				.buffer = .init(main.globalAllocator),
+				.decryptedBuffer = .init(root.globalAllocator),
+				.buffer = .init(root.globalAllocator),
 				.channelId = channelId,
 			};
 		}
 
 		pub fn deinit(self: ReceiveBuffer) void {
-			self.ranges.deinit(main.globalAllocator);
-			self.protocolBuffer.deinit(main.globalAllocator);
-			self.buffer.deinit(main.globalAllocator);
-			self.decryptedBuffer.deinit(main.globalAllocator);
+			self.ranges.deinit(root.globalAllocator);
+			self.protocolBuffer.deinit(root.globalAllocator);
+			self.buffer.deinit(root.globalAllocator);
+			self.decryptedBuffer.deinit(root.globalAllocator);
 		}
 
 		fn applyRanges(self: *ReceiveBuffer, secureChannel: ?*SecureChannel) !void {
 			const range = self.ranges.extractFirstRange().?;
 			std.debug.assert(range.start == self.availablePosition);
 			self.availablePosition = range.end();
-			const data = main.stackAllocator.alloc(u8, @intCast(range.len));
-			defer main.stackAllocator.free(data);
+			const data = root.stackAllocator.alloc(u8, @intCast(range.len));
+			defer root.stackAllocator.free(data);
 			self.buffer.popSliceFront(data) catch unreachable;
 			if (secureChannel) |ch| {
 				try ch.receiveThroughTls(data);
@@ -975,7 +975,7 @@ pub const Connection = struct { // MARK: Connection
 			while (true) {
 				if (self.header == null) {
 					self.header = try self.getHeaderInformation() orelse return;
-					self.protocolBuffer.ensureCapacity(main.globalAllocator, self.header.?.size);
+					self.protocolBuffer.ensureCapacity(root.globalAllocator, self.header.?.size);
 				}
 				const amount = @min(@as(usize, @intCast(self.decryptedBuffer.len)), self.header.?.size - self.protocolBuffer.items.len);
 				if (self.decryptedBuffer.len == 0) return;
@@ -990,7 +990,7 @@ pub const Connection = struct { // MARK: Connection
 				}
 				self.protocolBuffer.clearRetainingCapacity();
 				if (self.protocolBuffer.items.len > 1 << 24) {
-					self.protocolBuffer.shrinkAndFree(main.globalAllocator, 1 << 24);
+					self.protocolBuffer.shrinkAndFree(root.globalAllocator, 1 << 24);
 				}
 			}
 		}
@@ -1009,7 +1009,7 @@ pub const Connection = struct { // MARK: Connection
 			if (start -% self.availablePosition < 0) return .accepted; // We accepted it in the past.
 			const offset: usize = @intCast(start -% self.availablePosition);
 			self.buffer.insertSliceAtOffset(data, offset) catch return .rejected;
-			self.ranges.addRange(main.globalAllocator, .{.start = start, .len = len});
+			self.ranges.addRange(root.globalAllocator, .{.start = start, .len = len});
 			if (start == self.availablePosition) {
 				try self.collectRangesAndExecuteProtocols(secureChannel, conn);
 			}
@@ -1033,8 +1033,8 @@ pub const Connection = struct { // MARK: Connection
 			}
 		};
 		unconfirmedRanges: std.PriorityQueue(Range, void, Range.compareTime) = .initContext({}),
-		lostRanges: main.utils.CircularBufferQueue(Range),
-		buffer: main.utils.CircularBufferQueue(u8),
+		lostRanges: root.utils.CircularBufferQueue(Range),
+		buffer: root.utils.CircularBufferQueue(u8),
 		fullyConfirmedIndex: SequenceIndex,
 		highestSentIndex: SequenceIndex,
 		nextIndex: SequenceIndex,
@@ -1042,8 +1042,8 @@ pub const Connection = struct { // MARK: Connection
 
 		pub fn init(index: SequenceIndex) SendBuffer {
 			return .{
-				.lostRanges = .init(main.globalAllocator, 1 << 10),
-				.buffer = .init(main.globalAllocator, 1 << 20),
+				.lostRanges = .init(root.globalAllocator, 1 << 10),
+				.buffer = .init(root.globalAllocator, 1 << 20),
 				.fullyConfirmedIndex = index,
 				.highestSentIndex = index,
 				.nextIndex = index,
@@ -1052,7 +1052,7 @@ pub const Connection = struct { // MARK: Connection
 		}
 
 		pub fn deinit(self: *SendBuffer) void {
-			self.unconfirmedRanges.deinit(main.globalAllocator.allocator);
+			self.unconfirmedRanges.deinit(root.globalAllocator.allocator);
 			self.lostRanges.deinit();
 			self.buffer.deinit();
 		}
@@ -1065,7 +1065,7 @@ pub const Connection = struct { // MARK: Connection
 			if (self.highestSentIndex == self.fullyConfirmedIndex) {
 				self.lastUnsentTime = time;
 			}
-			var fullData: main.ListManaged(u8) = .init(main.stackAllocator);
+			var fullData: main.ListManaged(u8) = .init(root.stackAllocator);
 			defer fullData.deinit();
 			if (data.len + self.buffer.len > std.math.maxInt(SequenceIndex)) return error.OutOfMemory;
 			fullData.append(protocolIndex);
@@ -1147,7 +1147,7 @@ pub const Connection = struct { // MARK: Connection
 		}
 
 		pub fn getNextPacketToSend(self: *SendBuffer, byteIndex: *SequenceIndex, buf: []u8, time: i64, considerForCongestionControl: bool, allowedDelay: i64) ?usize {
-			self.unconfirmedRanges.ensureUnusedCapacity(main.globalAllocator.allocator, 1) catch unreachable;
+			self.unconfirmedRanges.ensureUnusedCapacity(root.globalAllocator.allocator, 1) catch unreachable;
 			// Resend old packet:
 			if (self.lostRanges.popFront()) |_range| {
 				var range = _range;
@@ -1164,7 +1164,7 @@ pub const Connection = struct { // MARK: Connection
 				self.buffer.getSliceAtOffset(@intCast(range.start -% self.fullyConfirmedIndex), buf[0..@intCast(range.len)]) catch unreachable;
 				range.timestamp = time;
 				byteIndex.* = range.start;
-				self.unconfirmedRanges.push(main.globalAllocator.allocator, range) catch unreachable;
+				self.unconfirmedRanges.push(root.globalAllocator.allocator, range) catch unreachable;
 				return @intCast(range.len);
 			}
 
@@ -1176,7 +1176,7 @@ pub const Connection = struct { // MARK: Connection
 
 			self.buffer.getSliceAtOffset(@intCast(self.highestSentIndex -% self.fullyConfirmedIndex), buf[0..@intCast(len)]) catch unreachable;
 			byteIndex.* = self.highestSentIndex;
-			self.unconfirmedRanges.push(main.globalAllocator.allocator, .{
+			self.unconfirmedRanges.push(root.globalAllocator.allocator, .{
 				.start = self.highestSentIndex,
 				.len = len,
 				.timestamp = time,
@@ -1231,7 +1231,7 @@ pub const Connection = struct { // MARK: Connection
 		}
 
 		pub fn sendNextPacketAndGetSize(self: *Channel, conn: *Connection, time: i64, considerForCongestionControl: bool) ?usize {
-			var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, conn.mtuEstimate);
+			var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, conn.mtuEstimate);
 			defer writer.deinit();
 
 			writer.writeEnum(ChannelId, self.channelId);
@@ -1263,13 +1263,13 @@ pub const Connection = struct { // MARK: Connection
 		serverCertificate: c.mbedtls_x509_crt = .{},
 		serverKey: c.mbedtls_pk_context = .{},
 		dataToReceive: []const u8 = &.{},
-		mutex: main.utils.Mutex = .{},
+		mutex: root.utils.Mutex = .{},
 
-		side: main.sync.Side,
+		side: root.sync.Side,
 		finishedCollectingClientVerificationData: bool = false,
 		verificationDataForClientSignature: main.List(u8) = .empty,
 
-		pub fn init(self: *SecureChannel, sequenceIndex: SequenceIndex, delay: i64, id: ChannelId, side: main.sync.Side) !void {
+		pub fn init(self: *SecureChannel, sequenceIndex: SequenceIndex, delay: i64, id: ChannelId, side: root.sync.Side) !void {
 			self.* = .{
 				.super = .init(sequenceIndex, delay, id),
 				.side = side,
@@ -1328,7 +1328,7 @@ pub const Connection = struct { // MARK: Connection
 			c.mbedtls_x509_crt_free(&self.serverCertificate);
 			c.mbedtls_pk_free(&self.serverKey);
 			self.super.deinit();
-			self.verificationDataForClientSignature.deinit(main.globalAllocator);
+			self.verificationDataForClientSignature.deinit(root.globalAllocator);
 		}
 
 		fn checkResult(result: c_int, function: []const u8) !void {
@@ -1352,7 +1352,7 @@ pub const Connection = struct { // MARK: Connection
 				const result = c.mbedtls_ssl_handshake(&self.sslContext);
 				self.mutex.unlock();
 				if (result == c.MBEDTLS_ERR_SSL_WANT_READ) {
-					main.heap.GarbageCollection.syncPoint();
+					root.heap.GarbageCollection.syncPoint();
 					try main.io.sleep(.fromMilliseconds(10), .awake);
 					continue;
 				}
@@ -1368,7 +1368,7 @@ pub const Connection = struct { // MARK: Connection
 			if (!self.finishedCollectingClientVerificationData) {
 				@branchHint(.unlikely);
 				if (self.side == .server) {
-					self.verificationDataForClientSignature.appendSlice(main.globalAllocator, data[0..len]);
+					self.verificationDataForClientSignature.appendSlice(root.globalAllocator, data[0..len]);
 				}
 			}
 			return @intCast(len);
@@ -1383,7 +1383,7 @@ pub const Connection = struct { // MARK: Connection
 			if (!self.finishedCollectingClientVerificationData) {
 				@branchHint(.unlikely);
 				if (self.side == .client) {
-					self.verificationDataForClientSignature.appendSlice(main.globalAllocator, self.dataToReceive[0..copyLen]);
+					self.verificationDataForClientSignature.appendSlice(root.globalAllocator, self.dataToReceive[0..copyLen]);
 				}
 			}
 			self.dataToReceive = self.dataToReceive[copyLen..];
@@ -1487,7 +1487,7 @@ pub const Connection = struct { // MARK: Connection
 	// MARK: fields
 
 	manager: *ConnectionManager,
-	user: ?*main.server.User,
+	user: ?*root.server.User,
 
 	remoteAddress: SocketAddress,
 	bruteforcingPort: bool = false,
@@ -1506,7 +1506,7 @@ pub const Connection = struct { // MARK: Connection
 	lastRttSampleTime: i64,
 	nextPacketTimestamp: i64,
 	nextConfirmationTimestamp: i64,
-	queuedConfirmations: main.utils.CircularBufferQueue(ConfirmationData),
+	queuedConfirmations: root.utils.CircularBufferQueue(ConfirmationData),
 	mtuEstimate: u16 = minMtu,
 
 	bandwidthEstimateInBytesPerRtt: f32 = minMtu,
@@ -1516,18 +1516,18 @@ pub const Connection = struct { // MARK: Connection
 
 	connectionState: Atomic(ConnectionState),
 	handShakeState: Atomic(HandShakeState) = .init(.start),
-	handShakeWaiting: main.utils.Condition = .{},
+	handShakeWaiting: root.utils.Condition = .{},
 	lastConnectionTime: ?i64,
 
 	// To distinguish different connections from the same computer to avoid multiple reconnects
 	connectionIdentifier: i64,
 	remoteConnectionIdentifier: i64,
 
-	mutex: main.utils.Mutex = .{},
+	mutex: root.utils.Mutex = .{},
 
-	pub fn init(manager: *ConnectionManager, ipPort: []const u8, user: ?*main.server.User) !*Connection {
-		const result: *Connection = main.globalAllocator.create(Connection);
-		errdefer main.globalAllocator.destroy(result);
+	pub fn init(manager: *ConnectionManager, ipPort: []const u8, user: ?*root.server.User) !*Connection {
+		const result: *Connection = root.globalAllocator.create(Connection);
+		errdefer root.globalAllocator.destroy(result);
 		result.* = Connection{
 			.manager = manager,
 			.user = user,
@@ -1537,7 +1537,7 @@ pub const Connection = struct { // MARK: Connection
 			.nextPacketTimestamp = networkTimestamp(),
 			.nextConfirmationTimestamp = networkTimestamp(),
 			.lastRttSampleTime = networkTimestamp() -% 10_000*ms,
-			.queuedConfirmations = .init(main.globalAllocator, 1024),
+			.queuedConfirmations = .init(root.globalAllocator, 1024),
 			.lossyChannel = .init(main.random.nextInt(SequenceIndex, &main.seed), 1*ms, .lossy),
 			.secureChannel = undefined,
 			.slowChannel = .init(main.random.nextInt(SequenceIndex, &main.seed), 100*ms, .slow),
@@ -1568,7 +1568,7 @@ pub const Connection = struct { // MARK: Connection
 		self.secureChannel.deinit();
 		self.slowChannel.deinit();
 		self.queuedConfirmations.deinit();
-		main.globalAllocator.destroy(self);
+		root.globalAllocator.destroy(self);
 	}
 
 	// pretending the connection is closed
@@ -1587,7 +1587,7 @@ pub const Connection = struct { // MARK: Connection
 		if (self.connectionState.load(.monotonic) == .paused) {
 			self.connectionState.store(.connected, .monotonic);
 		}
-		main.network.protocols.reload.informClientOfRestart(self);
+		root.network.protocols.reload.informClientOfRestart(self);
 		self.handShakeState.store(.signatureResponse, .monotonic);
 		if (self.user) |user| {
 			user.@"continue"();
@@ -1608,7 +1608,7 @@ pub const Connection = struct { // MARK: Connection
 		const restartCounter = try reader.readInt(u32);
 
 		if (!conn.isServerSide()) {
-			const state = try reader.readEnum(main.server.User.State);
+			const state = try reader.readEnum(root.server.User.State);
 
 			if (conn.restartCounter < restartCounter) {
 				conn.restartCounter = restartCounter;
@@ -1725,7 +1725,7 @@ pub const Connection = struct { // MARK: Connection
 
 	fn sendConfirmationPacket(self: *Connection, timestamp: i64) void {
 		std.debug.assert(self.manager.threadId == std.Thread.getCurrentId());
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, self.mtuEstimate);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, self.mtuEstimate);
 		defer writer.deinit();
 
 		writer.writeEnum(ChannelId, .confirmation);
@@ -1794,7 +1794,7 @@ pub const Connection = struct { // MARK: Connection
 					if (self.remoteConnectionIdentifier != remoteConnectionIdentifier) { // Reconnection attempt
 						if (self.user) |user| {
 							self.manager.removeConnection(self);
-							main.server.disconnect(user);
+							root.server.disconnect(user);
 						} else {
 							std.log.err("Server reconnected?", .{});
 							self.disconnect();
@@ -1806,7 +1806,7 @@ pub const Connection = struct { // MARK: Connection
 			}
 			// Acknowledge the packet on the client:
 			if (self.user == null) {
-				var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 1 + @sizeOf(i64));
+				var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 1 + @sizeOf(i64));
 				defer writer.deinit();
 
 				writer.writeEnum(ChannelId, .init);
@@ -1881,7 +1881,7 @@ pub const Connection = struct { // MARK: Connection
 				// Send the initial packet once every 100 ms.
 				if (timestamp -% self.nextPacketTimestamp < 0) return;
 				self.nextPacketTimestamp = timestamp +% 100*ms;
-				var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 1 + @sizeOf(i64) + 3*@sizeOf(SequenceIndex));
+				var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 1 + @sizeOf(i64) + 3*@sizeOf(SequenceIndex));
 				defer writer.deinit();
 
 				writer.writeEnum(ChannelId, .init);
@@ -1944,12 +1944,12 @@ pub const Connection = struct { // MARK: Connection
 	pub fn disconnect(self: *Connection) void {
 		self.manager.send(&.{@intFromEnum(ChannelId.disconnect)}, self.remoteAddress, null);
 		self.connectionState.store(.disconnected, .monotonic);
-		if (builtin.os.tag == .windows and !self.isServerSide() and main.server.world != null) {
+		if (builtin.os.tag == .windows and !self.isServerSide() and root.server.world != null) {
 			main.io.sleep(.fromMilliseconds(10), .awake) catch {}; // Windows is too eager to close the socket, without waiting here we get a ConnectionResetByPeer on the other side.
 		}
 		self.manager.removeConnection(self);
 		if (self.user) |user| {
-			main.server.disconnect(user);
+			root.server.disconnect(user);
 		} else {
 			self.handShakeWaiting.broadcast();
 			if (self.handShakeState.load(.monotonic) == .complete) {
@@ -2000,8 +2000,8 @@ test "Format address" {
 	};
 	for (socketAddresses) |addressStr| {
 		const address = try SocketAddress.resolve(addressStr, null);
-		const reformattedAddress = std.fmt.allocPrint(main.heap.testingAllocator.allocator, "{f}", .{address}) catch unreachable;
-		defer main.heap.testingAllocator.free(reformattedAddress);
+		const reformattedAddress = std.fmt.allocPrint(root.heap.testingAllocator.allocator, "{f}", .{address}) catch unreachable;
+		defer root.heap.testingAllocator.free(reformattedAddress);
 		try std.testing.expectEqualStrings(addressStr, reformattedAddress);
 	}
 }

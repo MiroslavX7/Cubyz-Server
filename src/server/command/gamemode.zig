@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Get or set a player's gamemode.";
@@ -22,7 +22,7 @@ pub fn execute(args: Args, source: Source) void {
 			const target = command.Target.fromPlayerIndex(params.playerIndex, source) catch return;
 
 			if (params.mode) |mode| {
-				main.sync.setGamemode(target.user, mode);
+				root.sync.setGamemode(target.user, mode);
 			} else {
 				source.sendMessage("#ffff00{s}", .{@tagName(target.user.gamemode.load(.monotonic))});
 			}

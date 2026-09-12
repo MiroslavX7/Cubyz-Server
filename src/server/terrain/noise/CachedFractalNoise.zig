@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array2D = main.utils.Array2D;
-const MapFragmentPosition = main.server.terrain.SurfaceMap.MapFragmentPosition;
+const Array2D = root.utils.Array2D;
+const MapFragmentPosition = root.server.terrain.SurfaceMap.MapFragmentPosition;
 
 const CachedFractalNoise = @This();
 
@@ -21,7 +21,7 @@ pub fn init(wx: i32, wy: i32, voxelSize: u31, size: u31, worldSeed: u64, scale: 
 			.voxelSize = voxelSize,
 			.voxelSizeShift = @ctz(voxelSize),
 		},
-		.cache = .init(main.globalAllocator, cacheWidth, cacheWidth),
+		.cache = .init(root.globalAllocator, cacheWidth, cacheWidth),
 		.scale = scale,
 		.worldSeed = worldSeed,
 	};
@@ -39,7 +39,7 @@ pub fn init(wx: i32, wy: i32, voxelSize: u31, size: u31, worldSeed: u64, scale: 
 }
 
 pub fn deinit(self: CachedFractalNoise) void {
-	self.cache.deinit(main.globalAllocator);
+	self.cache.deinit(root.globalAllocator);
 }
 
 pub fn getRandomValue(self: CachedFractalNoise, wx: i32, wy: i32) f32 {

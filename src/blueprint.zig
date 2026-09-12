@@ -1,23 +1,23 @@
 const std = @import("std");
 
 const root = @import("root");
-const Compression = main.utils.Compression;
+const Compression = root.utils.Compression;
 const ZonElement = main.ZonElement;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 
-const Array3D = main.utils.Array3D;
-const Block = main.blocks.Block;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const User = main.server.User;
-const ServerChunk = main.chunk.ServerChunk;
+const Array3D = root.utils.Array3D;
+const Block = root.blocks.Block;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const User = root.server.User;
+const ServerChunk = root.chunk.ServerChunk;
 const Degrees = main.rotation.Degrees;
 const Tag = main.Tag;
 
-const BinaryWriter = main.utils.BinaryWriter;
-const BinaryReader = main.utils.BinaryReader;
+const BinaryWriter = root.utils.BinaryWriter;
+const BinaryReader = root.utils.BinaryReader;
 
-const AliasTable = main.utils.AliasTable;
+const AliasTable = root.utils.AliasTable;
 const List = main.List;
 
 const GameIdToBlueprintIdMapType = std.AutoHashMap(Block, BlockStorageType);
@@ -117,7 +117,7 @@ pub const Blueprint = struct { // MARK: Blueprint
 				for (0..sizeZ) |z| {
 					const worldZ = startZ +% @as(i32, @intCast(z));
 
-					const maybeBlock = main.server.world.?.getBlock(worldX, worldY, worldZ);
+					const maybeBlock = root.server.world.?.getBlock(worldX, worldY, worldZ);
 					if (maybeBlock) |block| {
 						self.blocks.set(x, y, z, block);
 					} else {
@@ -184,7 +184,7 @@ pub const Blueprint = struct { // MARK: Blueprint
 
 					const block = self.blocks.get(x, y, z);
 					if (block.typ != voidType or flags.preserveVoid) {
-						_ = main.server.world.?.updateBlock(worldX, worldY, worldZ, block);
+						_ = root.server.world.?.updateBlock(worldX, worldY, worldZ, block);
 					}
 				}
 			}
@@ -208,14 +208,14 @@ pub const Blueprint = struct { // MARK: Blueprint
 		const self = Blueprint{.blocks = .init(allocator, width, depth, height)};
 
 		const decompressedData = try self.decompressBuffer(compressedReader.remaining, blockPaletteSizeBytes, compression);
-		defer main.stackAllocator.free(decompressedData);
+		defer root.stackAllocator.free(decompressedData);
 		var decompressedReader = BinaryReader.init(decompressedData);
 
-		const palette = try loadBlockPalette(main.stackAllocator, paletteBlockCount, &decompressedReader);
-		defer main.stackAllocator.free(palette);
+		const palette = try loadBlockPalette(root.stackAllocator, paletteBlockCount, &decompressedReader);
+		defer root.stackAllocator.free(palette);
 
-		const blueprintIdToGameIdMap = makeBlueprintIdToGameIdMap(main.stackAllocator, palette);
-		defer main.stackAllocator.free(blueprintIdToGameIdMap);
+		const blueprintIdToGameIdMap = makeBlueprintIdToGameIdMap(root.stackAllocator, palette);
+		defer root.stackAllocator.free(blueprintIdToGameIdMap);
 
 		for (self.blocks.mem) |*block| {
 			const blueprintBlockRaw = try decompressedReader.readInt(BlockStorageType);
@@ -232,11 +232,11 @@ pub const Blueprint = struct { // MARK: Blueprint
 		return self;
 	}
 	pub fn store(self: Blueprint, allocator: NeverFailingAllocator) []u8 {
-		var gameIdToBlueprintId = self.makeGameIdToBlueprintIdMap(main.stackAllocator);
+		var gameIdToBlueprintId = self.makeGameIdToBlueprintIdMap(root.stackAllocator);
 		defer gameIdToBlueprintId.deinit();
 		std.debug.assert(gameIdToBlueprintId.count() != 0);
 
-		var uncompressedWriter = BinaryWriter.init(main.stackAllocator);
+		var uncompressedWriter = BinaryWriter.init(root.stackAllocator);
 		defer uncompressedWriter.deinit();
 
 		const blockPaletteSizeBytes = storeBlockPalette(gameIdToBlueprintId, &uncompressedWriter);
@@ -246,8 +246,8 @@ pub const Blueprint = struct { // MARK: Blueprint
 			uncompressedWriter.writeInt(BlockStorageType, blueprintBlock);
 		}
 
-		const compressed = self.compressOutputBuffer(main.stackAllocator, uncompressedWriter.data.items);
-		defer main.stackAllocator.free(compressed.data);
+		const compressed = self.compressOutputBuffer(root.stackAllocator, uncompressedWriter.data.items);
+		defer root.stackAllocator.free(compressed.data);
 
 		var outputWriter = BinaryWriter.initCapacity(allocator, @sizeOf(i16) + @sizeOf(BlueprintCompression) + @sizeOf(u32) + @sizeOf(u16)*4 + compressed.data.len);
 
@@ -267,7 +267,7 @@ pub const Blueprint = struct { // MARK: Blueprint
 		var blueprintIdToGameIdMap = allocator.alloc(Block, palette.len);
 
 		for (palette, 0..) |blockName, blueprintBlockId| {
-			const block = main.blocks.parseBlockWithOptions(blockName, .{.applyMigrations = true});
+			const block = root.blocks.parseBlockWithOptions(blockName, .{.applyMigrations = true});
 			blueprintIdToGameIdMap[blueprintBlockId] = block;
 		}
 		return blueprintIdToGameIdMap;
@@ -295,8 +295,8 @@ pub const Blueprint = struct { // MARK: Blueprint
 		return palette;
 	}
 	fn storeBlockPalette(map: GameIdToBlueprintIdMapType, writer: *BinaryWriter) usize {
-		var blockPalette = main.stackAllocator.alloc(Block, map.count());
-		defer main.stackAllocator.free(blockPalette);
+		var blockPalette = root.stackAllocator.alloc(Block, map.count());
+		defer root.stackAllocator.free(blockPalette);
 
 		var iterator = map.iterator();
 		while (iterator.next()) |entry| {
@@ -305,7 +305,7 @@ pub const Blueprint = struct { // MARK: Blueprint
 
 		std.log.info("Blueprint block palette:", .{});
 
-		var idAndDataList: main.ListManaged(u8) = .init(main.stackAllocator);
+		var idAndDataList: main.ListManaged(u8) = .init(root.stackAllocator);
 		defer idAndDataList.deinit();
 
 		for (0..blockPalette.len) |index| {
@@ -324,7 +324,7 @@ pub const Blueprint = struct { // MARK: Blueprint
 		const blockArraySizeBytes = self.blocks.width*self.blocks.depth*self.blocks.height*@sizeOf(BlockStorageType);
 		const decompressedDataSizeBytes = blockPaletteSizeBytes + blockArraySizeBytes;
 
-		const decompressedData = main.stackAllocator.alloc(u8, decompressedDataSizeBytes);
+		const decompressedData = root.stackAllocator.alloc(u8, decompressedDataSizeBytes);
 
 		switch (compression) {
 			.deflate => {
@@ -378,7 +378,7 @@ pub const Pattern = struct {
 		var totalWeight: f32 = 0;
 
 		var weightedEntries: List(struct { block: Block, weight: f32 }) = .empty;
-		defer weightedEntries.deinit(main.stackAllocator);
+		defer weightedEntries.deinit(root.stackAllocator);
 
 		while (specifiers.next()) |specifier| {
 			var blockId = specifier;
@@ -393,11 +393,11 @@ pub const Pattern = struct {
 				if (weight <= 0) return error.@"Weight must be greater than 0";
 			}
 
-			_ = main.blocks.getBlockById(blockId) catch return error.@"Block not found";
-			const block = main.blocks.parseBlock(blockId);
+			_ = root.blocks.getBlockById(blockId) catch return error.@"Block not found";
+			const block = root.blocks.parseBlock(blockId);
 
 			totalWeight += weight;
-			weightedEntries.append(main.stackAllocator, .{.block = block, .weight = weight});
+			weightedEntries.append(root.stackAllocator, .{.block = block, .weight = weight});
 		}
 
 		const entries = allocator.alloc(Entry, weightedEntries.items.len);
@@ -554,8 +554,8 @@ pub const Mask = struct { // MARK: Mask
 
 fn parseBlockLike(block: []const u8) error{ DataParsingFailed, IdParsingFailed }!Mask.Entry.Inner {
 	if (@import("builtin").is_test) return try Test.parseBlockLikeTest(block);
-	const typ = main.blocks.getBlockById(block) catch return error.IdParsingFailed;
-	const dataNullable = main.blocks.getBlockData(block) catch return error.DataParsingFailed;
+	const typ = root.blocks.getBlockById(block) catch return error.IdParsingFailed;
+	const dataNullable = root.blocks.getBlockData(block) catch return error.DataParsingFailed;
 	if (dataNullable) |data| return .{.block = .{.typ = typ, .data = data}};
 	return .{.blockType = typ};
 }
@@ -589,8 +589,8 @@ test "Mask match block type with any data" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 null";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	const mask = try Mask.initFromString(main.heap.testingAllocator, "addon:dummy");
-	defer mask.deinit(main.heap.testingAllocator);
+	const mask = try Mask.initFromString(root.heap.testingAllocator, "addon:dummy");
+	defer mask.deinit(root.heap.testingAllocator);
 
 	try std.testing.expect(mask.match(.{.typ = 1, .data = 0}));
 	try std.testing.expect(mask.match(.{.typ = 1, .data = 1}));
@@ -601,43 +601,43 @@ test "Mask empty negative case" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 null";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	try std.testing.expectError(error.MissingExpression, Mask.initFromString(main.heap.testingAllocator, ""));
+	try std.testing.expectError(error.MissingExpression, Mask.initFromString(root.heap.testingAllocator, ""));
 }
 
 test "Mask half-or negative case" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 null";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	try std.testing.expectError(error.MissingExpression, Mask.initFromString(main.heap.testingAllocator, "addon:dummy|"));
+	try std.testing.expectError(error.MissingExpression, Mask.initFromString(root.heap.testingAllocator, "addon:dummy|"));
 }
 
 test "Mask half-or negative case 2" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 null";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	try std.testing.expectError(error.MissingExpression, Mask.initFromString(main.heap.testingAllocator, "|addon:dummy"));
+	try std.testing.expectError(error.MissingExpression, Mask.initFromString(root.heap.testingAllocator, "|addon:dummy"));
 }
 
 test "Mask half-and negative case" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 null";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	try std.testing.expectError(error.MissingExpression, Mask.initFromString(main.heap.testingAllocator, "addon:dummy&"));
+	try std.testing.expectError(error.MissingExpression, Mask.initFromString(root.heap.testingAllocator, "addon:dummy&"));
 }
 
 test "Mask half-and negative case 2" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 null";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	try std.testing.expectError(error.MissingExpression, Mask.initFromString(main.heap.testingAllocator, "&addon:dummy"));
+	try std.testing.expectError(error.MissingExpression, Mask.initFromString(root.heap.testingAllocator, "&addon:dummy"));
 }
 
 test "Mask inverse match block type with any data" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 null";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	const mask = try Mask.initFromString(main.heap.testingAllocator, "!addon:dummy");
-	defer mask.deinit(main.heap.testingAllocator);
+	const mask = try Mask.initFromString(root.heap.testingAllocator, "!addon:dummy");
+	defer mask.deinit(root.heap.testingAllocator);
 
 	try std.testing.expect(!mask.match(.{.typ = 1, .data = 0}));
 	try std.testing.expect(!mask.match(.{.typ = 1, .data = 1}));
@@ -648,8 +648,8 @@ test "Mask match block type with exact data" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike 1 1";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	const mask = try Mask.initFromString(main.heap.testingAllocator, "addon:dummy");
-	defer mask.deinit(main.heap.testingAllocator);
+	const mask = try Mask.initFromString(root.heap.testingAllocator, "addon:dummy");
+	defer mask.deinit(root.heap.testingAllocator);
 
 	try std.testing.expect(!mask.match(.{.typ = 1, .data = 0}));
 	try std.testing.expect(mask.match(.{.typ = 1, .data = 1}));
@@ -660,8 +660,8 @@ test "Mask match type 0 or type 1 with exact data" {
 	Test.parseBlockLikeTest = &Test.@"parseBlockLike foo or bar";
 	defer Test.parseBlockLikeTest = &Test.defaultParseBlockLike;
 
-	const mask = try Mask.initFromString(main.heap.testingAllocator, "addon:foo|addon:bar");
-	defer mask.deinit(main.heap.testingAllocator);
+	const mask = try Mask.initFromString(root.heap.testingAllocator, "addon:foo|addon:bar");
+	defer mask.deinit(root.heap.testingAllocator);
 
 	try std.testing.expect(mask.match(.{.typ = 1, .data = 0}));
 	try std.testing.expect(mask.match(.{.typ = 2, .data = 0}));

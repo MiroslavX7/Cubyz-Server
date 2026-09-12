@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
-const model = main.entity.components.@"cubyz:model";
+const model = root.entity.components.@"cubyz:model";
 
 pub const description = "Lookup or change your avatar";
 pub const usage =

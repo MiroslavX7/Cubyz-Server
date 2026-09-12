@@ -40,19 +40,19 @@ pub fn globalDeinit() void {
 }
 
 pub fn init(pos: Vec2f, width: f32, text: []const u8, comptime fmt: []const u8, valueList: anytype, initialValue: u16, callback: *const fn (u16) void) *DiscreteSlider {
-	const values = main.globalAllocator.alloc([]const u8, valueList.len);
+	const values = root.globalAllocator.alloc([]const u8, valueList.len);
 	var maxLen: usize = 0;
 	for (valueList, 0..) |value, i| {
-		values[i] = main.globalAllocator.print(fmt, .{value});
+		values[i] = root.globalAllocator.print(fmt, .{value});
 		maxLen = @max(maxLen, values[i].len);
 	}
 
-	const initialText = main.globalAllocator.alloc(u8, text.len + maxLen);
+	const initialText = root.globalAllocator.alloc(u8, text.len + maxLen);
 	@memcpy(initialText[0..text.len], text);
 	@memset(initialText[text.len..], ' ');
 	const label = Label.init(undefined, width - 3*border, initialText, .center);
 	const button = Button.initText(.{0, 0}, undefined, "", .{});
-	const self = main.globalAllocator.create(DiscreteSlider);
+	const self = root.globalAllocator.create(DiscreteSlider);
 	self.* = DiscreteSlider{
 		.pos = pos,
 		.size = undefined,
@@ -75,11 +75,11 @@ pub fn deinit(self: *const DiscreteSlider) void {
 	self.label.deinit();
 	self.button.deinit();
 	for (self.values) |value| {
-		main.globalAllocator.free(value);
+		root.globalAllocator.free(value);
 	}
-	main.globalAllocator.free(self.values);
-	main.globalAllocator.free(self.currentText);
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.free(self.values);
+	root.globalAllocator.free(self.currentText);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn toComponent(self: *DiscreteSlider) GuiComponent {
@@ -95,8 +95,8 @@ fn setButtonPosFromValue(self: *DiscreteSlider) void {
 }
 
 fn updateLabel(self: *DiscreteSlider, newValue: []const u8, width: f32) void {
-	main.globalAllocator.free(self.currentText);
-	self.currentText = main.globalAllocator.alloc(u8, newValue.len + self.text.len);
+	root.globalAllocator.free(self.currentText);
+	self.currentText = root.globalAllocator.alloc(u8, newValue.len + self.text.len);
 	@memcpy(self.currentText[0..self.text.len], self.text);
 	@memcpy(self.currentText[self.text.len..], newValue);
 	const label = Label.init(undefined, width - 3*border, self.currentText, .center);

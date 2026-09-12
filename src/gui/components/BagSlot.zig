@@ -35,7 +35,7 @@ pub fn globalDeinit() void {
 }
 
 pub fn init(pos: Vec2f, inventory: *BagInventory) *BagSlot {
-	const self = main.globalAllocator.create(BagSlot);
+	const self = root.globalAllocator.create(BagSlot);
 	self.* = .{
 		.inventory = inventory,
 		.pos = pos,
@@ -44,7 +44,7 @@ pub fn init(pos: Vec2f, inventory: *BagInventory) *BagSlot {
 }
 
 pub fn deinit(self: *const BagSlot) void {
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn toComponent(self: *BagSlot) GuiComponent {
@@ -68,13 +68,13 @@ pub fn mainButtonReleased(self: *BagSlot, mousePosition: Vec2f) void {
 		if (GuiComponent.contains(self.pos, self.size, mousePosition)) {
 			const carried = gui.inventory.carried;
 			if (main.KeyBoard.key("mainGuiButton").modsOnPress.shift) {
-				main.sync.client.executeCommand(.{.takeFromPlayerBag = .init(&.{main.game.Player.inventory}, std.math.maxInt(u16))});
+				root.sync.client.executeCommand(.{.takeFromPlayerBag = .init(&.{main.game.Player.inventory}, std.math.maxInt(u16))});
 				return;
 			}
 			if (carried.getAmount(0) != 0) {
-				main.sync.client.executeCommand(.{.moveToPlayerBag = .{.amount = carried.getAmount(0), .source = .{.inv = carried.super, .slot = 0}}});
+				root.sync.client.executeCommand(.{.moveToPlayerBag = .{.amount = carried.getAmount(0), .source = .{.inv = carried.super, .slot = 0}}});
 			} else {
-				main.sync.client.executeCommand(.{.takeFromPlayerBag = .init(&.{carried}, std.math.maxInt(u16))});
+				root.sync.client.executeCommand(.{.takeFromPlayerBag = .init(&.{carried}, std.math.maxInt(u16))});
 			}
 		}
 	}
@@ -105,7 +105,7 @@ pub fn render(self: *BagSlot, _: Vec2f) void {
 		}
 		var buf: [16]u8 = undefined;
 		var text = TextBuffer.init(
-			main.stackAllocator,
+			root.stackAllocator,
 			std.fmt.bufPrint(&buf, "{}", .{amount}) catch "∞",
 			.{.color = if (amount == 0) 0xff0000 else 0xffffff},
 			false,

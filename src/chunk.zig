@@ -135,8 +135,8 @@ pub const Neighbor = enum(u3) { // MARK: Neighbor
 	}
 };
 
-var memoryPool: main.heap.MemoryPool(Chunk) = .init(main.globalArena);
-var serverPool: main.heap.MemoryPool(ServerChunk) = .init(main.globalArena);
+var memoryPool: root.heap.MemoryPool(Chunk) = .init(root.globalArena);
+var serverPool: root.heap.MemoryPool(ServerChunk) = .init(root.globalArena);
 
 pub const Lod = enum(u5) {
 	@"1" = 0,
@@ -363,14 +363,14 @@ pub const BlockPos = packed struct(u15) { // MARK: BlockPos
 
 pub const Chunk = struct { // MARK: Chunk
 	pos: ChunkPosition,
-	data: main.utils.PaletteCompressedRegion(Block, chunkVolume) = undefined,
+	data: root.utils.PaletteCompressedRegion(Block, chunkVolume) = undefined,
 
 	width: u31,
 	voxelSizeShift: u5,
 	voxelSizeMask: i32,
 
 	blockPosToEntityDataMap: std.AutoHashMapUnmanaged(BlockPos, main.block_entity.BlockEntity),
-	blockPosToEntityDataMapMutex: main.utils.Mutex,
+	blockPosToEntityDataMapMutex: root.utils.Mutex,
 
 	pub fn init(pos: ChunkPosition) *Chunk {
 		const self = memoryPool.create();
@@ -396,11 +396,11 @@ pub const Chunk = struct { // MARK: Chunk
 
 	fn deinitContent(self: *Chunk) void {
 		std.debug.assert(self.blockPosToEntityDataMap.count() == 0);
-		self.blockPosToEntityDataMap.deinit(main.globalAllocator.allocator);
+		self.blockPosToEntityDataMap.deinit(root.globalAllocator.allocator);
 		self.data.deferredDeinit();
 	}
 
-	pub fn unloadBlockEntities(self: *Chunk, comptime side: main.sync.Side) void {
+	pub fn unloadBlockEntities(self: *Chunk, comptime side: root.sync.Side) void {
 		self.blockPosToEntityDataMapMutex.lock();
 		defer self.blockPosToEntityDataMapMutex.unlock();
 		var iterator = self.blockPosToEntityDataMap.iterator();
@@ -466,7 +466,7 @@ pub const ServerChunk = struct { // MARK: ServerChunk
 	wasStored: bool = false,
 	shouldStoreNeighbors: bool = false,
 
-	mutex: main.utils.Mutex = .{},
+	mutex: root.utils.Mutex = .{},
 	refCount: std.atomic.Value(u16),
 
 	pub fn initAndIncreaseRefCount(pos: ChunkPosition) *ServerChunk {
@@ -491,11 +491,11 @@ pub const ServerChunk = struct { // MARK: ServerChunk
 
 	pub fn deinit(self: *ServerChunk) void {
 		std.debug.assert(self.refCount.raw == 0);
-		const oldContext = main.sync.threadContext;
-		defer main.sync.threadContext = oldContext;
-		main.sync.threadContext = .chunkDeiniting;
+		const oldContext = root.sync.threadContext;
+		defer root.sync.threadContext = oldContext;
+		root.sync.threadContext = .chunkDeiniting;
 		if (self.wasChanged) {
-			self.save(main.server.world.?);
+			self.save(root.server.world.?);
 		}
 		self.super.unloadBlockEntities(.server);
 		self.super.deinitContent();
@@ -507,7 +507,7 @@ pub const ServerChunk = struct { // MARK: ServerChunk
 		if (!self.wasChanged) {
 			self.wasChanged = true;
 			self.increaseRefCount();
-			main.server.world.?.queueChunkUpdateAndDecreaseRefCount(self);
+			root.server.world.?.queueChunkUpdateAndDecreaseRefCount(self);
 		}
 	}
 
@@ -676,7 +676,7 @@ pub const ServerChunk = struct { // MARK: ServerChunk
 		self.setChanged();
 	}
 
-	pub fn save(self: *ServerChunk, world: *main.server.ServerWorld) void {
+	pub fn save(self: *ServerChunk, world: *root.server.ServerWorld) void {
 		self.mutex.lock();
 		defer self.mutex.unlock();
 		if (self.shouldStoreNeighbors and self.super.pos.voxelSize == 1) {
@@ -690,7 +690,7 @@ pub const ServerChunk = struct { // MARK: ServerChunk
 					var dz: i32 = -@as(i32, chunkSize);
 					while (dz <= chunkSize) : (dz += chunkSize) {
 						if (dx == 0 and dy == 0 and dz == 0) continue;
-						const ch = main.server.world.?.getOrGenerateChunkAndIncreaseRefCount(.{
+						const ch = root.server.world.?.getOrGenerateChunkAndIncreaseRefCount(.{
 							.wx = self.super.pos.wx +% dx,
 							.wy = self.super.pos.wy +% dy,
 							.wz = self.super.pos.wz +% dz,
@@ -710,13 +710,13 @@ pub const ServerChunk = struct { // MARK: ServerChunk
 			// Store the surrounding map pieces as well:
 			self.mutex.unlock();
 			defer self.mutex.lock();
-			const mapStartX = self.super.pos.wx -% main.server.terrain.SurfaceMap.MapFragment.mapSize/2 & ~@as(i32, main.server.terrain.SurfaceMap.MapFragment.mapMask);
-			const mapStartY = self.super.pos.wy -% main.server.terrain.SurfaceMap.MapFragment.mapSize/2 & ~@as(i32, main.server.terrain.SurfaceMap.MapFragment.mapMask);
+			const mapStartX = self.super.pos.wx -% root.server.terrain.SurfaceMap.MapFragment.mapSize/2 & ~@as(i32, root.server.terrain.SurfaceMap.MapFragment.mapMask);
+			const mapStartY = self.super.pos.wy -% root.server.terrain.SurfaceMap.MapFragment.mapSize/2 & ~@as(i32, root.server.terrain.SurfaceMap.MapFragment.mapMask);
 			for (0..2) |dx| {
 				for (0..2) |dy| {
-					const mapX = mapStartX +% main.server.terrain.SurfaceMap.MapFragment.mapSize*@as(i32, @intCast(dx));
-					const mapY = mapStartY +% main.server.terrain.SurfaceMap.MapFragment.mapSize*@as(i32, @intCast(dy));
-					const map = main.server.terrain.SurfaceMap.getOrGenerateFragment(mapX, mapY, self.super.pos.voxelSize);
+					const mapX = mapStartX +% root.server.terrain.SurfaceMap.MapFragment.mapSize*@as(i32, @intCast(dx));
+					const mapY = mapStartY +% root.server.terrain.SurfaceMap.MapFragment.mapSize*@as(i32, @intCast(dy));
+					const map = root.server.terrain.SurfaceMap.getOrGenerateFragment(mapX, mapY, self.super.pos.voxelSize);
 					if (!map.wasStored.swap(true, .monotonic)) {
 						map.save(null, .{});
 					}
@@ -726,12 +726,12 @@ pub const ServerChunk = struct { // MARK: ServerChunk
 		self.wasStored = true;
 		if (self.wasChanged) {
 			const pos = self.super.pos;
-			const regionSize = pos.voxelSize*chunkSize*main.server.storage.RegionFile.regionSize;
+			const regionSize = pos.voxelSize*chunkSize*root.server.storage.RegionFile.regionSize;
 			const regionMask: i32 = regionSize - 1;
-			const region = main.server.storage.loadRegionFileAndIncreaseRefCount(pos.wx & ~regionMask, pos.wy & ~regionMask, pos.wz & ~regionMask, pos.voxelSize);
+			const region = root.server.storage.loadRegionFileAndIncreaseRefCount(pos.wx & ~regionMask, pos.wy & ~regionMask, pos.wz & ~regionMask, pos.voxelSize);
 			defer region.decreaseRefCount();
-			const data = main.server.storage.ChunkCompression.storeChunk(main.stackAllocator, &self.super, .toDisk, false);
-			defer main.stackAllocator.free(data);
+			const data = root.server.storage.ChunkCompression.storeChunk(root.stackAllocator, &self.super, .toDisk, false);
+			defer root.stackAllocator.free(data);
 			region.storeChunk(
 				data,
 				@as(usize, @intCast(pos.wx -% region.pos.wx))/pos.voxelSize/chunkSize,

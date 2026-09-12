@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const ConnectionManager = main.network.ConnectionManager;
+const ConnectionManager = root.network.ConnectionManager;
 const settings = main.settings;
 const Vec2f = main.vec.Vec2f;
 
@@ -29,8 +29,8 @@ var thread: ?std.Thread = null;
 const width: f32 = 420;
 
 fn discoverIpAddress() void {
-	main.server.connectionManager.makeOnline();
-	ipAddress = main.globalAllocator.print("{f}", .{main.server.connectionManager.externalAddress});
+	root.server.connectionManager.makeOnline();
+	ipAddress = root.globalAllocator.print("{f}", .{root.server.connectionManager.externalAddress});
 	gotIpAddress.store(true, .release);
 }
 
@@ -46,7 +46,7 @@ fn invite() void {
 		_thread.join();
 		thread = null;
 	}
-	_ = main.server.User.init(main.server.connectionManager, ipAddressEntry.currentString.items) catch |err| {
+	_ = root.server.User.init(root.server.connectionManager, ipAddressEntry.currentString.items) catch |err| {
 		if (err != error.AlreadyConnected) {
 			std.log.err("Cannot connect user: {s}", .{@errorName(err)});
 		}
@@ -87,7 +87,7 @@ pub fn onClose() void {
 		thread = null;
 	}
 	if (ipAddress.len != 0) {
-		main.globalAllocator.free(ipAddress);
+		root.globalAllocator.free(ipAddress);
 		ipAddress = "";
 	}
 
@@ -101,8 +101,8 @@ pub fn update() void {
 		gotIpAddress.store(false, .monotonic);
 
 		if (main.settings.streamerMode) {
-			const obfuscatedIp = main.utils.obfuscateString(main.stackAllocator, ipAddress);
-			defer main.stackAllocator.free(obfuscatedIp);
+			const obfuscatedIp = root.utils.obfuscateString(root.stackAllocator, ipAddress);
+			defer root.stackAllocator.free(obfuscatedIp);
 			ipAddressLabel.updateText(obfuscatedIp);
 		} else {
 			ipAddressLabel.updateText(ipAddress);

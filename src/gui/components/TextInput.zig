@@ -56,12 +56,12 @@ const Options = struct {
 
 pub fn init(pos: Vec2f, maxWidth: f32, maxHeight: f32, text: []const u8, options: Options) *TextInput {
 	const scrollBar = ScrollBar.init(undefined, scrollBarWidth, maxHeight - 2*border, 0);
-	const self = main.globalAllocator.create(TextInput);
+	const self = root.globalAllocator.create(TextInput);
 	self.* = TextInput{
 		.pos = pos,
 		.size = .{maxWidth, maxHeight},
-		.currentString = .init(main.globalAllocator),
-		.textBuffer = TextBuffer.init(main.globalAllocator, text, .{}, true, .left),
+		.currentString = .init(root.globalAllocator),
+		.textBuffer = TextBuffer.init(root.globalAllocator, text, .{}, true, .left),
 		.maxWidth = maxWidth,
 		.maxHeight = maxHeight,
 		.scrollBar = scrollBar,
@@ -80,7 +80,7 @@ pub fn deinit(self: *const TextInput) void {
 	self.textBuffer.deinit();
 	self.currentString.deinit();
 	self.scrollBar.deinit();
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn clear(self: *TextInput) void {
@@ -165,7 +165,7 @@ pub fn deselect(self: *TextInput) void {
 fn reloadText(self: *TextInput) void {
 	self.options.onUpdate.run();
 	self.textBuffer.deinit();
-	self.textBuffer = TextBuffer.init(main.globalAllocator, self.currentString.items, .{}, true, .left);
+	self.textBuffer = TextBuffer.init(root.globalAllocator, self.currentString.items, .{}, true, .left);
 	self.textSize = self.textBuffer.calculateLineBreaks(fontSize, self.maxWidth - 2*border - scrollBarWidth);
 }
 
@@ -512,7 +512,7 @@ fn ensureCursorVisibility(self: *TextInput) void {
 
 fn getRenderCursorPos(self: *const TextInput, pos: u32) u32 {
 	if (!self.obfuscated) return pos;
-	const obfuscatedPos = (std.unicode.utf8CountCodepoints(self.currentString.items[0..pos]) catch 0)*main.utils.obfuscationChar.len;
+	const obfuscatedPos = (std.unicode.utf8CountCodepoints(self.currentString.items[0..pos]) catch 0)*root.utils.obfuscationChar.len;
 	return @intCast(obfuscatedPos);
 }
 
@@ -536,10 +536,10 @@ pub fn render(self: *TextInput, mousePosition: Vec2f) void {
 	var textPos = Vec2f{border, border};
 	var textSize = self.textSize;
 	const textBuffer = if (self.obfuscated) blk: {
-		const obfuscatedString = main.utils.obfuscateString(main.stackAllocator, self.currentString.items);
-		defer main.stackAllocator.free(obfuscatedString);
+		const obfuscatedString = root.utils.obfuscateString(root.stackAllocator, self.currentString.items);
+		defer root.stackAllocator.free(obfuscatedString);
 
-		var newTextBuffer = TextBuffer.init(main.stackAllocator, obfuscatedString, .{}, true, .left);
+		var newTextBuffer = TextBuffer.init(root.stackAllocator, obfuscatedString, .{}, true, .left);
 		textSize = newTextBuffer.calculateLineBreaks(fontSize, self.maxWidth - 2*border - scrollBarWidth);
 		break :blk newTextBuffer;
 	} else self.textBuffer;

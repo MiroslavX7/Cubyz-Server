@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array3D = main.utils.Array3D;
-const ChunkPosition = main.chunk.ChunkPosition;
+const Array3D = root.utils.Array3D;
+const ChunkPosition = root.chunk.ChunkPosition;
 
 const CachedFractalNoise3D = @This();
 
@@ -23,7 +23,7 @@ pub fn init(wx: i32, wy: i32, wz: i32, voxelSize: u31, size: u31, worldSeed: u64
 			.voxelSize = voxelSize,
 		},
 		.voxelShift = @ctz(voxelSize),
-		.cache = Array3D(f32).init(main.globalAllocator, cacheWidth, cacheWidth, cacheWidth),
+		.cache = Array3D(f32).init(root.globalAllocator, cacheWidth, cacheWidth, cacheWidth),
 		.scale = scale,
 		.worldSeed = worldSeed,
 	};
@@ -44,7 +44,7 @@ pub fn init(wx: i32, wy: i32, wz: i32, voxelSize: u31, size: u31, worldSeed: u64
 }
 
 pub fn deinit(self: CachedFractalNoise3D) void {
-	self.cache.deinit(main.globalAllocator);
+	self.cache.deinit(root.globalAllocator);
 }
 
 pub fn getRandomValue(self: CachedFractalNoise3D, wx: i32, wy: i32, wz: i32) f32 {

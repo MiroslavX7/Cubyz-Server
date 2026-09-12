@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 const ZonElement = main.ZonElement;
@@ -9,9 +9,9 @@ const ZonElement = main.ZonElement;
 windowName: []const u8,
 
 pub fn init(zon: ZonElement, _: main.callbacks.Creator) ?*@This() {
-	const result = main.worldArena.create(@This());
+	const result = root.worldArena.create(@This());
 	result.* = .{
-		.windowName = main.worldArena.dupe(u8, zon.get([]const u8, "name") orelse {
+		.windowName = root.worldArena.dupe(u8, zon.get([]const u8, "name") orelse {
 			std.log.err("Missing field \"name\" for open_window event.", .{});
 			return null;
 		}),

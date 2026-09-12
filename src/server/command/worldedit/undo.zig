@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const Source = main.server.command.Source;
+const Source = root.server.command.Source;
 
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const Blueprint = main.blueprint.Blueprint;
 
 pub const description = "Undo last change done to world with world editing commands.";
@@ -22,7 +22,7 @@ pub fn execute(_: Args, source: Source) void {
 	if (user.worldEditData.undoHistory.pop()) |action| {
 		defer action.deinit();
 
-		const redo = Blueprint.capture(main.globalAllocator, action.selection());
+		const redo = Blueprint.capture(root.globalAllocator, action.selection());
 		action.blueprint.paste(action.position, .{.preserveVoid = true});
 
 		switch (redo) {

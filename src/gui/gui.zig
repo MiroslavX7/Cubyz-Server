@@ -8,7 +8,7 @@ const settings = main.settings;
 const vec = main.vec;
 const Vec2f = vec.Vec2f;
 const ListManaged = main.ListManaged;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
@@ -52,10 +52,10 @@ const GuiCommandQueue = struct { // MARK: GuiCommandQueue
 		action: Action,
 	};
 
-	var commands: main.utils.ConcurrentQueue(Command) = undefined;
+	var commands: root.utils.ConcurrentQueue(Command) = undefined;
 
 	fn init() void {
-		commands = .init(main.globalAllocator, 16);
+		commands = .init(root.globalAllocator, 16);
 	}
 
 	fn deinit() void {
@@ -124,9 +124,9 @@ const GuiCommandQueue = struct { // MARK: GuiCommandQueue
 
 pub fn initWindowList() void {
 	GuiCommandQueue.init();
-	windowList = .init(main.globalAllocator);
-	hudWindows = .init(main.globalAllocator);
-	openWindows = .init(main.globalAllocator);
+	windowList = .init(root.globalAllocator);
+	hudWindows = .init(root.globalAllocator);
+	openWindows = .init(root.globalAllocator);
 	inline for (@typeInfo(windowlist).@"struct".decls) |decl| {
 		const windowStruct = @field(windowlist, decl.name);
 		windowStruct.window.id = decl.name;
@@ -194,12 +194,12 @@ pub fn deinit() void {
 }
 
 pub fn save() void { // MARK: save()
-	var guiZon = ZonElement.initObject(main.stackAllocator);
-	defer guiZon.deinit(main.stackAllocator);
+	var guiZon = ZonElement.initObject(root.stackAllocator);
+	defer guiZon.deinit(root.stackAllocator);
 	for (windowList.items) |window| {
-		const windowZon = ZonElement.initObject(main.stackAllocator);
+		const windowZon = ZonElement.initObject(root.stackAllocator);
 		for (window.relativePosition, 0..) |relPos, i| {
-			const relPosZon = ZonElement.initObject(main.stackAllocator);
+			const relPosZon = ZonElement.initObject(root.stackAllocator);
 			switch (relPos) {
 				.ratio => |ratio| {
 					relPosZon.put("type", "ratio");
@@ -229,31 +229,31 @@ pub fn save() void { // MARK: save()
 	}
 
 	// Merge with the old settings file to preserve unknown settings.
-	var oldZon: ZonElement = main.files.cubyzDir().readToZon(main.stackAllocator, "gui_layout.zig.zon") catch |err| blk: {
+	var oldZon: ZonElement = root.files.cubyzDir().readToZon(root.stackAllocator, "gui_layout.zig.zon") catch |err| blk: {
 		if (err != error.FileNotFound) {
 			std.log.err("Could not read gui_layout.zig.zon: {s}", .{@errorName(err)});
 		}
 		break :blk .null;
 	};
-	defer oldZon.deinit(main.stackAllocator);
+	defer oldZon.deinit(root.stackAllocator);
 
 	if (oldZon == .object) {
 		guiZon.join(.preferLeft, oldZon);
 	}
 
-	main.files.cubyzDir().writeZon("gui_layout.zig.zon", guiZon) catch |err| {
+	root.files.cubyzDir().writeZon("gui_layout.zig.zon", guiZon) catch |err| {
 		std.log.err("Could not write gui_layout.zig.zon: {s}", .{@errorName(err)});
 	};
 }
 
 fn load() void {
-	const zon: ZonElement = main.files.cubyzDir().readToZon(main.stackAllocator, "gui_layout.zig.zon") catch |err| blk: {
+	const zon: ZonElement = root.files.cubyzDir().readToZon(root.stackAllocator, "gui_layout.zig.zon") catch |err| blk: {
 		if (err != error.FileNotFound) {
 			std.log.err("Could not read gui_layout.zig.zon: {s}", .{@errorName(err)});
 		}
 		break :blk .null;
 	};
-	defer zon.deinit(main.stackAllocator);
+	defer zon.deinit(root.stackAllocator);
 
 	for (windowList.items) |window| {
 		const windowZon = zon.getChild(window.id);
@@ -662,8 +662,8 @@ pub const inventory = struct { // MARK: inventory
 	const ClientInventory = main.items.Inventory.ClientInventory;
 	pub var carried: ClientInventory = undefined;
 	var carriedItemSlot: *ItemSlot = undefined;
-	var leftClickSlots: ListManaged(*ItemSlot) = .init(main.globalAllocator);
-	var rightClickSlots: ListManaged(*ItemSlot) = .init(main.globalAllocator);
+	var leftClickSlots: ListManaged(*ItemSlot) = .init(root.globalAllocator);
+	var rightClickSlots: ListManaged(*ItemSlot) = .init(root.globalAllocator);
 	var recipeItem: main.items.Item = .null;
 	var initialized: bool = false;
 	const minCraftingCooldown: std.Io.Duration = .fromMilliseconds(20);
@@ -673,7 +673,7 @@ pub const inventory = struct { // MARK: inventory
 	var isCrafting: bool = false;
 
 	pub fn init() void {
-		carried = ClientInventory.init(main.globalAllocator, 1, .serverShared, .{.hand = main.game.Player.id}, .{});
+		carried = ClientInventory.init(root.globalAllocator, 1, .serverShared, .{.hand = main.game.Player.id}, .{});
 		carriedItemSlot = ItemSlot.init(.{0, 0}, carried, 0, .default, .normal);
 		carriedItemSlot.renderFrame = false;
 		initialized = true;
@@ -682,7 +682,7 @@ pub const inventory = struct { // MARK: inventory
 
 	pub fn deinit() void {
 		initialized = false;
-		carried.deinit(main.globalAllocator);
+		carried.deinit(root.globalAllocator);
 		carriedItemSlot.deinit();
 		leftClickSlots.clearAndFree();
 		rightClickSlots.clearAndFree();
@@ -797,10 +797,10 @@ pub const inventory = struct { // MARK: inventory
 			recipeItem = .null;
 			isCrafting = false;
 			if (leftClickSlots.items.len != 0) {
-				const targetInventories = main.stackAllocator.alloc(ClientInventory, leftClickSlots.items.len);
-				defer main.stackAllocator.free(targetInventories);
-				const targetSlots = main.stackAllocator.alloc(u32, leftClickSlots.items.len);
-				defer main.stackAllocator.free(targetSlots);
+				const targetInventories = root.stackAllocator.alloc(ClientInventory, leftClickSlots.items.len);
+				defer root.stackAllocator.free(targetInventories);
+				const targetSlots = root.stackAllocator.alloc(u32, leftClickSlots.items.len);
+				defer root.stackAllocator.free(targetSlots);
 				for (0..leftClickSlots.items.len) |i| {
 					targetInventories[i] = leftClickSlots.items[i].inventory;
 					targetSlots[i] = leftClickSlots.items[i].itemSlot;

@@ -17,10 +17,10 @@ const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec4f = vec.Vec4f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const blocks = main.blocks;
 const World = game.World;
-const ServerWorld = main.server.ServerWorld;
+const ServerWorld = root.server.ServerWorld;
 const items = main.items;
 const ItemStack = items.ItemStack;
 const random = main.random;
@@ -55,7 +55,7 @@ pub const client = struct { // MARK: client
 			},
 		);
 
-		nodeBuffer.init(main.globalAllocator, 1 << 20, 15);
+		nodeBuffer.init(root.globalAllocator, 1 << 20, 15);
 	}
 	pub fn deinit() void {
 		pipeline.deinit();
@@ -64,20 +64,20 @@ pub const client = struct { // MARK: client
 	pub fn clear() void {}
 
 	pub fn renderHud(_: Vec3f, playerPos: Vec3d) void {
-		main.client.entity_manager.mutex.lock();
-		defer main.client.entity_manager.mutex.unlock();
+		root.client.entity_manager.mutex.lock();
+		defer root.client.entity_manager.mutex.unlock();
 
 		const screenUnits = @as(f32, @floatFromInt(main.Window.height))/1024;
 		const fontBaseSize = 128.0;
 		const fontMinScreenSize = 16.0;
 		const fontScreenSize = fontBaseSize*screenUnits;
 
-		for (main.client.entity_manager.entities.items()) |ent| {
+		for (root.client.entity_manager.entities.items()) |ent| {
 			if (ent.id == game.Player.id) continue; // don't render local player
 			if (ent.name.len == 0 and !settings.showPlayerIndexWithName) continue;
 
 			var offsetText: f32 = 0;
-			if (main.entity.components.@"cubyz:model".client.get(ent.id)) |component| {
+			if (root.entity.components.@"cubyz:model".client.get(ent.id)) |component| {
 				const entModel = component.entityModel.get();
 				offsetText = entModel.height/2;
 			}
@@ -101,10 +101,10 @@ pub const client = struct { // MARK: client
 			const oldColor = graphics.draw.setColor(alpha << 24 | 0xffffff);
 			defer graphics.draw.restoreColor(oldColor);
 
-			const renderedName = main.stackAllocator.print("{f}", .{ent});
-			defer main.stackAllocator.free(renderedName);
+			const renderedName = root.stackAllocator.print("{f}", .{ent});
+			defer root.stackAllocator.free(renderedName);
 
-			var buf = graphics.TextBuffer.init(main.stackAllocator, renderedName, .{.color = 0xffffff}, false, .center);
+			var buf = graphics.TextBuffer.init(root.stackAllocator, renderedName, .{.color = 0xffffff}, false, .center);
 			defer buf.deinit();
 			const fontSize = std.mem.max(f32, &.{fontMinScreenSize, fontScreenSize/projectedPos[3]});
 			const size = buf.calculateLineBreaks(fontSize, @floatFromInt(main.Window.width*8));
@@ -113,15 +113,15 @@ pub const client = struct { // MARK: client
 	}
 	pub fn render(ambientLight: Vec3f, playerPos: Vec3d, deltaTime: f64) void {
 		_ = deltaTime;
-		main.client.entity_manager.mutex.lock();
-		defer main.client.entity_manager.mutex.unlock();
+		root.client.entity_manager.mutex.lock();
+		defer root.client.entity_manager.mutex.unlock();
 
 		// TODO: #3342
 		for (entity.components.@"cubyz:model".client.components.dense.items, entity.components.@"cubyz:model".client.components.denseToSparseIndex.items) |*component, id| {
 			if (id == game.Player.id) continue; // don't process local player
 
 			const entModel = component.entityModel.get();
-			const ent = main.client.entity_manager.getEntity(id) orelse continue;
+			const ent = root.client.entity_manager.getEntity(id) orelse continue;
 
 			const head = entModel.nodeIndexMap.get("Head");
 			if (head) |headId| {
@@ -153,7 +153,7 @@ pub const client = struct { // MARK: client
 			if (id == game.Player.id) continue; // don't render local player
 
 			const entModel = component.entityModel.get();
-			const ent = main.client.entity_manager.getEntity(id) orelse continue;
+			const ent = root.client.entity_manager.getEntity(id) orelse continue;
 
 			entModel.bind();
 			const entTexture = entModel.defaultTexture;

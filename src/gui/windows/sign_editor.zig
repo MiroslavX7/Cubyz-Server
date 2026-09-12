@@ -24,14 +24,14 @@ var pos: main.vec.Vec3i = undefined;
 var oldText: []const u8 = &.{};
 
 pub fn deinit() void {
-	main.globalAllocator.free(oldText);
+	root.globalAllocator.free(oldText);
 	oldText = &.{};
 }
 
 pub fn openFromSignData(_pos: main.vec.Vec3i, _oldText: []const u8) void {
 	pos = _pos;
-	main.globalAllocator.free(oldText);
-	oldText = main.globalAllocator.dupe(u8, _oldText);
+	root.globalAllocator.free(oldText);
+	oldText = root.globalAllocator.dupe(u8, _oldText);
 	gui.closeWindowFromRef(&window);
 	gui.openWindowFromRef(&window);
 	main.Window.setMouseGrabbed(false);

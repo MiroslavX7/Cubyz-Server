@@ -4,15 +4,15 @@ const std = @import("std");
 const root = @import("root");
 const server = main.server;
 const User = server.User;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const NeverFailingArenaAllocator = main.heap.NeverFailingArenaAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const NeverFailingArenaAllocator = root.heap.NeverFailingArenaAllocator;
 const ZonElement = main.ZonElement;
 const sync = main.sync;
 
 const PermissionMap = struct { // MARK: PermissionMap
 	map: std.StringHashMapUnmanaged(void) = .{},
 
-	pub fn fromBytes(self: *PermissionMap, arena: NeverFailingAllocator, reader: *main.utils.BinaryReader) !void {
+	pub fn fromBytes(self: *PermissionMap, arena: NeverFailingAllocator, reader: *root.utils.BinaryReader) !void {
 		sync.threadContext.assertCorrectContext(.server);
 		const len = try reader.readInt(u32);
 		self.map.ensureUnusedCapacity(arena.allocator, len) catch unreachable;
@@ -23,7 +23,7 @@ const PermissionMap = struct { // MARK: PermissionMap
 		}
 	}
 
-	pub fn toBytes(self: PermissionMap, writer: *main.utils.BinaryWriter) void {
+	pub fn toBytes(self: PermissionMap, writer: *root.utils.BinaryWriter) void {
 		sync.threadContext.assertCorrectContext(.server);
 		writer.writeInt(u32, self.map.count());
 
@@ -73,13 +73,13 @@ pub const Permissions = struct { // MARK: Permissions
 		};
 	}
 
-	pub fn fromBytes(self: *Permissions, reader: *main.utils.BinaryReader) !void {
+	pub fn fromBytes(self: *Permissions, reader: *root.utils.BinaryReader) !void {
 		sync.threadContext.assertCorrectContext(.server);
 		try self.list(.white).fromBytes(self.arena.allocator(), reader);
 		try self.list(.black).fromBytes(self.arena.allocator(), reader);
 	}
 
-	pub fn toBytes(self: Permissions, writer: *main.utils.BinaryWriter) void {
+	pub fn toBytes(self: Permissions, writer: *root.utils.BinaryWriter) void {
 		sync.threadContext.assertCorrectContext(.server);
 		self.whitelist.toBytes(writer);
 		self.blacklist.toBytes(writer);
@@ -131,7 +131,7 @@ const GroupInstance = struct { // MARK: GroupInstance
 		allocator.destroy(self);
 	}
 
-	pub fn fromBytes(allocator: NeverFailingAllocator, reader: *main.utils.BinaryReader) !*GroupInstance {
+	pub fn fromBytes(allocator: NeverFailingAllocator, reader: *root.utils.BinaryReader) !*GroupInstance {
 		const version = try reader.readInt(u8);
 		if (version != 0) return error.UnsupportedVersion;
 
@@ -145,7 +145,7 @@ const GroupInstance = struct { // MARK: GroupInstance
 		return self;
 	}
 
-	pub fn toBytes(self: *GroupInstance, writer: *main.utils.BinaryWriter) void {
+	pub fn toBytes(self: *GroupInstance, writer: *root.utils.BinaryWriter) void {
 		sync.threadContext.assertCorrectContext(.server);
 		const version = 0;
 		writer.writeInt(u8, version);
@@ -156,14 +156,14 @@ const GroupInstance = struct { // MARK: GroupInstance
 	fn save(self: *GroupInstance, allocator: NeverFailingAllocator, id: Group) void {
 		if (builtin.is_test) return;
 		sync.threadContext.assertCorrectContext(.server);
-		const path = allocator.print("saves/{s}/permission/{d}.group", .{main.server.world.?.path, @intFromEnum(id)});
+		const path = allocator.print("saves/{s}/permission/{d}.group", .{root.server.world.?.path, @intFromEnum(id)});
 		defer allocator.free(path);
 
-		var writer: main.utils.BinaryWriter = .init(allocator);
+		var writer: root.utils.BinaryWriter = .init(allocator);
 		defer writer.deinit();
 
 		self.toBytes(&writer);
-		main.files.cubyzDir().write(path, writer.data.items) catch |err| {
+		root.files.cubyzDir().write(path, writer.data.items) catch |err| {
 			std.log.err("Couldn't save permission group: {s} {t}", .{self.name, err});
 		};
 	}
@@ -220,14 +220,14 @@ pub const Group = enum(u32) { // MARK: Group
 		return result.value_ptr.*;
 	}
 
-	pub fn fromBytes(reader: *main.utils.BinaryReader) !Group {
+	pub fn fromBytes(reader: *root.utils.BinaryReader) !Group {
 		const group = try reader.readEnum(Group);
 		if (groups.items[@intFromEnum(group)] == null) return error.GroupNotFound;
 		return group;
 	}
 
-	pub fn toBytes(self: Group, writer: *main.utils.BinaryWriter) void {
-		writer.writeEnum(main.server.permission.Group, self);
+	pub fn toBytes(self: Group, writer: *root.utils.BinaryWriter) void {
+		writer.writeEnum(root.server.permission.Group, self);
 	}
 
 	pub fn getByName(name: []const u8) error{GroupNotFound}!Group {
@@ -248,9 +248,9 @@ pub const Group = enum(u32) { // MARK: Group
 		groups.items[@intFromEnum(self)] = null;
 
 		if (builtin.is_test) return true;
-		const path = main.stackAllocator.print("saves/{s}/permission/{d}.group", .{main.server.world.?.path, @intFromEnum(self)});
-		defer main.stackAllocator.free(path);
-		main.files.cubyzDir().deleteFile(path) catch |err| {
+		const path = root.stackAllocator.print("saves/{s}/permission/{d}.group", .{root.server.world.?.path, @intFromEnum(self)});
+		defer root.stackAllocator.free(path);
+		root.files.cubyzDir().deleteFile(path) catch |err| {
 			std.log.err("Couldn't delete group file even though it exits: {t}", .{err});
 		};
 		return true;
@@ -290,7 +290,7 @@ pub fn deinit() void {
 }
 
 fn addGroupFromBin(group: Group, data: []const u8) void {
-	var reader: main.utils.BinaryReader = .init(data);
+	var reader: root.utils.BinaryReader = .init(data);
 	const groupInstance = GroupInstance.fromBytes(groupsArena.allocator(), &reader) catch |err| {
 		std.log.err("Group with id {d} has invalid content skipping: {t}", .{@intFromEnum(group), err});
 		groups.append(null);
@@ -300,39 +300,39 @@ fn addGroupFromBin(group: Group, data: []const u8) void {
 	groups.append(groupInstance);
 }
 
-pub fn loadGroups(dir: main.files.Dir) !void {
+pub fn loadGroups(dir: root.files.Dir) !void {
 	dir.makePath(".") catch |err| {
 		std.log.err("Couldn't create permission directory: {t}", .{err});
 	};
-	const metaDataZon: ZonElement = dir.readToZon(main.stackAllocator, "metadata.zon") catch .initObject(main.stackAllocator);
-	defer metaDataZon.deinit(main.stackAllocator);
+	const metaDataZon: ZonElement = dir.readToZon(root.stackAllocator, "metadata.zon") catch .initObject(root.stackAllocator);
+	defer metaDataZon.deinit(root.stackAllocator);
 
-	init(main.globalAllocator);
+	init(root.globalAllocator);
 	const currentId = metaDataZon.get(u32, "currentId") orelse 0;
 	groups.ensureCapacity(currentId);
 
 	for (0..currentId) |id| {
-		const path = main.stackAllocator.print("{d}.group", .{id});
-		defer main.stackAllocator.free(path);
+		const path = root.stackAllocator.print("{d}.group", .{id});
+		defer root.stackAllocator.free(path);
 
 		if (!dir.hasFile(path)) {
 			groups.append(null);
 			continue;
 		}
-		const data = try dir.read(main.stackAllocator, path);
-		defer main.stackAllocator.free(data);
+		const data = try dir.read(root.stackAllocator, path);
+		defer root.stackAllocator.free(data);
 		addGroupFromBin(@enumFromInt(id), data);
 	}
 }
 
 fn saveMetaData(allocator: NeverFailingAllocator) !void {
 	if (builtin.is_test) return;
-	const metadatPath = allocator.print("saves/{s}/permission/metadata.zon", .{main.server.world.?.path});
+	const metadatPath = allocator.print("saves/{s}/permission/metadata.zon", .{root.server.world.?.path});
 	defer allocator.free(metadatPath);
-	var metadataZon: ZonElement = .initObject(main.stackAllocator);
-	defer metadataZon.deinit(main.stackAllocator);
+	var metadataZon: ZonElement = .initObject(root.stackAllocator);
+	defer metadataZon.deinit(root.stackAllocator);
 	metadataZon.put("currentId", @as(u32, @truncate(groups.items.len)));
-	try main.files.cubyzDir().writeZon(metadatPath, metadataZon);
+	try root.files.cubyzDir().writeZon(metadatPath, metadataZon);
 }
 
 // ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -340,7 +340,7 @@ fn saveMetaData(allocator: NeverFailingAllocator) !void {
 // ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 test "whitePermission" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/command/test");
@@ -350,7 +350,7 @@ test "whitePermission" {
 }
 
 test "blacklist" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/command");
@@ -362,7 +362,7 @@ test "blacklist" {
 }
 
 test "deepPermission" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/server/command/testing/test");
@@ -376,7 +376,7 @@ test "deepPermission" {
 }
 
 test "rootPermission" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/");
@@ -385,7 +385,7 @@ test "rootPermission" {
 }
 
 test "rootBlackPermission" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/");
@@ -396,7 +396,7 @@ test "rootBlackPermission" {
 }
 
 test "addRemovePermission" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/command/test");
@@ -405,7 +405,7 @@ test "addRemovePermission" {
 }
 
 test "removeNonExistentPermission" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/command/test");
@@ -414,7 +414,7 @@ test "removeNonExistentPermission" {
 }
 
 test "groupCreation" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	const id = try Group.createGroup("test");
@@ -422,25 +422,25 @@ test "groupCreation" {
 }
 
 test "groupPermissions" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	const group = try Group.createGroup("test");
-	try group.addPermission(main.heap.testingAllocator, .white, "/command/test");
+	try group.addPermission(root.heap.testingAllocator, .white, "/command/test");
 	try std.testing.expectEqual(Permissions.PermissionResult.yes, group.hasPermission("/command/test"));
 }
 
 test "groupRemovePermissions" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	const group = try Group.createGroup("test");
-	try group.addPermission(main.heap.testingAllocator, .white, "/command/test");
-	try std.testing.expectEqual(true, group.removePermission(main.heap.testingAllocator, .white, "/command/test"));
+	try group.addPermission(root.heap.testingAllocator, .white, "/command/test");
+	try std.testing.expectEqual(true, group.removePermission(root.heap.testingAllocator, .white, "/command/test"));
 }
 
 test "invalidGroup" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	_ = try Group.createGroup("test");
@@ -448,14 +448,14 @@ test "invalidGroup" {
 }
 
 test "invalidGroupEmptyGroups" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	try std.testing.expectError(error.GroupNotFound, Group.getByName("root"));
 }
 
 test "acessDeletedGroup" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	const group = try Group.createGroup("test");
@@ -464,7 +464,7 @@ test "acessDeletedGroup" {
 }
 
 test "invalidGroupCreation" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	_ = try Group.createGroup("test");
@@ -472,20 +472,20 @@ test "invalidGroupCreation" {
 }
 
 test "permissionListToFromBytes" {
-	var permissions: Permissions = .init(main.heap.testingAllocator);
+	var permissions: Permissions = .init(root.heap.testingAllocator);
 	defer permissions.deinit();
 
 	permissions.addPermission(.white, "/command/test");
 	permissions.addPermission(.white, "/command/spawn");
 
-	var writer = main.utils.BinaryWriter.init(main.heap.testingAllocator);
+	var writer = root.utils.BinaryWriter.init(root.heap.testingAllocator);
 	defer writer.deinit();
 	permissions.toBytes(&writer);
 
-	var testPermissions: Permissions = .init(main.heap.testingAllocator);
+	var testPermissions: Permissions = .init(root.heap.testingAllocator);
 	defer testPermissions.deinit();
 
-	var reader: main.utils.BinaryReader = .init(writer.data.items);
+	var reader: root.utils.BinaryReader = .init(writer.data.items);
 	try testPermissions.fromBytes(&reader);
 
 	try std.testing.expectEqual(2, testPermissions.whitelist.map.size);
@@ -497,21 +497,21 @@ test "permissionListToFromBytes" {
 }
 
 test "permissionGroupToFromBytes" {
-	init(main.heap.testingAllocator);
+	init(root.heap.testingAllocator);
 	defer deinit();
 
 	const group = try Group.createGroup("test");
 
-	try group.addPermission(main.heap.testingAllocator, .white, "/command/test");
-	try group.addPermission(main.heap.testingAllocator, .white, "/command/spawn");
+	try group.addPermission(root.heap.testingAllocator, .white, "/command/test");
+	try group.addPermission(root.heap.testingAllocator, .white, "/command/spawn");
 
-	var writer: main.utils.BinaryWriter = .init(main.heap.testingAllocator);
+	var writer: root.utils.BinaryWriter = .init(root.heap.testingAllocator);
 	defer writer.deinit();
 	(try group.getInstance()).toBytes(&writer);
 
-	var reader: main.utils.BinaryReader = .init(writer.data.items);
-	var testGroup: *GroupInstance = try .fromBytes(main.heap.testingAllocator, &reader);
-	defer testGroup.deinit(main.heap.testingAllocator);
+	var reader: root.utils.BinaryReader = .init(writer.data.items);
+	var testGroup: *GroupInstance = try .fromBytes(root.heap.testingAllocator, &reader);
+	defer testGroup.deinit(root.heap.testingAllocator);
 
 	try std.testing.expectEqual(2, testGroup.permissions.whitelist.map.size);
 

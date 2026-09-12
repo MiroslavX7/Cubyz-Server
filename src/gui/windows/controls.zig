@@ -72,11 +72,11 @@ fn updateDeadzone(deadzone: f32) void {
 	main.settings.controllerAxisDeadzone = deadzone;
 }
 
-fn deadzoneFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+fn deadzoneFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
 	return allocator.print("Deadzone: {d:.0}%", .{value*100});
 }
 
-fn sensitivityFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+fn sensitivityFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
 	return allocator.print("{s} Sensitivity: {d:.0}%", .{if (editingKeyboard) "Mouse" else "Controller", value*100});
 }
 

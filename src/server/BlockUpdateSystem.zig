@@ -1,32 +1,32 @@
 const std = @import("std");
 
 const root = @import("root");
-const BlockPos = main.chunk.BlockPos;
+const BlockPos = root.chunk.BlockPos;
 const ZonElement = main.ZonElement;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 list: main.List(BlockPos) = .empty,
-mutex: main.utils.Mutex = .{},
+mutex: root.utils.Mutex = .{},
 
 pub fn init() @This() {
 	return .{};
 }
 pub fn deinit(self: *@This()) void {
 	self.mutex = undefined;
-	self.list.deinit(main.globalAllocator);
+	self.list.deinit(root.globalAllocator);
 }
 pub fn add(self: *@This(), position: BlockPos) void {
 	self.mutex.lock();
 	defer self.mutex.unlock();
-	self.list.append(main.globalAllocator, position);
+	self.list.append(root.globalAllocator, position);
 }
-pub fn update(self: *@This(), ch: *main.chunk.ServerChunk) void {
+pub fn update(self: *@This(), ch: *root.chunk.ServerChunk) void {
 	// swap
 	self.mutex.lock();
 	const list = self.list;
-	defer list.deinit(main.globalAllocator);
+	defer list.deinit(root.globalAllocator);
 	self.list = .empty;
 	self.mutex.unlock();
 

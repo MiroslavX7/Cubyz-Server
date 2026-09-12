@@ -12,17 +12,17 @@ var localPlayerIndex: usize = undefined;
 var nextPlayerIndex: std.atomic.Value(usize) = undefined;
 var worldPath: []const u8 = undefined;
 
-var mutex: main.utils.Mutex = .{};
+var mutex: root.utils.Mutex = .{};
 
 fn init(path: []const u8, loadedLocalPlayerIndex: usize) void {
 	sync.threadContext.assertCorrectContext(.server);
-	worldPath = main.worldArena.dupe(u8, path);
+	worldPath = root.worldArena.dupe(u8, path);
 	localPlayerIndex = loadedLocalPlayerIndex;
 	playerDatabase = .{};
 	nextPlayerIndex = .init(0);
 }
 
-pub fn loadPlayerLoginInfo(dir: main.files.Dir, path: []const u8, loadedLocalPlayerIndex: usize) !void {
+pub fn loadPlayerLoginInfo(dir: root.files.Dir, path: []const u8, loadedLocalPlayerIndex: usize) !void {
 	init(path, loadedLocalPlayerIndex);
 
 	var playerDir = try dir.openIterableDir("players");
@@ -30,8 +30,8 @@ pub fn loadPlayerLoginInfo(dir: main.files.Dir, path: []const u8, loadedLocalPla
 	var iterator = playerDir.iterate();
 	while (try iterator.next(main.io)) |file| {
 		if (file.kind == .file and std.mem.endsWith(u8, file.name, ".zon")) {
-			const zon = try playerDir.readToZon(main.stackAllocator, file.name);
-			defer zon.deinit(main.stackAllocator);
+			const zon = try playerDir.readToZon(root.stackAllocator, file.name);
+			defer zon.deinit(root.stackAllocator);
 			const fileNameBase = file.name[0..std.mem.findScalar(u8, file.name, '.').?];
 			if (fileNameBase[0] == '0' and fileNameBase.len != 1) {
 				std.log.err("Player file {s} contains leading zeroes. Skipping.", .{file.name});
@@ -48,18 +48,18 @@ pub fn loadPlayerLoginInfo(dir: main.files.Dir, path: []const u8, loadedLocalPla
 					std.log.err("Player file {s} has invalid key entry {s}: Type is missing. Skipping.", .{file.name, key});
 					continue;
 				}];
-				_ = std.meta.stringToEnum(main.network.authentication.KeyTypeEnum, keyType) orelse {
+				_ = std.meta.stringToEnum(root.network.authentication.KeyTypeEnum, keyType) orelse {
 					std.log.err("Player file {s} has invalid key type {s}. Skipping.", .{file.name, keyType});
 					continue;
 				};
-				playerDatabase.put(main.worldArena.allocator, main.worldArena.dupe(u8, key), .{.playerIndex = index, .blocked = blocked}) catch unreachable;
+				playerDatabase.put(root.worldArena.allocator, root.worldArena.dupe(u8, key), .{.playerIndex = index, .blocked = blocked}) catch unreachable;
 			} else if (index != localPlayerIndex) {
 				const name = zon.get([]const u8, "name") orelse {
 					std.log.err("Couldn't read player file {s}. Skipping.", .{file.name});
 					continue;
 				};
-				const fullEntry = main.worldArena.print("name:{s}", .{name});
-				playerDatabase.put(main.worldArena.allocator, fullEntry, .{.playerIndex = index, .blocked = blocked}) catch unreachable;
+				const fullEntry = root.worldArena.print("name:{s}", .{name});
+				playerDatabase.put(root.worldArena.allocator, fullEntry, .{.playerIndex = index, .blocked = blocked}) catch unreachable;
 			}
 		}
 	}
@@ -94,29 +94,29 @@ pub fn rebindKey(oldPublicKeyFromFile: ?[]const u8, oldNameFromFile: ?[]const u8
 		blocked = playerDatabase.fetchRemove(publicKey).?.value.blocked;
 	} else {
 		removeOld: {
-			const nameEntry = main.stackAllocator.print("name:{s}", .{oldNameFromFile orelse break :removeOld});
-			defer main.stackAllocator.free(nameEntry);
+			const nameEntry = root.stackAllocator.print("name:{s}", .{oldNameFromFile orelse break :removeOld});
+			defer root.stackAllocator.free(nameEntry);
 			if (playerDatabase.fetchRemove(nameEntry)) |kv| blocked = kv.value.blocked;
 		}
 	}
-	playerDatabase.put(main.worldArena.allocator, main.worldArena.dupe(u8, newKey), .{.playerIndex = index, .blocked = blocked}) catch unreachable;
+	playerDatabase.put(root.worldArena.allocator, root.worldArena.dupe(u8, newKey), .{.playerIndex = index, .blocked = blocked}) catch unreachable;
 }
 
 fn saveNewPlayer(key: []const u8, index: usize) void {
-	const playersDir = main.stackAllocator.print("saves/{s}/players", .{worldPath});
-	defer main.stackAllocator.free(playersDir);
-	main.files.cubyzDir().makePath(playersDir) catch |err| {
+	const playersDir = root.stackAllocator.print("saves/{s}/players", .{worldPath});
+	defer root.stackAllocator.free(playersDir);
+	root.files.cubyzDir().makePath(playersDir) catch |err| {
 		std.log.err("Couldn't create players directory: {t}", .{err});
 	};
 
-	const path = main.stackAllocator.print("saves/{s}/players/{}.zon", .{worldPath, index});
-	defer main.stackAllocator.free(path);
+	const path = root.stackAllocator.print("saves/{s}/players/{}.zon", .{worldPath, index});
+	defer root.stackAllocator.free(path);
 
-	const zon: ZonElement = .initObject(main.stackAllocator);
-	defer zon.deinit(main.stackAllocator);
+	const zon: ZonElement = .initObject(root.stackAllocator);
+	defer zon.deinit(root.stackAllocator);
 	zon.put("publicKey", key);
 
-	main.files.cubyzDir().writeZon(path, zon) catch |err| {
+	root.files.cubyzDir().writeZon(path, zon) catch |err| {
 		std.log.err("Couldn't create player file for pre-authorized key {s}: {t}", .{key, err});
 	};
 }
@@ -127,10 +127,10 @@ fn ensurePlayerRecord(key: []const u8) EnsureResult {
 	sync.threadContext.assertCorrectContext(.server);
 	mutex.assertLocked();
 
-	const result = playerDatabase.getOrPut(main.worldArena.allocator, key) catch unreachable;
+	const result = playerDatabase.getOrPut(root.worldArena.allocator, key) catch unreachable;
 	if (result.found_existing) return .{.entry = result.value_ptr, .wasNew = false};
 
-	result.key_ptr.* = main.worldArena.dupe(u8, key);
+	result.key_ptr.* = root.worldArena.dupe(u8, key);
 	result.value_ptr.* = .{.playerIndex = nextPlayerIndex.fetchAdd(1, .monotonic), .blocked = false};
 
 	if (!builtin.is_test) {
@@ -144,18 +144,18 @@ fn saveBlocked(index: usize, value: bool) void {
 	if (builtin.is_test) return;
 	sync.threadContext.assertCorrectContext(.server);
 
-	const path = main.stackAllocator.print("saves/{s}/players/{}.zon", .{worldPath, index});
-	defer main.stackAllocator.free(path);
+	const path = root.stackAllocator.print("saves/{s}/players/{}.zon", .{worldPath, index});
+	defer root.stackAllocator.free(path);
 
-	var zon: ZonElement = main.files.cubyzDir().readToZon(main.stackAllocator, path) catch .null;
-	defer zon.deinit(main.stackAllocator);
+	var zon: ZonElement = root.files.cubyzDir().readToZon(root.stackAllocator, path) catch .null;
+	defer zon.deinit(root.stackAllocator);
 	if (zon != .object) {
-		zon.deinit(main.stackAllocator);
-		zon = .initObject(main.stackAllocator);
+		zon.deinit(root.stackAllocator);
+		zon = .initObject(root.stackAllocator);
 	}
 	zon.put("blocked", value);
 
-	main.files.cubyzDir().writeZon(path, zon) catch |err| {
+	root.files.cubyzDir().writeZon(path, zon) catch |err| {
 		std.log.err("Couldn't update blocked state for player {}: {t}", .{index, err});
 	};
 }
@@ -187,8 +187,8 @@ pub fn block(key: []const u8) BlockResult {
 }
 
 test "addContainsRemove" {
-	main.heap.allocators.createWorldArena();
-	defer main.heap.allocators.destroyWorldArena();
+	root.heap.allocators.createWorldArena();
+	defer root.heap.allocators.destroyWorldArena();
 
 	init("test", 0);
 
@@ -202,8 +202,8 @@ test "addContainsRemove" {
 }
 
 test "addUnblocks" {
-	main.heap.allocators.createWorldArena();
-	defer main.heap.allocators.destroyWorldArena();
+	root.heap.allocators.createWorldArena();
+	defer root.heap.allocators.destroyWorldArena();
 
 	init("test", 0);
 
@@ -214,12 +214,12 @@ test "addUnblocks" {
 }
 
 test "lookupIndexDistinguishesKnownAndUnknownKeys" {
-	main.heap.allocators.createWorldArena();
-	defer main.heap.allocators.destroyWorldArena();
+	root.heap.allocators.createWorldArena();
+	defer root.heap.allocators.destroyWorldArena();
 
 	init("test", 0);
 
-	playerDatabase.put(main.worldArena.allocator, main.worldArena.dupe(u8, "ed25519:known"), .{.playerIndex = 0, .blocked = false}) catch unreachable;
+	playerDatabase.put(root.worldArena.allocator, root.worldArena.dupe(u8, "ed25519:known"), .{.playerIndex = 0, .blocked = false}) catch unreachable;
 
 	try std.testing.expectEqual(false, lookupIndex("ed25519:known").?.blocked);
 	try std.testing.expectEqual(null, lookupIndex("ed25519:unknown"));

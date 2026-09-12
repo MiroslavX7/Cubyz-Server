@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Stop the server.";
@@ -10,7 +10,7 @@ pub const usage =
 ;
 
 pub const Args = union(enum) {
-	@"/server <action>": struct { action: main.server.StopType },
+	@"/server <action>": struct { action: root.server.StopType },
 };
 
 pub fn execute(args: Args, source: Source) void {
@@ -19,5 +19,5 @@ pub fn execute(args: Args, source: Source) void {
 		return;
 	}
 
-	main.server.stop(args.@"/server <action>".action);
+	root.server.stop(args.@"/server <action>".action);
 }

@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const Degrees = main.rotation.Degrees;
-const Source = main.server.command.Source;
+const Source = root.server.command.Source;
 
 pub const description = "rotate clipboard content around Z axis counterclockwise.";
 pub const usage =
@@ -26,9 +26,9 @@ pub fn execute(args: Args, source: Source) void {
 		return;
 	}
 	const current = user.worldEditData.clipboard.?;
-	defer current.deinit(main.globalAllocator);
+	defer current.deinit(root.globalAllocator);
 	switch (args) {
-		.@"/rotate" => user.worldEditData.clipboard = current.rotateZ(main.globalAllocator, .@"90"),
-		.@"/rotate <rotation>" => |params| user.worldEditData.clipboard = current.rotateZ(main.globalAllocator, params.rotation),
+		.@"/rotate" => user.worldEditData.clipboard = current.rotateZ(root.globalAllocator, .@"90"),
+		.@"/rotate <rotation>" => |params| user.worldEditData.clipboard = current.rotateZ(root.globalAllocator, params.rotation),
 	}
 }

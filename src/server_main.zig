@@ -75,8 +75,8 @@ pub fn main() !void {
     std.log.info("Starting Cubyz dedicated server version {s}", .{settings.version.version});
 
     // Initialize environment
-    settings.environment.init(std.process.argsAlloc(main.globalAllocator));
-    defer std.process.argsFree(main.globalAllocator, settings.environment.env);
+    settings.environment.init(std.process.argsAlloc(root.globalAllocator));
+    defer std.process.argsFree(root.globalAllocator, settings.environment.env);
 
     // Initialize launch configuration (creates file if not exists)
     try settings.launchConfig.init();

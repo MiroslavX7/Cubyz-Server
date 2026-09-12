@@ -25,7 +25,7 @@ fn delayCallback(newValue: f32) void {
 	settings.save();
 }
 
-fn delayFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+fn delayFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
 	return allocator.print("#ffffffPlace/Break Delay: {d:.0} ms", .{value/1.0e6});
 }
 
@@ -34,7 +34,7 @@ fn speedCallback(newValue: f32) void {
 	settings.save();
 }
 
-fn speedFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+fn speedFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
 	return allocator.print("#ffffffPlace/Break Speed: {d:.0} ms", .{value/1.0e6});
 }
 

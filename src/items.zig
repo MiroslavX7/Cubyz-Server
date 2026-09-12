@@ -8,9 +8,9 @@ const Color = graphics.Color;
 const Tag = main.Tag;
 const ZonElement = main.ZonElement;
 const List = main.List;
-const BinaryReader = main.utils.BinaryReader;
-const BinaryWriter = main.utils.BinaryWriter;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const BinaryReader = root.utils.BinaryReader;
+const BinaryWriter = root.utils.BinaryWriter;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const chunk = main.chunk;
 const random = @import("random.zig");
 const vec = @import("vec.zig");
@@ -41,8 +41,8 @@ const Material = struct { // MARK: Material
 
 	fn loadColorsFromTexture(self: *Material, allocator: NeverFailingAllocator, colorTexturePath: []const u8, colorReplacementTexturePath: []const u8) !void {
 		if (colorTexturePath.len == 0) return error.@"Missing attribute 'colorTexture'";
-		const image = graphics.Image.readFromFile(main.stackAllocator, colorTexturePath, .{.orientation = .asIs}) catch try graphics.Image.readFromFile(main.stackAllocator, colorReplacementTexturePath, .{.orientation = .asIs});
-		defer image.deinit(main.stackAllocator);
+		const image = graphics.Image.readFromFile(root.stackAllocator, colorTexturePath, .{.orientation = .asIs}) catch try graphics.Image.readFromFile(root.stackAllocator, colorReplacementTexturePath, .{.orientation = .asIs});
+		defer image.deinit(root.stackAllocator);
 
 		if (image.width < 2 or image.height < 2) return error.@"Color texture must be at least 2x2 pixels";
 
@@ -536,7 +536,7 @@ const TextureGenerator = struct { // MARK: TextureGenerator
 	fn mostCommonNeighborMaterial(materialGrid: *const [16][16]?BaseItemIndex, heightMap: *const [17][17]f32, pos: [2]u8, offsets: []const [2]i8) ?Material {
 		const Tally = struct { item: BaseItemIndex, score: f32, lightWeight: f32 };
 		var tallies: main.List(Tally) = .empty;
-		defer tallies.deinit(main.stackAllocator);
+		defer tallies.deinit(root.stackAllocator);
 
 		outer: for (offsets) |offset| {
 			const neighborPos = neighborCoord(pos, offset) orelse continue;
@@ -552,7 +552,7 @@ const TextureGenerator = struct { // MARK: TextureGenerator
 					continue :outer;
 				}
 			}
-			tallies.append(main.stackAllocator, .{.item = item, .score = score, .lightWeight = light});
+			tallies.append(root.stackAllocator, .{.item = item, .score = score, .lightWeight = light});
 		}
 
 		var best: ?Tally = null;
@@ -621,7 +621,7 @@ const ProceduralItemPhysics = struct { // MARK: ProceduralItemPhysics
 	pub fn evaluateProceduralItem(proceduralItem: *ProceduralItem) void {
 		proceduralItem.properties = @splat(0);
 		var tempModifiers: main.List(Modifier) = .empty;
-		defer tempModifiers.deinit(main.stackAllocator);
+		defer tempModifiers.deinit(root.stackAllocator);
 		for (proceduralItem.type.properties()) |property| {
 			if (property.destination == null) continue;
 			var sum: f32 = 0;
@@ -653,7 +653,7 @@ const ProceduralItemPhysics = struct { // MARK: ProceduralItemPhysics
 						continue :outer;
 					}
 				}
-				tempModifiers.append(main.stackAllocator, newMod);
+				tempModifiers.append(root.stackAllocator, newMod);
 			}
 		}
 		std.sort.insertion(Modifier, tempModifiers.items, {}, struct {
@@ -661,7 +661,7 @@ const ProceduralItemPhysics = struct { // MARK: ProceduralItemPhysics
 				return lhs.vTable.priority < rhs.vTable.priority;
 			}
 		}.lessThan);
-		proceduralItem.modifiers = main.globalAllocator.dupe(Modifier, tempModifiers.items);
+		proceduralItem.modifiers = root.globalAllocator.dupe(Modifier, tempModifiers.items);
 		for (tempModifiers.items) |mod| {
 			mod.changeProceduralItemParameters(proceduralItem);
 		}
@@ -681,7 +681,7 @@ const ProceduralItemPhysics = struct { // MARK: ProceduralItemPhysics
 
 	fn checkConnectivity(proceduralItem: *ProceduralItem) bool {
 		var gridCellsReached: [16][16]bool = @splat(@splat(false));
-		var floodfillQueue = main.utils.CircularBufferQueue(Vec2i).init(main.stackAllocator, 16);
+		var floodfillQueue = root.utils.CircularBufferQueue(Vec2i).init(root.stackAllocator, 16);
 		defer floodfillQueue.deinit();
 		outer: for (proceduralItem.materialGrid, 0..) |row, x| {
 			for (row, 0..) |entry, y| {
@@ -843,10 +843,10 @@ pub const ProceduralItem = struct { // MARK: ProceduralItem
 	inertiaCenterOfMass: f32,
 
 	pub fn init() *ProceduralItem {
-		const self = main.globalAllocator.create(ProceduralItem);
-		self.image = graphics.Image.init(main.globalAllocator, 16, 16);
+		const self = root.globalAllocator.create(ProceduralItem);
+		self.image = graphics.Image.init(root.globalAllocator, 16, 16);
 		self.texture = null;
-		self.tooltip = .init(main.globalAllocator);
+		self.tooltip = .init(root.globalAllocator);
 		return self;
 	}
 
@@ -855,20 +855,20 @@ pub const ProceduralItem = struct { // MARK: ProceduralItem
 		// if(self.texture) |texture| {
 		// texture.deinit();
 		// }
-		self.image.deinit(main.globalAllocator);
+		self.image.deinit(root.globalAllocator);
 		self.tooltip.deinit();
-		main.globalAllocator.free(self.modifiers);
-		main.globalAllocator.destroy(self);
+		root.globalAllocator.free(self.modifiers);
+		root.globalAllocator.destroy(self);
 	}
 
 	pub fn clone(self: *const ProceduralItem) *ProceduralItem {
-		const result = main.globalAllocator.create(ProceduralItem);
+		const result = root.globalAllocator.create(ProceduralItem);
 		result.* = .{
 			.craftingGrid = self.craftingGrid,
 			.materialGrid = self.materialGrid,
-			.modifiers = main.globalAllocator.dupe(Modifier, self.modifiers),
-			.tooltip = .init(main.globalAllocator),
-			.image = graphics.Image.init(main.globalAllocator, self.image.width, self.image.height),
+			.modifiers = root.globalAllocator.dupe(Modifier, self.modifiers),
+			.tooltip = .init(root.globalAllocator),
+			.image = graphics.Image.init(root.globalAllocator, self.image.width, self.image.height),
 			.texture = null,
 			.seed = self.seed,
 			.type = self.type,
@@ -1351,14 +1351,14 @@ pub const Recipe = struct { // MARK: Recipe
 		const resultAmount = try reader.readVarInt(u16);
 		const sourceCount = try reader.readVarInt(usize);
 
-		var sourceItems: main.List(BaseItemIndex) = .initCapacity(main.stackAllocator, @min(256, sourceCount));
-		defer sourceItems.deinit(main.stackAllocator);
-		var sourceAmounts: main.List(u16) = .initCapacity(main.stackAllocator, @min(256, sourceCount));
-		defer sourceAmounts.deinit(main.stackAllocator);
+		var sourceItems: main.List(BaseItemIndex) = .initCapacity(root.stackAllocator, @min(256, sourceCount));
+		defer sourceItems.deinit(root.stackAllocator);
+		var sourceAmounts: main.List(u16) = .initCapacity(root.stackAllocator, @min(256, sourceCount));
+		defer sourceAmounts.deinit(root.stackAllocator);
 
 		while (reader.remaining.len > 0 and sourceItems.items.len < sourceCount) {
-			sourceItems.append(main.stackAllocator, try reader.readEnum(BaseItemIndex));
-			sourceAmounts.append(main.stackAllocator, try reader.readVarInt(u16));
+			sourceItems.append(root.stackAllocator, try reader.readEnum(BaseItemIndex));
+			sourceAmounts.append(root.stackAllocator, try reader.readVarInt(u16));
 		}
 
 		return getValidRecipe(.{.sourceItems = sourceItems.items, .sourceAmounts = sourceAmounts.items, .resultItem = resultItem, .resultAmount = resultAmount});
@@ -1377,7 +1377,7 @@ pub var itemList: [65536]BaseItem = undefined;
 // Due to migrations multiple indices can map to the same item. This must be resolved during inventory loading using this map.
 var itemDeduplicationMap: [65536]BaseItemIndex = undefined;
 
-var recipeList: main.ListManaged(Recipe) = .init(main.worldArena);
+var recipeList: main.ListManaged(Recipe) = .init(root.worldArena);
 
 pub fn hasRegistered(id: []const u8) bool {
 	return reverseIndices.contains(id);
@@ -1401,14 +1401,14 @@ pub fn globalInit() void {
 	itemListSize = 0;
 	inline for (@typeInfo(modifierList).@"struct".decls) |decl| {
 		const ModifierStruct: type = @field(modifierList, decl.name);
-		modifiers.put(main.globalArena.allocator, decl.name, &Modifier.VTable.initFromModifierStruct(ModifierStruct)) catch unreachable;
+		modifiers.put(root.globalArena.allocator, decl.name, &Modifier.VTable.initFromModifierStruct(ModifierStruct)) catch unreachable;
 	}
 	inline for (@typeInfo(modifierRestrictionList).@"struct".decls) |decl| {
 		const ModifierRestrictionStruct = @field(modifierRestrictionList, decl.name);
-		modifierRestrictions.put(main.globalArena.allocator, decl.name, &.{
-			.satisfied = comptime main.meta.castFunctionSelfToAnyopaque(ModifierRestrictionStruct.satisfied),
-			.loadFromZon = comptime main.meta.castFunctionReturnToAnyopaque(ModifierRestrictionStruct.loadFromZon),
-			.printTooltip = comptime main.meta.castFunctionSelfToAnyopaque(ModifierRestrictionStruct.printTooltip),
+		modifierRestrictions.put(root.globalArena.allocator, decl.name, &.{
+			.satisfied = comptime root.meta.castFunctionSelfToAnyopaque(ModifierRestrictionStruct.satisfied),
+			.loadFromZon = comptime root.meta.castFunctionReturnToAnyopaque(ModifierRestrictionStruct.loadFromZon),
+			.printTooltip = comptime root.meta.castFunctionSelfToAnyopaque(ModifierRestrictionStruct.printTooltip),
 		}) catch unreachable;
 	}
 	Inventory.client.init();
@@ -1430,8 +1430,8 @@ pub fn register(_: []const u8, texturePath: []const u8, replacementTexturePath: 
 	const newItem = &itemList[itemListSize];
 	defer itemListSize += 1;
 
-	newItem.init(main.worldArena, texturePath, replacementTexturePath, colorTexturePath, colorReplacementTexturePath, id, zon);
-	const result = reverseIndices.getOrPut(main.worldArena.allocator, newItem.id) catch unreachable;
+	newItem.init(root.worldArena, texturePath, replacementTexturePath, colorTexturePath, colorReplacementTexturePath, id, zon);
+	const result = reverseIndices.getOrPut(root.worldArena.allocator, newItem.id) catch unreachable;
 	if (!result.found_existing) {
 		result.value_ptr.* = @enumFromInt(itemListSize);
 	}
@@ -1445,22 +1445,22 @@ fn loadPixelSources(assetFolder: []const u8, id: []const u8, layerPostfix: []con
 	var split = std.mem.splitScalar(u8, id, ':');
 	const mod = split.first();
 	const proceduralItem = split.rest();
-	const path = main.stackAllocator.print("{s}/{s}/tools/{s}{s}.png", .{assetFolder, mod, proceduralItem, layerPostfix});
-	defer main.stackAllocator.free(path);
-	const image = main.graphics.Image.readFromFile(main.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
+	const path = root.stackAllocator.print("{s}/{s}/tools/{s}{s}.png", .{assetFolder, mod, proceduralItem, layerPostfix});
+	defer root.stackAllocator.free(path);
+	const image = main.graphics.Image.readFromFile(root.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
 		if (err != error.FileNotFound) {
 			std.log.err("Error while reading procedural item image '{s}': {s}", .{path, @errorName(err)});
 		}
-		const replacementPath = main.stackAllocator.print("assets/{s}/tools/{s}{s}.png", .{mod, proceduralItem, layerPostfix});
-		defer main.stackAllocator.free(replacementPath);
-		break :blk main.graphics.Image.readFromFile(main.stackAllocator, replacementPath, .{.orientation = .openGl}) catch |err2| {
+		const replacementPath = root.stackAllocator.print("assets/{s}/tools/{s}{s}.png", .{mod, proceduralItem, layerPostfix});
+		defer root.stackAllocator.free(replacementPath);
+		break :blk main.graphics.Image.readFromFile(root.stackAllocator, replacementPath, .{.orientation = .openGl}) catch |err2| {
 			if (layerPostfix.len == 0 or err2 != error.FileNotFound) {
 				std.log.err("Error while reading procedural item image. Tried '{s}' and '{s}': {s}", .{path, replacementPath, @errorName(err2)});
 			}
 			break :blk main.graphics.Image.emptyImage;
 		};
 	};
-	defer image.deinit(main.stackAllocator);
+	defer image.deinit(root.stackAllocator);
 	if ((image.width != 16 or image.height != 16) and image.imageData.ptr != main.graphics.Image.emptyImage.imageData.ptr) {
 		std.log.err("Truncating image for {s} with incorrect dimensions. Should be 16×16.", .{id});
 	}
@@ -1494,9 +1494,9 @@ pub fn registerProceduralItem(assetFolder: []const u8, id: []const u8, zon: ZonE
 		slotInfos[i].optional = (zonDisabled.as(usize) orelse 0) != 0;
 	}
 	var parameterMatrices: main.List(PropertyMatrix) = .empty;
-	defer parameterMatrices.deinit(main.stackAllocator);
+	defer parameterMatrices.deinit(root.stackAllocator);
 	for (zon.getChild("parameters").toSlice()) |paramZon| {
-		const val = parameterMatrices.addOne(main.stackAllocator);
+		const val = parameterMatrices.addOne(root.stackAllocator);
 		val.source = MaterialProperty.fromString(paramZon.get([]const u8, "source") orelse "not specified");
 		val.destination = ProceduralItemProperty.fromString(paramZon.get([]const u8, "destination") orelse "not specified");
 		val.resultScale = paramZon.get(f32, "factor") orelse 1.0;
@@ -1520,16 +1520,16 @@ pub fn registerProceduralItem(assetFolder: []const u8, id: []const u8, zon: ZonE
 	var pixelSourcesOverlay: [16][16]u8 = undefined;
 	loadPixelSources(assetFolder, id, "_overlay", &pixelSourcesOverlay);
 
-	const idDupe = main.worldArena.dupe(u8, id);
-	proceduralItemTypeList.append(main.worldArena, .{
+	const idDupe = root.worldArena.dupe(u8, id);
+	proceduralItemTypeList.append(root.worldArena, .{
 		.id = idDupe,
-		.tags = Tag.loadTagsFromZon(main.worldArena, zon.getChild("tags")),
+		.tags = Tag.loadTagsFromZon(root.worldArena, zon.getChild("tags")),
 		.slotInfos = slotInfos,
-		.properties = main.worldArena.dupe(PropertyMatrix, parameterMatrices.items),
+		.properties = root.worldArena.dupe(PropertyMatrix, parameterMatrices.items),
 		.pixelSources = pixelSources,
 		.pixelSourcesOverlay = pixelSourcesOverlay,
 	});
-	proceduralItemTypeIdToIndex.put(main.worldArena.allocator, idDupe, @enumFromInt(proceduralItemTypeList.items.len - 1)) catch unreachable;
+	proceduralItemTypeIdToIndex.put(root.worldArena.allocator, idDupe, @enumFromInt(proceduralItemTypeList.items.len - 1)) catch unreachable;
 
 	std.log.debug("Registered procedural item: '{s}'", .{id});
 }
@@ -1537,8 +1537,8 @@ pub fn registerProceduralItem(assetFolder: []const u8, id: []const u8, zon: ZonE
 pub fn registerRecipes(zon: ZonElement) void {
 	for (zon.toSlice()) |recipeZon| {
 		recipes.parseRecipe(recipeZon, &recipeList) catch |err| {
-			const recipeString = recipeZon.toString(main.stackAllocator);
-			defer main.stackAllocator.free(recipeString);
+			const recipeString = recipeZon.toString(root.stackAllocator);
+			defer root.stackAllocator.free(recipeString);
 			std.log.err("Skipping recipe with error {s}:\n{s}", .{@errorName(err), recipeString});
 			continue;
 		};

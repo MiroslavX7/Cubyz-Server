@@ -1,19 +1,19 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
-const Neighbor = main.chunk.Neighbor;
+const Neighbor = root.chunk.Neighbor;
 const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const id = "cubyz:simple_tree";
 
@@ -47,8 +47,8 @@ deltaLeafElongation: f32,
 branched: bool,
 
 pub fn loadModel(parameters: ZonElement) ?*SimpleTreeModel {
-	const self = main.worldArena.create(SimpleTreeModel);
-	const woodBlock = main.blocks.parseBlock(parameters.get([]const u8, "log") orelse {
+	const self = root.worldArena.create(SimpleTreeModel);
+	const woodBlock = root.blocks.parseBlock(parameters.get([]const u8, "log") orelse {
 		std.log.err("Missing required 'log' field for cubyz:simple_tree rotation", .{});
 		return null;
 	});
@@ -57,13 +57,13 @@ pub fn loadModel(parameters: ZonElement) ?*SimpleTreeModel {
 			if (parameters.get([]const u8, "type")) |typ| std.log.err("Unknown tree type \"{s}\"", .{typ});
 			break :blk .round;
 		},
-		.leavesBlock = main.blocks.parseBlock(parameters.get([]const u8, "leaves") orelse {
+		.leavesBlock = root.blocks.parseBlock(parameters.get([]const u8, "leaves") orelse {
 			std.log.err("Missing required 'leaves' field for cubyz:simple_tree rotation", .{});
 			return null;
 		}),
 		.woodBlock = woodBlock,
 		.topWoodBlock = blk: {
-			break :blk main.blocks.parseBlock(parameters.get([]const u8, "top") orelse break :blk woodBlock);
+			break :blk root.blocks.parseBlock(parameters.get([]const u8, "top") orelse break :blk woodBlock);
 		},
 		.height0 = parameters.get(i32, "height") orelse 6,
 		.deltaHeight = parameters.get(u31, "height_variation") orelse 3,
@@ -82,7 +82,7 @@ pub fn loadModel(parameters: ZonElement) ?*SimpleTreeModel {
 	return self;
 }
 
-pub fn initalOrientation(block: main.blocks.Block, orientation: Neighbor, mode: RotationModeType) main.blocks.Block {
+pub fn initalOrientation(block: root.blocks.Block, orientation: Neighbor, mode: RotationModeType) root.blocks.Block {
 	switch (mode) {
 		.log, .branch => {
 			return .{.typ = block.typ, .data = orientation.reverse().bitMask()};
@@ -94,7 +94,7 @@ pub fn initalOrientation(block: main.blocks.Block, orientation: Neighbor, mode: 
 	}
 }
 
-pub fn addNeighbor(block: main.blocks.Block, neighborDir: Neighbor, mode: RotationModeType) main.blocks.Block {
+pub fn addNeighbor(block: root.blocks.Block, neighborDir: Neighbor, mode: RotationModeType) root.blocks.Block {
 	switch (mode) {
 		.log, .branch => {
 			return .{.typ = block.typ, .data = block.data | neighborDir.bitMask()};
@@ -103,7 +103,7 @@ pub fn addNeighbor(block: main.blocks.Block, neighborDir: Neighbor, mode: Rotati
 	}
 }
 
-pub fn generateStem(self: *SimpleTreeModel, x: i32, y: i32, z: i32, height: i32, chunk: *main.chunk.ServerChunk, seed: *u64) void {
+pub fn generateStem(self: *SimpleTreeModel, x: i32, y: i32, z: i32, height: i32, chunk: *root.chunk.ServerChunk, seed: *u64) void {
 	if (chunk.super.pos.voxelSize <= 2) {
 		var pz: i32 = chunk.startIndex(z);
 		while (pz < z + height) : (pz += chunk.super.pos.voxelSize) {
@@ -128,7 +128,7 @@ pub fn generateStem(self: *SimpleTreeModel, x: i32, y: i32, z: i32, height: i32,
 	}
 }
 
-pub fn generateBranch(self: *SimpleTreeModel, x: i32, y: i32, z: i32, dir: Neighbor, chunk: *main.chunk.ServerChunk) void {
+pub fn generateBranch(self: *SimpleTreeModel, x: i32, y: i32, z: i32, dir: Neighbor, chunk: *root.chunk.ServerChunk) void {
 	const block = initalOrientation(self.topWoodBlock, dir, self.topRotationModeType);
 	const x2 = x + dir.relX();
 	const y2 = y + dir.relY();
@@ -138,7 +138,7 @@ pub fn generateBranch(self: *SimpleTreeModel, x: i32, y: i32, z: i32, dir: Neigh
 	}
 }
 
-pub fn generate(self: *SimpleTreeModel, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
+pub fn generate(self: *SimpleTreeModel, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
 	const factor = random.nextFloat(seed);
 	var height = self.height0 + @as(i32, @trunc(factor*@as(f32, @floatFromInt(self.deltaHeight))));
 	const leafRadius = self.leafRadius + factor*self.deltaLeafRadius;

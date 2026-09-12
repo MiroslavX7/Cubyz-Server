@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 const Vec3i = main.vec.Vec3i;
 
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const Blueprint = main.blueprint.Blueprint;
 const Pattern = main.blueprint.Pattern;
 const Mask = main.blueprint.Mask;
@@ -27,15 +27,15 @@ pub fn execute(args: Args, source: Source) void {
 	}
 	const user = source.user;
 	const selection = command.getCurrentSelection(user) catch return;
-	const capture = Blueprint.capture(main.globalAllocator, selection);
+	const capture = Blueprint.capture(root.globalAllocator, selection);
 
 	switch (capture) {
 		.success => |blueprint| {
 			user.worldEditData.undoHistory.push(.init(blueprint, selection.minPos, "replace"));
 			user.worldEditData.redoHistory.clear();
 
-			var modifiedBlueprint = blueprint.clone(main.stackAllocator);
-			defer modifiedBlueprint.deinit(main.stackAllocator);
+			var modifiedBlueprint = blueprint.clone(root.stackAllocator);
+			defer modifiedBlueprint.deinit(root.stackAllocator);
 
 			modifiedBlueprint.replace(args.@"/replace <old mask> <new pattern>".oldMask.mask, null, args.@"/replace <old mask> <new pattern>".newPattern.pattern);
 			modifiedBlueprint.paste(selection.minPos, .{.preserveVoid = true});

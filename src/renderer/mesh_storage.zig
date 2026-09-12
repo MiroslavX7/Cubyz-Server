@@ -8,7 +8,7 @@ const game = main.game;
 const network = main.network;
 const settings = main.settings;
 const utils = main.utils;
-const LightMap = main.server.terrain.LightMap;
+const LightMap = root.server.terrain.LightMap;
 const vec = main.vec;
 const Vec2f = vec.Vec2f;
 const Vec3i = vec.Vec3i;
@@ -35,14 +35,14 @@ const storageMask = storageSize - 1;
 var storageLists: [settings.highestSupportedLod + 1]*[storageSize*storageSize*storageSize]ChunkMeshNode = undefined;
 var mapStorageLists: [settings.highestSupportedLod + 1]*[storageSize*storageSize]Atomic(?*LightMap.LightMapFragment) = undefined;
 var meshList: main.List(*chunk_meshing.ChunkMesh) = .empty;
-var priorityMeshUpdateList: main.utils.ConcurrentQueue(chunk.ChunkPosition) = undefined;
+var priorityMeshUpdateList: root.utils.ConcurrentQueue(chunk.ChunkPosition) = undefined;
 pub var updatableList: main.List(chunk.ChunkPosition) = .empty;
-var mapUpdatableList: main.utils.ConcurrentQueue(*LightMap.LightMapFragment) = undefined;
+var mapUpdatableList: root.utils.ConcurrentQueue(*LightMap.LightMapFragment) = undefined;
 var lastPx: i32 = 0;
 var lastPy: i32 = 0;
 var lastPz: i32 = 0;
 var lastRD: u16 = 0;
-var mutex: main.utils.Mutex = .{};
+var mutex: root.utils.Mutex = .{};
 
 pub const BlockUpdate = struct {
 	pos: Vec3i,
@@ -53,7 +53,7 @@ pub const BlockUpdate = struct {
 		return .{.pos = pos, .newBlock = block, .blockEntityData = blockEntityData};
 	}
 
-	pub fn initManaged(allocator: main.heap.NeverFailingAllocator, template: BlockUpdate) BlockUpdate {
+	pub fn initManaged(allocator: root.heap.NeverFailingAllocator, template: BlockUpdate) BlockUpdate {
 		return .{
 			.pos = template.pos,
 			.newBlock = template.newBlock,
@@ -61,27 +61,27 @@ pub const BlockUpdate = struct {
 		};
 	}
 
-	pub fn deinitManaged(self: BlockUpdate, allocator: main.heap.NeverFailingAllocator) void {
+	pub fn deinitManaged(self: BlockUpdate, allocator: root.heap.NeverFailingAllocator) void {
 		allocator.free(self.blockEntityData);
 	}
 };
 
-pub var meshMemoryPool: main.heap.MemoryPool(chunk_meshing.ChunkMesh) = .init(main.globalArena);
+pub var meshMemoryPool: root.heap.MemoryPool(chunk_meshing.ChunkMesh) = .init(root.globalArena);
 
 pub fn init() void { // MARK: init()
 	lastRD = 0;
 	for (&storageLists) |*storageList| {
-		storageList.* = main.globalAllocator.create([storageSize*storageSize*storageSize]ChunkMeshNode);
+		storageList.* = root.globalAllocator.create([storageSize*storageSize*storageSize]ChunkMeshNode);
 		for (storageList.*) |*val| {
 			val.* = .{};
 		}
 	}
 	for (&mapStorageLists) |*mapStorageList| {
-		mapStorageList.* = main.globalAllocator.create([storageSize*storageSize]Atomic(?*LightMap.LightMapFragment));
+		mapStorageList.* = root.globalAllocator.create([storageSize*storageSize]Atomic(?*LightMap.LightMapFragment));
 		@memset(mapStorageList.*, .init(null));
 	}
-	priorityMeshUpdateList = .init(main.globalAllocator, 16);
-	mapUpdatableList = .init(main.globalAllocator, 16);
+	priorityMeshUpdateList = .init(root.globalAllocator, 16);
+	mapUpdatableList = .init(root.globalAllocator, 16);
 }
 
 pub fn deinit() void {
@@ -95,20 +95,20 @@ pub fn deinit() void {
 	lastRD = 0;
 	freeOldMeshes(olderPx, olderPy, olderPz, olderRD);
 	for (storageLists) |storageList| {
-		main.globalAllocator.destroy(storageList);
+		root.globalAllocator.destroy(storageList);
 	}
 	for (mapStorageLists) |mapStorageList| {
-		main.globalAllocator.destroy(mapStorageList);
+		root.globalAllocator.destroy(mapStorageList);
 	}
 
-	updatableList.clearAndFree(main.globalAllocator);
+	updatableList.clearAndFree(root.globalAllocator);
 	while (mapUpdatableList.popFront()) |map| {
 		map.deferredDeinit();
 	}
 	mapUpdatableList.deinit();
 	priorityMeshUpdateList.deinit();
-	meshList.clearAndFree(main.globalAllocator);
-	main.heap.GarbageCollection.waitForFreeCompletion();
+	meshList.clearAndFree(root.globalAllocator);
+	root.heap.GarbageCollection.waitForFreeCompletion();
 }
 
 // MARK: getters
@@ -549,9 +549,9 @@ pub noinline fn updateAndGetRenderChunks(conn: *network.Connection, frustum: *co
 
 	const playerPosInt: Vec3i = @floor(playerPos);
 
-	var meshRequests: main.ListManaged(chunk.ChunkPosition) = .init(main.stackAllocator);
+	var meshRequests: main.ListManaged(chunk.ChunkPosition) = .init(root.stackAllocator);
 	defer meshRequests.deinit();
-	var mapRequests: main.ListManaged(LightMap.MapFragmentPosition) = .init(main.stackAllocator);
+	var mapRequests: main.ListManaged(LightMap.MapFragmentPosition) = .init(root.stackAllocator);
 	defer mapRequests.deinit();
 
 	const olderPx = lastPx;
@@ -574,7 +574,7 @@ pub noinline fn updateAndGetRenderChunks(conn: *network.Connection, frustum: *co
 
 	// Finds all visible chunks and lod chunks using a breadth-first hierarchical search.
 
-	var searchList = main.utils.CircularBufferQueue(*ChunkMeshNode).init(main.stackAllocator, 1024);
+	var searchList = root.utils.CircularBufferQueue(*ChunkMeshNode).init(root.stackAllocator, 1024);
 	defer searchList.deinit();
 	{
 		var firstPos = chunk.ChunkPosition{
@@ -596,7 +596,7 @@ pub noinline fn updateAndGetRenderChunks(conn: *network.Connection, frustum: *co
 			searchList.pushBack(node);
 		}
 	}
-	var nodeList: main.ListManaged(*ChunkMeshNode) = .initCapacity(main.stackAllocator, 1024);
+	var nodeList: main.ListManaged(*ChunkMeshNode) = .initCapacity(root.stackAllocator, 1024);
 	defer nodeList.deinit();
 	while (searchList.popFront()) |node| {
 		std.debug.assert(node.finishedMeshing);
@@ -700,7 +700,7 @@ pub noinline fn updateAndGetRenderChunks(conn: *network.Connection, frustum: *co
 		}
 		// Remove empty meshes.
 		if (!mesh.isEmpty()) {
-			meshList.append(main.globalAllocator, mesh);
+			meshList.append(root.globalAllocator, mesh);
 		}
 	}
 
@@ -799,7 +799,7 @@ pub fn addMeshToStorage(mesh: *chunk_meshing.ChunkMesh) error{ AlreadyStored, No
 pub fn finishMesh(pos: chunk.ChunkPosition) void {
 	mutex.lock();
 	defer mutex.unlock();
-	updatableList.append(main.globalAllocator, pos);
+	updatableList.append(root.globalAllocator, pos);
 }
 
 // MARK: updaters
@@ -818,11 +818,11 @@ pub fn updateLightMap(map: *LightMap.LightMapFragment) void {
 // MARK: Block breaking animation
 
 pub fn addBreakingAnimation(pos: Vec3i, breakingProgress: f32) void {
-	const animationFrame: usize = @trunc(breakingProgress*@as(f32, @floatFromInt(main.blocks.meshes.blockBreakingTextures.items.len)));
-	const texture = main.blocks.meshes.blockBreakingTextures.items[animationFrame];
+	const animationFrame: usize = @trunc(breakingProgress*@as(f32, @floatFromInt(root.blocks.meshes.blockBreakingTextures.items.len)));
+	const texture = root.blocks.meshes.blockBreakingTextures.items[animationFrame];
 
 	const block = getBlockFromRenderThread(pos[0], pos[1], pos[2]) orelse return;
-	const model = main.blocks.meshes.model(block).model();
+	const model = root.blocks.meshes.model(block).model();
 
 	for (model.internalQuads) |quadIndex| {
 		addBreakingAnimationFace(pos, quadIndex, texture, null, block.transparent());
@@ -836,7 +836,7 @@ pub fn addBreakingAnimation(pos: Vec3i, breakingProgress: f32) void {
 
 fn addBreakingAnimationFace(pos: Vec3i, quadIndex: main.models.QuadIndex, texture: u16, neighbor: ?chunk.Neighbor, isTransparent: bool) void {
 	const worldPos = pos +% if (neighbor) |n| n.relPos() else Vec3i{0, 0, 0};
-	const relPos = worldPos & @as(Vec3i, @splat(main.chunk.chunkMask));
+	const relPos = worldPos & @as(Vec3i, @splat(root.chunk.chunkMask));
 	const mesh = getMesh(.{.wx = worldPos[0], .wy = worldPos[1], .wz = worldPos[2], .voxelSize = 1}) orelse return;
 	mesh.mutex.lock();
 	defer mesh.mutex.unlock();
@@ -870,7 +870,7 @@ fn addBreakingAnimationFace(pos: Vec3i, quadIndex: main.models.QuadIndex, textur
 
 fn removeBreakingAnimationFace(pos: Vec3i, quadIndex: main.models.QuadIndex, neighbor: ?chunk.Neighbor) void {
 	const worldPos = pos +% if (neighbor) |n| n.relPos() else Vec3i{0, 0, 0};
-	const relPos = worldPos & @as(Vec3i, @splat(main.chunk.chunkMask));
+	const relPos = worldPos & @as(Vec3i, @splat(root.chunk.chunkMask));
 	const mesh = getMesh(.{.wx = worldPos[0], .wy = worldPos[1], .wz = worldPos[2], .voxelSize = 1}) orelse return;
 	for (mesh.blockBreakingFaces.items, 0..) |face, i| {
 		if (face.position.x == relPos[0] and face.position.y == relPos[1] and face.position.z == relPos[2] and face.blockAndQuad.quadIndex == quadIndex) {
@@ -883,7 +883,7 @@ fn removeBreakingAnimationFace(pos: Vec3i, quadIndex: main.models.QuadIndex, nei
 
 pub fn removeBreakingAnimation(pos: Vec3i) void {
 	const block = getBlockFromRenderThread(pos[0], pos[1], pos[2]) orelse return;
-	const model = main.blocks.meshes.model(block).model();
+	const model = root.blocks.meshes.model(block).model();
 
 	for (model.internalQuads) |quadIndex| {
 		removeBreakingAnimationFace(pos, quadIndex, null);

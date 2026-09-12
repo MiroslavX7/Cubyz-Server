@@ -14,7 +14,7 @@ const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec4f = vec.Vec4f;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
@@ -28,7 +28,7 @@ height: f64,
 pos: Vec3d = undefined,
 rot: Vec3f = undefined,
 
-id: main.entity.Entity,
+id: root.entity.Entity,
 name: []const u8,
 
 pub fn init(self: *@This(), zon: ZonElement, allocator: NeverFailingAllocator) !void {
@@ -50,12 +50,12 @@ pub fn init(self: *@This(), zon: ZonElement, allocator: NeverFailingAllocator) !
 	self.interpolatedValues.init(&self._interpolationPos, &self._interpolationVel);
 
 	if (zon.getChildOrNull("components")) |components| {
-		try main.entity.loadComponentsFromBase64(components.as([]const u8) orelse "", self.id, .client);
+		try root.entity.loadComponentsFromBase64(components.as([]const u8) orelse "", self.id, .client);
 	}
 }
 
 pub fn deinit(self: @This(), allocator: NeverFailingAllocator) void {
-	main.entity.client.removeAllComponents(self.id);
+	root.entity.client.removeAllComponents(self.id);
 	allocator.free(self.name);
 }
 
@@ -78,7 +78,7 @@ pub fn update(self: *@This(), time: i16, lastTime: i16) void {
 }
 
 pub fn format(self: *const @This(), writer: *std.Io.Writer) std.Io.Writer.Error!void {
-	if (main.settings.showPlayerIndexWithName and main.entity.components.@"cubyz:player".client.get(self.id) != null) {
+	if (main.settings.showPlayerIndexWithName and root.entity.components.@"cubyz:player".client.get(self.id) != null) {
 		try self.formatWithPlayerIndex(writer);
 	} else {
 		try writer.print("{s}", .{self.name});
@@ -86,6 +86,6 @@ pub fn format(self: *const @This(), writer: *std.Io.Writer) std.Io.Writer.Error!
 }
 
 pub fn formatWithPlayerIndex(self: @This(), writer: *std.Io.Writer) std.Io.Writer.Error!void {
-	std.debug.assert(main.entity.components.@"cubyz:player".client.get(self.id) != null);
-	try writer.print("{s}@{d}", .{self.name, main.entity.components.@"cubyz:player".client.get(self.id).?.playerIndex});
+	std.debug.assert(root.entity.components.@"cubyz:player".client.get(self.id) != null);
+	try writer.print("{s}@{d}", .{self.name, root.entity.components.@"cubyz:player".client.get(self.id).?.playerIndex});
 }

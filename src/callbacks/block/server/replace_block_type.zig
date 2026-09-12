@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 
 blockType: u16,
 
@@ -9,12 +9,12 @@ pub fn init(zon: main.ZonElement, creator: main.callbacks.Creator) ?*@This() {
 	const replacedBlock = switch (creator) {
 		.block => |b| b,
 	};
-	const result = main.worldArena.create(@This());
+	const result = root.worldArena.create(@This());
 	const blockId = zon.get([]const u8, "block") orelse {
 		std.log.err("Missing field \"block\" for replace_block_type event", .{});
 		return null;
 	};
-	const blockType = main.blocks.getBlockById(blockId) catch {
+	const blockType = root.blocks.getBlockById(blockId) catch {
 		std.log.err("Block with id '{s}' not found for replace_block_type event", .{blockId});
 		return null;
 	};
@@ -41,6 +41,6 @@ pub fn run(self: *@This(), params: main.callbacks.ServerBlockCallback.Params) ma
 		.typ = self.blockType,
 		.data = params.block.data,
 	};
-	_ = main.server.world.?.cmpxchgBlock(wx, wy, wz, params.block, replacingBlock);
+	_ = root.server.world.?.cmpxchgBlock(wx, wy, wz, params.block, replacingBlock);
 	return .handled;
 }

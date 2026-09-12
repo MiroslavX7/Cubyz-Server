@@ -2,12 +2,12 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ZonElement = main.ZonElement;
 
 pub fn openDirInWindow(path: []const u8) void {
-	const newPath = main.stackAllocator.dupe(u8, path);
-	defer main.stackAllocator.free(newPath);
+	const newPath = root.stackAllocator.dupe(u8, path);
+	defer root.stackAllocator.free(newPath);
 
 	if (builtin.os.tag == .windows) {
 		std.mem.replaceScalar(u8, newPath, '/', '\\');
@@ -18,9 +18,9 @@ pub fn openDirInWindow(path: []const u8) void {
 		.macos => .{"open", newPath},
 		else => .{"xdg-open", newPath},
 	};
-	var envMap = main.settings.environment.env.createMap(main.stackAllocator.allocator) catch |err| blk: {
+	var envMap = main.settings.environment.env.createMap(root.stackAllocator.allocator) catch |err| blk: {
 		std.log.err("Failed to get environment map: {s}", .{@errorName(err)});
-		break :blk std.process.Environ.Map.init(main.stackAllocator.allocator);
+		break :blk std.process.Environ.Map.init(root.stackAllocator.allocator);
 	};
 	defer envMap.deinit();
 	_ = std.process.spawn(main.io, .{
@@ -57,17 +57,17 @@ pub fn cubyzDirStr() []const u8 {
 fn flawedInit(homePath: []const u8) !void {
 	if (main.settings.launchConfig.cubyzDir.len != 0) {
 		cubyzDir_ = try std.Io.Dir.cwd().createDirPathOpen(main.io, main.settings.launchConfig.cubyzDir, .{});
-		cubyzDirStr_ = main.globalAllocator.dupe(u8, main.settings.launchConfig.cubyzDir);
+		cubyzDirStr_ = root.globalAllocator.dupe(u8, main.settings.launchConfig.cubyzDir);
 		return;
 	}
 	var homeDir = try std.Io.Dir.openDirAbsolute(main.io, homePath, .{});
 	defer homeDir.close(main.io);
 	if (builtin.os.tag == .windows) {
 		cubyzDir_ = try homeDir.createDirPathOpen(main.io, "Saved Games/Cubyz", .{});
-		cubyzDirStr_ = std.mem.concat(main.globalAllocator.allocator, u8, &.{homePath, "/Saved Games/Cubyz"}) catch unreachable;
+		cubyzDirStr_ = std.mem.concat(root.globalAllocator.allocator, u8, &.{homePath, "/Saved Games/Cubyz"}) catch unreachable;
 	} else {
 		cubyzDir_ = try homeDir.createDirPathOpen(main.io, ".cubyz", .{});
-		cubyzDirStr_ = std.mem.concat(main.globalAllocator.allocator, u8, &.{homePath, "/.cubyz"}) catch unreachable;
+		cubyzDirStr_ = std.mem.concat(root.globalAllocator.allocator, u8, &.{homePath, "/.cubyz"}) catch unreachable;
 	}
 }
 
@@ -82,7 +82,7 @@ pub fn deinit() void {
 		cubyzDir_.?.close(main.io);
 	}
 	if (cubyzDirStr_.ptr != ".".ptr) {
-		main.globalAllocator.free(cubyzDirStr_);
+		root.globalAllocator.free(cubyzDirStr_);
 	}
 }
 
@@ -102,16 +102,16 @@ pub const Dir = struct {
 	}
 
 	pub fn readToZon(self: Dir, allocator: NeverFailingAllocator, subPath: []const u8) !ZonElement {
-		const string = try self.read(main.stackAllocator, subPath);
-		defer main.stackAllocator.free(string);
-		const realPath: ?[:0]const u8 = self.dir.realPathFileAlloc(main.io, subPath, main.stackAllocator.allocator) catch null;
-		defer if (realPath) |p| main.stackAllocator.free(p);
+		const string = try self.read(root.stackAllocator, subPath);
+		defer root.stackAllocator.free(string);
+		const realPath: ?[:0]const u8 = self.dir.realPathFileAlloc(main.io, subPath, root.stackAllocator.allocator) catch null;
+		defer if (realPath) |p| root.stackAllocator.free(p);
 		return ZonElement.parseFromString(allocator, realPath orelse subPath, string);
 	}
 
 	pub fn write(self: Dir, path: []const u8, data: []const u8) !void {
-		const tempPath = main.stackAllocator.print("{s}.tmp0", .{path});
-		defer main.stackAllocator.free(tempPath);
+		const tempPath = root.stackAllocator.print("{s}.tmp0", .{path});
+		defer root.stackAllocator.free(tempPath);
 
 		try self.dir.writeFile(main.io, .{.data = data, .sub_path = tempPath});
 
@@ -119,8 +119,8 @@ pub const Dir = struct {
 	}
 
 	pub fn writeZon(self: Dir, path: []const u8, zon: ZonElement) !void {
-		const string = zon.toString(main.stackAllocator);
-		defer main.stackAllocator.free(string);
+		const string = zon.toString(root.stackAllocator);
+		defer root.stackAllocator.free(string);
 		try self.write(path, string);
 	}
 

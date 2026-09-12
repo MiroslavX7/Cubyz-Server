@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const ConnectionManager = main.network.ConnectionManager;
+const ConnectionManager = root.network.ConnectionManager;
 const settings = main.settings;
 const Vec2f = main.vec.Vec2f;
 
@@ -31,11 +31,11 @@ const width: f32 = 420;
 fn discoverIpAddress() void {
 	connection = ConnectionManager.init(main.settings.defaultPort, .{}) catch |err| {
 		std.log.err("Could not open Connection: {s}", .{@errorName(err)});
-		ipAddress = main.globalAllocator.dupe(u8, @errorName(err));
+		ipAddress = root.globalAllocator.dupe(u8, @errorName(err));
 		return;
 	};
 	connection.?.makeOnline();
-	ipAddress = main.globalAllocator.print("{f}", .{connection.?.externalAddress});
+	ipAddress = root.globalAllocator.print("{f}", .{connection.?.externalAddress});
 	gotIpAddress.store(true, .release);
 }
 
@@ -52,7 +52,7 @@ fn join() void {
 		thread = null;
 	}
 	if (ipAddress.len != 0) {
-		main.globalAllocator.free(ipAddress);
+		root.globalAllocator.free(ipAddress);
 		ipAddress = "";
 	}
 	if (connection) |_connection| {
@@ -106,7 +106,7 @@ pub fn onClose() void {
 		connection = null;
 	}
 	if (ipAddress.len != 0) {
-		main.globalAllocator.free(ipAddress);
+		root.globalAllocator.free(ipAddress);
 		ipAddress = "";
 	}
 
@@ -120,8 +120,8 @@ pub fn update() void {
 		gotIpAddress.store(false, .monotonic);
 
 		if (main.settings.streamerMode) {
-			const obfuscatedIp = main.utils.obfuscateString(main.stackAllocator, ipAddress);
-			defer main.stackAllocator.free(obfuscatedIp);
+			const obfuscatedIp = root.utils.obfuscateString(root.stackAllocator, ipAddress);
+			defer root.stackAllocator.free(obfuscatedIp);
 			ipAddressLabel.updateText(obfuscatedIp);
 		} else {
 			ipAddressLabel.updateText(ipAddress);

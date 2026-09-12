@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 fn growCapacity(current: usize, minimum: usize) usize {
 	var new = current;
@@ -209,7 +209,7 @@ pub fn ListManaged(comptime T: type) type {
 		}
 
 		pub fn print(self: *@This(), comptime fmt: []const u8, args: anytype) void {
-			var writer = std.Io.Writer.Allocating.init(main.stackAllocator.allocator); // TODO: Is there no easier way to make this without an extra copy?
+			var writer = std.Io.Writer.Allocating.init(root.stackAllocator.allocator); // TODO: Is there no easier way to make this without an extra copy?
 			defer writer.deinit();
 			writer.writer.print(fmt, args) catch unreachable;
 			self.appendSlice(writer.written());
@@ -428,9 +428,9 @@ pub fn List(comptime T: type) type {
 test "List.print single call, buffer not preserved" {
 	var list: List(u8) = .empty;
 	const oldAddress = list.items.ptr;
-	defer list.deinit(main.stackAllocator);
+	defer list.deinit(root.stackAllocator);
 
-	list.print(main.stackAllocator, "foo {d:.1}", .{34});
+	list.print(root.stackAllocator, "foo {d:.1}", .{34});
 	const newAddress = list.items.ptr;
 
 	try std.testing.expect(oldAddress != newAddress);
@@ -439,11 +439,11 @@ test "List.print single call, buffer not preserved" {
 }
 
 test "List.print initCapacity, buffer preserved" {
-	var list: List(u8) = .initCapacity(main.stackAllocator, 6);
+	var list: List(u8) = .initCapacity(root.stackAllocator, 6);
 	const oldAddress = list.items.ptr;
-	defer list.deinit(main.stackAllocator);
+	defer list.deinit(root.stackAllocator);
 
-	list.print(main.stackAllocator, "foo {}", .{34});
+	list.print(root.stackAllocator, "foo {}", .{34});
 	const newAddress = list.items.ptr;
 
 	try std.testing.expect(oldAddress == newAddress);
@@ -453,9 +453,9 @@ test "List.print initCapacity, buffer preserved" {
 
 test "List.print with a string" {
 	var list: List(u8) = .empty;
-	defer list.deinit(main.stackAllocator);
+	defer list.deinit(root.stackAllocator);
 
-	list.print(main.stackAllocator, "foo {s}", .{"bar spam BUZZ"});
+	list.print(root.stackAllocator, "foo {s}", .{"bar spam BUZZ"});
 
 	try std.testing.expectEqualStrings("foo bar spam BUZZ", list.items);
 	try std.testing.expect(list.items.len <= list.capacity);
@@ -464,16 +464,16 @@ test "List.print with a string" {
 test "List.print multiple prints" {
 	var list: List(u8) = .empty;
 	const oldAddress = list.items.ptr;
-	defer list.deinit(main.stackAllocator);
+	defer list.deinit(root.stackAllocator);
 
 	// The tricky part of the implementation is to correctly reassign buffer bounds, so every time
 	// we use the list as print destination, we want to make sure it retains normal list behavior
 	// by inserting a single element.
-	list.append(main.stackAllocator, '\n');
-	list.print(main.stackAllocator, "BarFooSpam {}", .{0.3});
-	list.append(main.stackAllocator, '\n');
-	list.print(main.stackAllocator, "fooBarSpam {}", .{34});
-	list.append(main.stackAllocator, '\n');
+	list.append(root.stackAllocator, '\n');
+	list.print(root.stackAllocator, "BarFooSpam {}", .{0.3});
+	list.append(root.stackAllocator, '\n');
+	list.print(root.stackAllocator, "fooBarSpam {}", .{34});
+	list.append(root.stackAllocator, '\n');
 
 	const newAddress = list.items.ptr;
 

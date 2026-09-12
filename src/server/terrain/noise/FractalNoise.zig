@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array2D = main.utils.Array2D;
+const Array2D = root.utils.Array2D;
 
 fn setSeed(x: i32, y: i32, offsetX: i32, offsetY: i32, seed: *u64, worldSeed: u64, scale: u31, maxResolution: u31) void {
 	seed.* = main.random.initSeed2D(worldSeed*%(scale*maxResolution | 1), .{(offsetX +% x)*%maxResolution, (offsetY +% y)*%maxResolution});
@@ -10,8 +10,8 @@ fn setSeed(x: i32, y: i32, offsetX: i32, offsetY: i32, seed: *u64, worldSeed: u6
 pub fn generateFractalTerrain(wx: i32, wy: i32, x0: u31, y0: u31, width: u32, height: u32, scale: u31, worldSeed: u64, map: Array2D(f32), maxResolution: u31) void {
 	const max = scale + 1;
 	const mask: i32 = scale - 1;
-	const bigMap = Array2D(f32).init(main.stackAllocator, max, max);
-	defer bigMap.deinit(main.stackAllocator);
+	const bigMap = Array2D(f32).init(root.stackAllocator, max, max);
+	defer bigMap.deinit(root.stackAllocator);
 	const offsetX = wx & ~mask;
 	const offsetY = wy & ~mask;
 	var seed: u64 = undefined;

@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const Blueprint = main.blueprint.Blueprint;
 
 pub const description = "Count block(s) appearance(s) in selection.";
@@ -25,14 +25,14 @@ pub fn execute(args: Args, source: Source) void {
 	const user = source.user;
 	const selection = command.getCurrentSelection(user) catch return;
 
-	var result = Blueprint.capture(main.stackAllocator, selection);
+	var result = Blueprint.capture(root.stackAllocator, selection);
 
 	switch (result) {
 		.success => |*blueprint| {
-			defer blueprint.deinit(main.stackAllocator);
+			defer blueprint.deinit(root.stackAllocator);
 
 			var context: std.AutoHashMapUnmanaged(u16, u32) = .{};
-			defer context.deinit(main.stackAllocator.allocator);
+			defer context.deinit(root.stackAllocator.allocator);
 
 			blueprint.apply(&context, countBlocks);
 
@@ -42,10 +42,10 @@ pub fn execute(args: Args, source: Source) void {
 			} else {
 				const TypAndCount = struct { typ: u16, count: u32 };
 				var items: main.List(TypAndCount) = .empty;
-				defer items.deinit(main.stackAllocator);
+				defer items.deinit(root.stackAllocator);
 
 				var iterator = context.iterator();
-				while (iterator.next()) |next| items.append(main.stackAllocator, .{.typ = next.key_ptr.*, .count = next.value_ptr.*});
+				while (iterator.next()) |next| items.append(root.stackAllocator, .{.typ = next.key_ptr.*, .count = next.value_ptr.*});
 
 				std.sort.insertion(TypAndCount, items.items, {}, struct {
 					fn lessThan(_: void, a: TypAndCount, b: TypAndCount) bool {
@@ -66,7 +66,7 @@ pub fn execute(args: Args, source: Source) void {
 }
 
 fn countBlocks(context: *std.AutoHashMapUnmanaged(u16, u32), current: Block) Block {
-	const result = context.getOrPut(main.stackAllocator.allocator, current.typ) catch unreachable;
+	const result = context.getOrPut(root.stackAllocator.allocator, current.typ) catch unreachable;
 	if (result.found_existing) {
 		result.value_ptr.* += 1;
 	} else {

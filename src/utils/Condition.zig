@@ -49,12 +49,12 @@
 const std = @import("std");
 const root = @import("root");
 const builtin = @import("builtin");
-const Mutex = main.utils.Mutex;
+const Mutex = root.utils.Mutex;
 
 const os = std.os;
 const assert = std.debug.assert;
 const testing = std.testing;
-const Futex = main.utils.Futex;
+const Futex = root.utils.Futex;
 
 const Condition = @This();
 

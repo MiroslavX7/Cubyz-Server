@@ -3,10 +3,10 @@ const std = @import("std");
 const build_options = @import("build_options");
 
 const root = @import("root");
-const Array2D = main.utils.Array2D;
+const Array2D = root.utils.Array2D;
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const ClimateMapFragment = terrain.ClimateMap.ClimateMapFragment;
 const BiomeSample = terrain.ClimateMap.BiomeSample;
 const Biome = terrain.biomes.Biome;
@@ -15,7 +15,7 @@ const vec = main.vec;
 const Vec2i = vec.Vec2i;
 const Vec2f = vec.Vec2f;
 
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 // Generates the climate map using a fluidynamics simulation, with a circular heat distribution.
 

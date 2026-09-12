@@ -13,7 +13,7 @@ const Vec3f = vec.Vec3f;
 
 const root = @import("root");
 const Window = main.Window;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
@@ -630,8 +630,8 @@ pub const draw = struct { // MARK: draw
 	}
 
 	pub inline fn print(comptime format: []const u8, args: anytype, x: f32, y: f32, fontSize: f32) void {
-		const string = main.stackAllocator.print(format, args);
-		defer main.stackAllocator.free(string);
+		const string = root.stackAllocator.print(format, args);
+		defer root.stackAllocator.free(string);
 		text(string, x, y, fontSize);
 	}
 };
@@ -873,7 +873,7 @@ pub const TextBuffer = struct { // MARK: TextBuffer
 		var parser = Parser{
 			.unicodeIterator = std.unicode.Utf8Iterator{.bytes = text, .i = 0},
 			.currentFontEffect = initialFontEffect,
-			.parsedText = .init(main.stackAllocator),
+			.parsedText = .init(root.stackAllocator),
 			.fontEffects = .init(allocator),
 			.characterIndex = .init(allocator),
 			.showControlCharacters = showControlCharacters,
@@ -906,8 +906,8 @@ pub const TextBuffer = struct { // MARK: TextBuffer
 		}
 
 		// Guess the text index from the given cluster indices. Only works if the number of glyphs and the number of characters in a cluster is the same.
-		const textIndexGuess = main.stackAllocator.alloc(u32, glyphInfos.len);
-		defer main.stackAllocator.free(textIndexGuess);
+		const textIndexGuess = root.stackAllocator.alloc(u32, glyphInfos.len);
+		defer root.stackAllocator.free(textIndexGuess);
 		for (textIndexGuess, 0..) |*index, i| {
 			if (i == 0 or glyphInfos[i - 1].cluster != glyphInfos[i].cluster) {
 				index.* = glyphInfos[i].cluster;
@@ -1092,8 +1092,8 @@ pub const TextBuffer = struct { // MARK: TextBuffer
 		c.glActiveTexture(c.GL_TEXTURE0);
 		c.glBindTexture(c.GL_TEXTURE_2D, TextRendering.glyphTexture[0]);
 		draw.rectVao.bind();
-		const lineWraps: []f32 = main.stackAllocator.alloc(f32, self.lineBreaks.items.len - 1);
-		defer main.stackAllocator.free(lineWraps);
+		const lineWraps: []f32 = root.stackAllocator.alloc(f32, self.lineBreaks.items.len - 1);
+		defer root.stackAllocator.free(lineWraps);
 		var i: usize = 0;
 		while (i < self.lineBreaks.items.len - 1) : (i += 1) {
 			x = self.getLineOffset(i);
@@ -1159,8 +1159,8 @@ pub const TextBuffer = struct { // MARK: TextBuffer
 		c.glActiveTexture(c.GL_TEXTURE0);
 		c.glBindTexture(c.GL_TEXTURE_2D, TextRendering.glyphTexture[0]);
 		draw.rectVao.bind();
-		const lineWraps: []f32 = main.stackAllocator.alloc(f32, self.lineBreaks.items.len - 1);
-		defer main.stackAllocator.free(lineWraps);
+		const lineWraps: []f32 = root.stackAllocator.alloc(f32, self.lineBreaks.items.len - 1);
+		defer root.stackAllocator.free(lineWraps);
 		var i: usize = 0;
 		while (i < self.lineBreaks.items.len - 1) : (i += 1) {
 			x = self.getLineOffset(i);
@@ -1262,8 +1262,8 @@ const TextRendering = struct { // MARK: TextRendering
 		harfbuzzFont = c.hb_font_create(harfbuzzFace);
 		fontUnitsPerPixel = @as(f32, @floatFromInt(freetypeFace.*.units_per_EM))/@as(f32, @floatFromInt(textureHeight));
 
-		glyphMapping = .init(main.globalAllocator);
-		glyphData = .init(main.globalAllocator);
+		glyphMapping = .init(root.globalAllocator);
+		glyphData = .init(root.globalAllocator);
 		glyphData.append(undefined); // 0 is a reserved value.
 		c.glGenTextures(2, &glyphTexture);
 		c.glBindTexture(c.GL_TEXTURE_2D, glyphTexture[0]);
@@ -1357,7 +1357,7 @@ const TextRendering = struct { // MARK: TextRendering
 	}
 
 	fn renderText(text: []const u8, x: f32, y: f32, fontSize: f32, initialFontEffect: TextBuffer.FontEffect) void {
-		const buf = TextBuffer.init(main.stackAllocator, text, initialFontEffect, false, .left);
+		const buf = TextBuffer.init(root.stackAllocator, text, initialFontEffect, false, .left);
 		defer buf.deinit();
 
 		buf.render(x, y, fontSize);
@@ -1888,8 +1888,8 @@ pub const TextureArray = struct { // MARK: TextureArray
 		for (0..maxLOD) |i| {
 			c.glTexImage3D(c.GL_TEXTURE_2D_ARRAY, @intCast(i), c.GL_RGBA8, @max(1, maxWidth >> @intCast(i)), @max(1, maxHeight >> @intCast(i)), @intCast(images.len), 0, c.GL_RGBA, c.GL_UNSIGNED_BYTE, null);
 		}
-		const arena = main.stackAllocator.createArena();
-		defer main.stackAllocator.destroyArena(arena);
+		const arena = root.stackAllocator.createArena();
+		defer root.stackAllocator.destroyArena(arena);
 		const lodBuffer: [][]Color = arena.alloc([]Color, maxLOD);
 		for (lodBuffer, 0..) |*buffer, i| {
 			buffer.* = arena.alloc(Color, @max(1, maxWidth >> @intCast(i))*@max(1, maxHeight >> @intCast(i)));
@@ -1971,11 +1971,11 @@ pub const Texture = struct { // MARK: Texture
 
 	pub fn initFromFile(path: []const u8) Texture {
 		var self = Texture.init();
-		const image = Image.readFromFile(main.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
+		const image = Image.readFromFile(root.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
 			std.log.err("Couldn't read image from {s}: {s}", .{path, @errorName(err)});
 			break :blk Image.defaultImage;
 		};
-		defer image.deinit(main.stackAllocator);
+		defer image.deinit(root.stackAllocator);
 		self.generate(image);
 		return self;
 	}
@@ -1993,13 +1993,13 @@ pub const Texture = struct { // MARK: Texture
 
 		curSize = largestSize;
 		while (curSize != 0) : (curSize /= 2) {
-			const path = main.stackAllocator.print("{s}{}.png", .{pathPrefix, curSize});
-			defer main.stackAllocator.free(path);
-			const image = Image.readFromFile(main.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
+			const path = root.stackAllocator.print("{s}{}.png", .{pathPrefix, curSize});
+			defer root.stackAllocator.free(path);
+			const image = Image.readFromFile(root.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
 				std.log.err("Couldn't read image from {s}: {s}", .{path, @errorName(err)});
 				break :blk Image.defaultImage;
 			};
-			defer image.deinit(main.stackAllocator);
+			defer image.deinit(root.stackAllocator);
 			c.glTexSubImage2D(c.GL_TEXTURE_2D, maxLod - std.math.log2_int(u31, curSize), 0, 0, curSize, curSize, c.GL_RGBA, c.GL_UNSIGNED_BYTE, image.imageData.ptr);
 		}
 
@@ -2204,8 +2204,8 @@ pub const Image = struct { // MARK: Image
 	pub fn readFromFile(allocator: NeverFailingAllocator, path: []const u8, options: struct { orientation: enum { asIs, openGl } }) !Image {
 		var result: Image = undefined;
 		var channel: c_int = undefined;
-		const nullTerminatedPath = main.stackAllocator.dupeZ(u8, path); // TODO: Find a more zig-friendly image loading library.
-		errdefer main.stackAllocator.free(nullTerminatedPath);
+		const nullTerminatedPath = root.stackAllocator.dupeZ(u8, path); // TODO: Find a more zig-friendly image loading library.
+		errdefer root.stackAllocator.free(nullTerminatedPath);
 		switch (options.orientation) {
 			.asIs => c.stbi_set_flip_vertically_on_load(0),
 			.openGl => c.stbi_set_flip_vertically_on_load(1),
@@ -2213,15 +2213,15 @@ pub const Image = struct { // MARK: Image
 		const data = c.stbi_load(nullTerminatedPath.ptr, @ptrCast(&result.width), @ptrCast(&result.height), &channel, 4) orelse {
 			return error.FileNotFound;
 		};
-		main.stackAllocator.free(nullTerminatedPath);
+		root.stackAllocator.free(nullTerminatedPath);
 		result.imageData = allocator.alloc(Color, result.width*result.height);
 		@memcpy(result.imageData, @as([*]align(1) Color, @ptrCast(data))[0 .. result.width*result.height]);
 		c.stbi_image_free(data);
 		return result;
 	}
 	pub fn exportToFile(self: Image, path: []const u8) !void {
-		const nullTerminated = main.stackAllocator.dupeZ(u8, path);
-		defer main.stackAllocator.free(nullTerminated);
+		const nullTerminated = root.stackAllocator.dupeZ(u8, path);
+		defer root.stackAllocator.free(nullTerminated);
 		_ = c.stbi_write_png(nullTerminated.ptr, self.width, self.height, 4, self.imageData.ptr, self.width*4); // TODO: Handle the return type.
 	}
 	pub fn getRGB(self: Image, x: usize, y: usize) Color {
@@ -2381,7 +2381,7 @@ const block_texture = struct { // MARK: block_texture
 	}
 };
 
-pub fn generateBlockTexture(block: main.blocks.Block) Texture {
+pub fn generateBlockTexture(block: root.blocks.Block) Texture {
 	const textureSize = block_texture.textureSize;
 	c.glViewport(0, 0, textureSize, textureSize);
 
@@ -2399,18 +2399,18 @@ pub fn generateBlockTexture(block: main.blocks.Block) Texture {
 
 	const uniforms = if (block.transparent()) &main.renderer.chunk_meshing.transparentUniforms else &main.renderer.chunk_meshing.uniforms;
 
-	var faceData: main.ListManaged(main.renderer.chunk_meshing.FaceData) = .init(main.stackAllocator);
+	var faceData: main.ListManaged(main.renderer.chunk_meshing.FaceData) = .init(root.stackAllocator);
 	defer faceData.deinit();
-	const model = main.blocks.meshes.model(block).model();
-	const pos: main.chunk.BlockPos = .fromCoords(1, 1, 1);
+	const model = root.blocks.meshes.model(block).model();
+	const pos: root.chunk.BlockPos = .fromCoords(1, 1, 1);
 	if (block.hasBackFace()) {
 		model.appendInternalQuadsToList(&faceData, block, pos, true);
-		for (main.chunk.Neighbor.iterable) |neighbor| {
+		for (root.chunk.Neighbor.iterable) |neighbor| {
 			model.appendNeighborFacingQuadsToList(&faceData, block, neighbor, pos, true);
 		}
 	}
 	model.appendInternalQuadsToList(&faceData, block, pos, false);
-	for (main.chunk.Neighbor.iterable) |neighbor| {
+	for (root.chunk.Neighbor.iterable) |neighbor| {
 		model.appendNeighborFacingQuadsToList(&faceData, block, neighbor, pos.neighbor(neighbor)[0], false);
 	}
 
@@ -2453,11 +2453,11 @@ pub fn generateBlockTexture(block: main.blocks.Block) Texture {
 
 		c.glUniform1f(uniforms.contrast, 0.25);
 		c.glActiveTexture(c.GL_TEXTURE0);
-		main.blocks.meshes.blockTextureArray.bind();
+		root.blocks.meshes.blockTextureArray.bind();
 		c.glActiveTexture(c.GL_TEXTURE1);
-		main.blocks.meshes.emissionTextureArray.bind();
+		root.blocks.meshes.emissionTextureArray.bind();
 		c.glActiveTexture(c.GL_TEXTURE2);
-		main.blocks.meshes.reflectivityAndAbsorptionTextureArray.bind();
+		root.blocks.meshes.reflectivityAndAbsorptionTextureArray.bind();
 		block_texture.depthTexture.bindTo(5);
 		c.glDrawElementsInstancedBaseVertexBaseInstance(c.GL_TRIANGLES, @intCast(6*faceData.items.len), c.GL_UNSIGNED_INT, null, 1, allocation.start*4, chunkAllocation.start);
 	}

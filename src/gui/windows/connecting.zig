@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const ConnectionManager = main.network.ConnectionManager;
+const ConnectionManager = root.network.ConnectionManager;
 const settings = main.settings;
 const Vec2f = main.vec.Vec2f;
 
@@ -46,7 +46,7 @@ fn connectFromNewThread() void {
 }
 
 pub fn start(_ip: []const u8, manager: *ConnectionManager) void {
-	ip = main.globalAllocator.dupe(u8, _ip);
+	ip = root.globalAllocator.dupe(u8, _ip);
 	connectionManager = manager;
 	state = .init(.connecting);
 	gui.openModalWindowFromRef(&window);
@@ -77,7 +77,7 @@ pub fn onOpen() void {
 pub fn onClose() void {
 	std.debug.assert(connectFuture == null);
 	if (ip.len != 0) {
-		main.globalAllocator.free(ip);
+		root.globalAllocator.free(ip);
 		ip = "";
 	}
 	if (window.rootComponent) |*comp| {
@@ -99,8 +99,8 @@ pub fn update() void {
 				continue :stateSwitch .failed;
 			};
 			gui.closeWindowFromRef(&window);
-			main.globalAllocator.free(settings.lastUsedIPAddress);
-			settings.lastUsedIPAddress = main.globalAllocator.dupe(u8, ip);
+			root.globalAllocator.free(settings.lastUsedIPAddress);
+			settings.lastUsedIPAddress = root.globalAllocator.dupe(u8, ip);
 			settings.save();
 			for (gui.openWindows.items) |openWindow| {
 				gui.closeWindowFromRef(openWindow);

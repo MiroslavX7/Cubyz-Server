@@ -6,7 +6,7 @@ const chunk = @import("chunk.zig");
 const ServerChunk = chunk.ServerChunk;
 const game = @import("game.zig");
 const World = game.World;
-const ServerWorld = main.server.ServerWorld;
+const ServerWorld = root.server.ServerWorld;
 const graphics = @import("graphics.zig");
 const items = @import("items.zig");
 const ItemStack = items.ItemStack;
@@ -20,9 +20,9 @@ const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const BinaryReader = main.utils.BinaryReader;
-const BinaryWriter = main.utils.BinaryWriter;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const BinaryReader = root.utils.BinaryReader;
+const BinaryWriter = root.utils.BinaryWriter;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
@@ -63,10 +63,10 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 
 	indices: [maxCapacity]u16 = undefined,
 
-	emptyMutex: main.utils.Mutex = .{},
+	emptyMutex: root.utils.Mutex = .{},
 	isEmpty: std.bit_set.ArrayBitSet(usize, maxCapacity),
 
-	changeQueue: main.utils.ConcurrentQueue(union(enum) { add: struct { u16, ItemDrop }, remove: u16 }),
+	changeQueue: root.utils.ConcurrentQueue(union(enum) { add: struct { u16, ItemDrop }, remove: u16 }),
 
 	world: ?*ServerWorld,
 
@@ -99,7 +99,7 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 		}
 	}
 
-	pub fn loadFromBytes(self: *ItemDropManager, reader: *main.utils.BinaryReader) !void {
+	pub fn loadFromBytes(self: *ItemDropManager, reader: *root.utils.BinaryReader) !void {
 		const version = try reader.readInt(u8);
 		if (version != 0) return error.UnsupportedVersion;
 		var i: u16 = 0;
@@ -108,7 +108,7 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 		}
 	}
 
-	pub fn storeToBytes(self: *ItemDropManager, writer: *main.utils.BinaryWriter) void {
+	pub fn storeToBytes(self: *ItemDropManager, writer: *root.utils.BinaryWriter) void {
 		const version = 0;
 		writer.writeInt(u8, version);
 		for (self.indices[0..self.size]) |i| {
@@ -116,7 +116,7 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 		}
 	}
 
-	fn addFromBytes(self: *ItemDropManager, reader: *main.utils.BinaryReader, i: u16) !void {
+	fn addFromBytes(self: *ItemDropManager, reader: *root.utils.BinaryReader, i: u16) !void {
 		const despawnTime = try reader.readInt(i32);
 		const pos = try reader.readVec(Vec3d);
 		const vel = try reader.readVec(Vec3d);
@@ -124,7 +124,7 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 		self.addWithIndex(i, pos, vel, random.nextFloatVector(3, &main.seed)*@as(Vec3f, @splat(2*std.math.pi)), itemStack, despawnTime, 0);
 	}
 
-	fn storeSingleToBytes(writer: *main.utils.BinaryWriter, itemdrop: ItemDrop) void {
+	fn storeSingleToBytes(writer: *root.utils.BinaryWriter, itemdrop: ItemDrop) void {
 		writer.writeInt(i32, itemdrop.despawnTime);
 		writer.writeVec(Vec3d, itemdrop.pos);
 		writer.writeVec(Vec3d, itemdrop.vel);
@@ -133,8 +133,8 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 
 	fn addFromZon(self: *ItemDropManager, zon: ZonElement) void {
 		const item = items.Item.init(zon) catch |err| {
-			const msg = zon.toStringEfficient(main.stackAllocator, "");
-			defer main.stackAllocator.free(msg);
+			const msg = zon.toStringEfficient(root.stackAllocator, "");
+			defer root.stackAllocator.free(msg);
 			std.log.err("Ignoring invalid item drop {s} which caused {s}", .{msg, @errorName(err)});
 			return;
 		};
@@ -249,17 +249,17 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 			.reverseIndex = undefined,
 		};
 		if (self.world != null) {
-			const list = ZonElement.initArray(main.stackAllocator);
-			defer list.deinit(main.stackAllocator);
+			const list = ZonElement.initArray(root.stackAllocator);
+			defer list.deinit(root.stackAllocator);
 			list.array.append(.null);
-			list.array.append(storeDrop(main.stackAllocator, drop, i));
-			const updateData = list.toStringEfficient(main.stackAllocator, &.{});
-			defer main.stackAllocator.free(updateData);
+			list.array.append(storeDrop(root.stackAllocator, drop, i));
+			const updateData = list.toStringEfficient(root.stackAllocator, &.{});
+			defer root.stackAllocator.free(updateData);
 
-			const userList = main.server.getUserList(main.stackAllocator);
-			defer main.stackAllocator.free(userList);
+			const userList = root.server.getUserList(root.stackAllocator);
+			defer root.stackAllocator.free(userList);
 			for (userList) |user| {
-				main.network.protocols.entity.send(user.conn, updateData);
+				root.network.protocols.entity.send(user.conn, updateData);
 			}
 		}
 
@@ -281,17 +281,17 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 			.reverseIndex = undefined,
 		};
 		if (self.world != null) {
-			const list = ZonElement.initArray(main.stackAllocator);
-			defer list.deinit(main.stackAllocator);
+			const list = ZonElement.initArray(root.stackAllocator);
+			defer list.deinit(root.stackAllocator);
 			list.array.append(.null);
-			list.array.append(storeDrop(main.stackAllocator, drop, i));
-			const updateData = list.toStringEfficient(main.stackAllocator, &.{});
-			defer main.stackAllocator.free(updateData);
+			list.array.append(storeDrop(root.stackAllocator, drop, i));
+			const updateData = list.toStringEfficient(root.stackAllocator, &.{});
+			defer root.stackAllocator.free(updateData);
 
-			const userList = main.server.getUserList(main.stackAllocator);
-			defer main.stackAllocator.free(userList);
+			const userList = root.server.getUserList(root.stackAllocator);
+			defer root.stackAllocator.free(userList);
 			for (userList) |user| {
-				main.network.protocols.entity.send(user.conn, updateData);
+				root.network.protocols.entity.send(user.conn, updateData);
 			}
 		}
 
@@ -337,17 +337,17 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 		self.emptyMutex.lock();
 		self.isEmpty.set(i);
 
-		const list = ZonElement.initArray(main.stackAllocator);
-		defer list.deinit(main.stackAllocator);
+		const list = ZonElement.initArray(root.stackAllocator);
+		defer list.deinit(root.stackAllocator);
 		list.array.append(.null);
 		list.array.append(.{.int = i});
-		const updateData = list.toStringEfficient(main.stackAllocator, &.{});
-		defer main.stackAllocator.free(updateData);
+		const updateData = list.toStringEfficient(root.stackAllocator, &.{});
+		defer root.stackAllocator.free(updateData);
 
-		const userList = main.server.getUserList(main.stackAllocator);
-		defer main.stackAllocator.free(userList);
+		const userList = root.server.getUserList(root.stackAllocator);
+		defer root.stackAllocator.free(userList);
 		for (userList) |user| {
-			main.network.protocols.entity.send(user.conn, updateData);
+			root.network.protocols.entity.send(user.conn, updateData);
 		}
 
 		self.emptyMutex.unlock();
@@ -369,7 +369,7 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 		_ = physics.calculateVerticalCollision(.server, deltaTime, pos, vel, null, onGround, hitBox, motion, 1.0);
 	}
 
-	pub fn checkEntity(self: *ItemDropManager, user: *main.server.User) void {
+	pub fn checkEntity(self: *ItemDropManager, user: *root.server.User) void {
 		var ii: u32 = 0;
 		while (ii < self.size) {
 			const i = self.indices[ii];
@@ -408,7 +408,7 @@ pub const ClientItemDropManager = struct { // MARK: ClientItemDropManager
 
 	var instance: ?*ClientItemDropManager = null;
 
-	var mutex: main.utils.Mutex = .{};
+	var mutex: root.utils.Mutex = .{};
 
 	pub fn init(self: *ClientItemDropManager, allocator: NeverFailingAllocator) void {
 		std.debug.assert(instance == null); // Only one instance allowed.
@@ -531,7 +531,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 				if (len == potentialSlot.len) {
 					_ = freeSlots.swapRemove(i);
 					const result = potentialSlot.index;
-					main.globalAllocator.destroy(potentialSlot);
+					root.globalAllocator.destroy(potentialSlot);
 					return result;
 				}
 			}
@@ -541,7 +541,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 		}
 
 		fn init(template: ItemVoxelModel) *ItemVoxelModel {
-			const self = main.globalAllocator.create(ItemVoxelModel);
+			const self = root.globalAllocator.create(ItemVoxelModel);
 			self.* = ItemVoxelModel{
 				.item = template.item,
 			};
@@ -549,7 +549,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 				// Find sizes and free index:
 				const block = self.item.baseItem.getDisplayBlock().?;
 				const model = blocks.meshes.model(block).model();
-				var data: main.ListManaged(u32) = .init(main.stackAllocator);
+				var data: main.ListManaged(u32) = .init(root.stackAllocator);
 				defer data.deinit();
 				for (model.internalQuads) |quad| {
 					const textureIndex = blocks.meshes.textureIndex(block, quad.quadInfo().textureSlot);
@@ -625,8 +625,8 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 		itemModelSSBO.bufferData(i32, &[3]i32{1, 1, 1});
 		itemModelSSBO.bind(2);
 
-		modelData = .init(main.globalAllocator);
-		freeSlots = .init(main.globalAllocator);
+		modelData = .init(root.globalAllocator);
+		freeSlots = .init(root.globalAllocator);
 	}
 
 	pub fn deinit() void {
@@ -635,7 +635,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 		modelData.deinit();
 		voxelModels.clear();
 		for (freeSlots.items) |freeSlot| {
-			main.globalAllocator.destroy(freeSlot);
+			root.globalAllocator.destroy(freeSlot);
 		}
 		freeSlots.deinit();
 	}

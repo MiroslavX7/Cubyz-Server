@@ -2,12 +2,12 @@ const std = @import("std");
 const root = @import("root");
 const items = main.items;
 const ZonElement = main.ZonElement;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const NeverFailingArenaAllocator = main.heap.NeverFailingArenaAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const NeverFailingArenaAllocator = root.heap.NeverFailingArenaAllocator;
 const Tag = main.Tag;
 const Recipe = items.Recipe;
 const BaseItemIndex = items.BaseItemIndex;
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 
 const Segment = union(enum) { literal: []const u8, symbol: []const u8 };
 
@@ -159,8 +159,8 @@ fn findRecipeItemOptions(allocator: NeverFailingAllocator, itemStackPattern: Ite
 }
 
 fn generateItemCombos(allocator: NeverFailingAllocator, recipe: []const ZonElement) ![]const []const ItemWithAmount {
-	const arena = main.stackAllocator.createArena();
-	defer main.stackAllocator.destroyArena(arena);
+	const arena = root.stackAllocator.createArena();
+	defer root.stackAllocator.destroyArena(arena);
 
 	var inputCombos: main.ListManaged([]const ItemWithAmount) = .initCapacity(arena, 1);
 	inputCombos.append(arena.alloc(ItemWithAmount, recipe.len));
@@ -194,8 +194,8 @@ pub fn addRecipe(itemCombo: []const ItemWithAmount, list: *main.ListManaged(Reci
 	const inputs = itemCombo[0 .. itemCombo.len - 1];
 	const output = itemCombo[itemCombo.len - 1];
 	const recipe = Recipe{
-		.sourceItems = main.worldArena.alloc(BaseItemIndex, inputs.len),
-		.sourceAmounts = main.worldArena.alloc(u16, inputs.len),
+		.sourceItems = root.worldArena.alloc(BaseItemIndex, inputs.len),
+		.sourceAmounts = root.worldArena.alloc(u16, inputs.len),
 		.resultItem = output.item,
 		.resultAmount = output.amount,
 	};
@@ -207,8 +207,8 @@ pub fn addRecipe(itemCombo: []const ItemWithAmount, list: *main.ListManaged(Reci
 }
 
 pub fn parseRecipe(zon: ZonElement, list: *main.ListManaged(Recipe)) !void {
-	const arena = main.stackAllocator.createArena();
-	defer main.stackAllocator.destroyArena(arena);
+	const arena = root.stackAllocator.createArena();
+	defer root.stackAllocator.destroyArena(arena);
 
 	const inputs = zon.getChild("inputs").toSlice();
 	const recipeItems = std.mem.concat(arena.allocator, ZonElement, &.{inputs, &.{zon.getChild("output")}}) catch unreachable;
@@ -228,12 +228,12 @@ pub fn parseRecipe(zon: ZonElement, list: *main.ListManaged(Recipe)) !void {
 }
 
 test "pattern parsing" {
-	try std.testing.expectError(error.AmbiguousSymbols, parsePattern(main.heap.testingAllocator, "cubyz:{a}{b}"));
-	try std.testing.expectError(error.EmptyBraces, parsePattern(main.heap.testingAllocator, "{}"));
-	try std.testing.expectError(error.UnclosedBraces, parsePattern(main.heap.testingAllocator, "cubyz:{foo"));
+	try std.testing.expectError(error.AmbiguousSymbols, parsePattern(root.heap.testingAllocator, "cubyz:{a}{b}"));
+	try std.testing.expectError(error.EmptyBraces, parsePattern(root.heap.testingAllocator, "{}"));
+	try std.testing.expectError(error.UnclosedBraces, parsePattern(root.heap.testingAllocator, "cubyz:{foo"));
 
-	const pattern = try parsePattern(main.heap.testingAllocator, "foo:{bar}/{baz}");
-	defer main.heap.testingAllocator.free(pattern);
+	const pattern = try parsePattern(root.heap.testingAllocator, "foo:{bar}/{baz}");
+	defer root.heap.testingAllocator.free(pattern);
 	const expected: []const Segment = &.{.{.literal = "foo:"}, .{.symbol = "bar"}, .{.literal = "/"}, .{.symbol = "baz"}};
 
 	// Can't use expectEqualSlices because segments contain strings.
@@ -241,20 +241,20 @@ test "pattern parsing" {
 }
 
 test "pattern matching" {
-	const pattern = try parsePattern(main.heap.testingAllocator, "foo:{bar}/{baz}");
-	defer main.heap.testingAllocator.free(pattern);
+	const pattern = try parsePattern(root.heap.testingAllocator, "foo:{bar}/{baz}");
+	defer root.heap.testingAllocator.free(pattern);
 
-	var keys: std.StringHashMap([]const u8) = .init(main.heap.testingAllocator.allocator);
+	var keys: std.StringHashMap([]const u8) = .init(root.heap.testingAllocator.allocator);
 	defer keys.deinit();
 
-	try std.testing.expectError(error.NoMatch, matchWithKeys(main.heap.testingAllocator, "foo:1", pattern, &keys));
+	try std.testing.expectError(error.NoMatch, matchWithKeys(root.heap.testingAllocator, "foo:1", pattern, &keys));
 
-	const newKeys = try matchWithKeys(main.heap.testingAllocator, "foo:1/2/3", pattern, &keys);
+	const newKeys = try matchWithKeys(root.heap.testingAllocator, "foo:1/2/3", pattern, &keys);
 	defer {
 		for (newKeys) |*keySet| {
 			@constCast(keySet).deinit();
 		}
-		main.heap.testingAllocator.free(newKeys);
+		root.heap.testingAllocator.free(newKeys);
 	}
 
 	try std.testing.expectEqual(2, newKeys.len);
@@ -265,19 +265,19 @@ test "pattern matching" {
 }
 
 test "pattern matching with keys" {
-	const pattern = try parsePattern(main.heap.testingAllocator, "foo:{bar}/{baz}");
-	defer main.heap.testingAllocator.free(pattern);
+	const pattern = try parsePattern(root.heap.testingAllocator, "foo:{bar}/{baz}");
+	defer root.heap.testingAllocator.free(pattern);
 
-	var keys: std.StringHashMap([]const u8) = .init(main.heap.testingAllocator.allocator);
+	var keys: std.StringHashMap([]const u8) = .init(root.heap.testingAllocator.allocator);
 	defer keys.deinit();
 	keys.put("bar", "1/2") catch unreachable;
 
-	const newKeys = try matchWithKeys(main.heap.testingAllocator, "foo:1/2/3", pattern, &keys);
+	const newKeys = try matchWithKeys(root.heap.testingAllocator, "foo:1/2/3", pattern, &keys);
 	defer {
 		for (newKeys) |*keySet| {
 			@constCast(keySet).deinit();
 		}
-		main.heap.testingAllocator.free(newKeys);
+		root.heap.testingAllocator.free(newKeys);
 	}
 
 	try std.testing.expectEqual(1, newKeys.len);

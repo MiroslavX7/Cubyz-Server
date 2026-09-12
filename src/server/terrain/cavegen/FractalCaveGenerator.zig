@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveMapFragment = terrain.CaveMap.CaveMapFragment;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const vec = main.vec;
@@ -40,7 +40,7 @@ const heightVariance = 0.15;
 pub fn generate(map: *CaveMapFragment, worldSeed: u64) void {
 	if (map.pos.voxelSize > 2) return;
 
-	const biomeMap = CaveBiomeMapView.init(main.stackAllocator, map.pos, CaveMapFragment.width*map.pos.voxelSize, CaveMapFragment.width*map.pos.voxelSize + range*3/2);
+	const biomeMap = CaveBiomeMapView.init(root.stackAllocator, map.pos, CaveMapFragment.width*map.pos.voxelSize, CaveMapFragment.width*map.pos.voxelSize + range*3/2);
 	defer biomeMap.deinit();
 	// Generate caves from all nearby chunks:
 	var wz = map.pos.wz -% 2*range;

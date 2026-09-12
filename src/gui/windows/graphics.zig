@@ -73,11 +73,11 @@ fn fovCallback(newValue: f32) void {
 	settings.save();
 }
 
-fn fovFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+fn fovFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
 	return allocator.print("#ffffffField Of View: {d:.0}°", .{value});
 }
 
-fn lodDistanceFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+fn lodDistanceFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
 	return allocator.print("#ffffffOpaque leaves distance: {d:.0}", .{@round(value)});
 }
 
@@ -86,7 +86,7 @@ fn lodDistanceCallback(newValue: f32) void {
 	settings.save();
 }
 
-fn contrastFormatter(allocator: main.heap.NeverFailingAllocator, value: f32) []const u8 {
+fn contrastFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
 	return allocator.print("#ffffffBlock Contrast: {d:.0}%", .{@round(value*100)});
 }
 
@@ -99,7 +99,7 @@ fn nightBrightnessCallback(newValue: f32) void {
 	settings.nightBrightness = newValue;
 	settings.save();
 }
-fn nightBrightnessFormatter(allocator: main.heap.NeverFailingAllocator, _: f32) []const u8 {
+fn nightBrightnessFormatter(allocator: root.heap.NeverFailingAllocator, _: f32) []const u8 {
 	return allocator.print("Night Brightness", .{});
 }
 
@@ -118,7 +118,7 @@ fn anisotropicFilteringCallback(newValue: u16) void {
 	settings.anisotropicFiltering = anisotropy[newValue];
 	settings.save();
 	if (main.game.world != null) {
-		main.blocks.meshes.reloadTextures(undefined);
+		root.blocks.meshes.reloadTextures(undefined);
 	}
 }
 

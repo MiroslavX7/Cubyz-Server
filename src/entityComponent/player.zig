@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const chunk = main.chunk;
-const Entity = main.entity.Entity;
+const Entity = root.entity.Entity;
 const game = main.game;
 const graphics = main.graphics;
 const c = graphics.c;
@@ -15,11 +15,11 @@ const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec4f = vec.Vec4f;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
-const BinaryReader = main.utils.BinaryReader;
+const BinaryReader = root.utils.BinaryReader;
 
-pub var entityComponentID: main.entity.EntityComponentId = undefined;
+pub var entityComponentID: root.entity.EntityComponentId = undefined;
 pub const entityComponentVersion = 0;
 
 // ############################# Client only stuff ################################
@@ -27,20 +27,20 @@ pub const client = struct {
 	const Component = struct {
 		playerIndex: u32,
 	};
-	pub var components: main.utils.SparseSet(Component, Entity) = .{};
+	pub var components: root.utils.SparseSet(Component, Entity) = .{};
 
 	pub fn init() void {}
 	pub fn deinit() void {
-		components.deinit(main.globalAllocator);
+		components.deinit(root.globalAllocator);
 	}
 	pub fn clear() void {
 		components.clear();
 	}
-	pub fn load(entity: Entity, reader: *utils.BinaryReader, version: u32) main.entity.EntityComponentLoadError!void {
+	pub fn load(entity: Entity, reader: *utils.BinaryReader, version: u32) root.entity.EntityComponentLoadError!void {
 		if (version != 0) return error.InvalidComponentVersion;
 		const playerIndex = reader.readVarInt(u32) catch return error.UnreadableComponentData;
 
-		const ptr = components.get(entity) orelse components.add(main.globalAllocator, entity);
+		const ptr = components.get(entity) orelse components.add(root.globalAllocator, entity);
 		ptr.* = Component{
 			.playerIndex = playerIndex,
 		};
@@ -58,20 +58,20 @@ pub const client = struct {
 pub const server = struct {
 	pub const Component = struct {
 		playerIndex: u32, // model
-		pub fn save(self: Component, writer: *utils.BinaryWriter, audience: main.entity.AudienceInfo) main.entity.ComponentSaveBehaviour {
+		pub fn save(self: Component, writer: *utils.BinaryWriter, audience: root.entity.AudienceInfo) root.entity.ComponentSaveBehaviour {
 			writer.writeVarInt(u32, self.playerIndex);
 			if (audience == .disk) return .discard;
 			return .save;
 		}
 	};
-	var components: main.utils.SparseSet(Component, Entity) = undefined;
+	var components: root.utils.SparseSet(Component, Entity) = undefined;
 	pub fn init() void {
 		components = .{};
 	}
 	pub fn deinit() void {
-		components.deinit(main.globalAllocator);
+		components.deinit(root.globalAllocator);
 	}
-	pub fn loadFromData(entity: Entity, reader: *utils.BinaryReader, version: u32) main.entity.EntityComponentLoadError!void {
+	pub fn loadFromData(entity: Entity, reader: *utils.BinaryReader, version: u32) root.entity.EntityComponentLoadError!void {
 		if (version != 0) return error.InvalidComponentVersion;
 		const playerIndex = reader.readVarInt(u32) catch return error.UnreadableComponentData;
 
@@ -86,7 +86,7 @@ pub const server = struct {
 		components.remove(entity) catch {};
 	}
 	pub fn put(entity: Entity, renderComponent: Component) void {
-		const ptr = components.get(entity) orelse components.add(main.globalAllocator, entity);
+		const ptr = components.get(entity) orelse components.add(root.globalAllocator, entity);
 		ptr.* = renderComponent;
 	}
 	pub fn get(entity: Entity) ?*Component {

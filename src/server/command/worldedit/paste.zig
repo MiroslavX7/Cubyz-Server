@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Source = main.server.command.Source;
+const Source = root.server.command.Source;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 
@@ -28,7 +28,7 @@ pub fn execute(args: Args, source: Source) void {
 		user.sendMessage("Pasting: {}", .{pos});
 
 		const selection: Blueprint.Selection = .initFromExtent(pos, clipboard.extent());
-		const undo = Blueprint.capture(main.globalAllocator, selection);
+		const undo = Blueprint.capture(root.globalAllocator, selection);
 		switch (undo) {
 			.success => |blueprint| {
 				user.worldEditData.undoHistory.push(.init(blueprint, pos, "paste"));

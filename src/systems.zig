@@ -24,7 +24,7 @@ pub const client = struct {
 		}
 	}
 	pub fn render(ambientLight: Vec3f, playerPos: Vec3d, deltaTime: f64) void {
-		main.client.entity_manager.update();
+		root.client.entity_manager.update();
 		inline for (@typeInfo(systems).@"struct".decls) |decl| {
 			@field(systems, decl.name).client.render(ambientLight, playerPos, deltaTime);
 		}

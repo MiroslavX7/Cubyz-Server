@@ -2,11 +2,11 @@ const std = @import("std");
 
 const root = @import("root");
 const ZonElement = main.ZonElement;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const ServerChunk = main.chunk.ServerChunk;
-const terrain = main.server.terrain;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const ServerChunk = root.chunk.ServerChunk;
+const terrain = root.server.terrain;
 const Assets = main.assets.Assets;
-const biomes = main.server.terrain.biomes;
+const biomes = root.server.terrain.biomes;
 const Tag = main.Tag;
 
 pub const simple_structures = @import("simple_structures/_list.zig");
@@ -62,9 +62,9 @@ pub const SimpleStructureModel = struct { // MARK: SimpleStructureModel
 		for (0..decls.len) |i| {
 			const Generator = @field(simple_structures, decls[i].name);
 			generators[i] = .{Generator.id, .{
-				.loadModel = main.meta.castFunctionReturnToOptionalAnyopaque(Generator.loadModel),
-				.generate = main.meta.castFunctionSelfToAnyopaque(Generator.generate),
-				.hashFunction = main.meta.castFunctionSelfToAnyopaque(struct {
+				.loadModel = root.meta.castFunctionReturnToOptionalAnyopaque(Generator.loadModel),
+				.generate = root.meta.castFunctionSelfToAnyopaque(Generator.generate),
+				.hashFunction = root.meta.castFunctionSelfToAnyopaque(struct {
 					fn hash(ptr: *Generator) u64 {
 						return biomes.hashGeneric(ptr.*);
 					}
@@ -82,19 +82,19 @@ pub const StructureTable = struct {
 	structures: []const SimpleStructureModel = &.{},
 	pub fn init(id: []const u8, zon: ZonElement) StructureTable {
 		var structureTable: StructureTable = .{
-			.id = main.worldArena.dupe(u8, id),
-			.tags = Tag.loadTagsFromZon(main.worldArena, zon.getChild("tags")),
+			.id = root.worldArena.dupe(u8, id),
+			.tags = Tag.loadTagsFromZon(root.worldArena, zon.getChild("tags")),
 		};
 		const tableChance: ?f32 = zon.get(f32, "chance");
 		var structureList: main.List(SimpleStructureModel) = .empty;
-		defer structureList.deinit(main.stackAllocator);
+		defer structureList.deinit(root.stackAllocator);
 
 		const structures = zon.getChild("structures");
 
 		var totalChance: f32 = 0.0;
 		for (structures.toSlice()) |elem| {
 			if (SimpleStructureModel.initModel(elem)) |model| {
-				structureList.append(main.stackAllocator, model);
+				structureList.append(root.stackAllocator, model);
 				totalChance += model.chance;
 			}
 		}
@@ -110,7 +110,7 @@ pub const StructureTable = struct {
 			}
 		}
 
-		structureTable.structures = main.worldArena.dupe(SimpleStructureModel, structureList.items);
+		structureTable.structures = root.worldArena.dupe(SimpleStructureModel, structureList.items);
 		return structureTable;
 	}
 };
@@ -121,7 +121,7 @@ var structureTablesById: std.StringHashMapUnmanaged(*StructureTable) = .{};
 
 fn register(id: []const u8, zon: ZonElement) void {
 	const structureTable = StructureTable.init(id, zon);
-	structureTables.append(main.worldArena, structureTable);
+	structureTables.append(root.worldArena, structureTable);
 	std.log.debug("Registered structure table: '{s}'", .{id});
 }
 
@@ -141,7 +141,7 @@ pub fn finishLoading() void {
 	finishedLoading = true;
 
 	std.mem.sort(StructureTable, structureTables.items, {}, compareStructureTables);
-	structureTablesById.ensureTotalCapacity(main.worldArena.allocator, @intCast(structureTables.items.len)) catch unreachable;
+	structureTablesById.ensureTotalCapacity(root.worldArena.allocator, @intCast(structureTables.items.len)) catch unreachable;
 	for (structureTables.items) |*structureTable| {
 		structureTablesById.putAssumeCapacity(structureTable.id, structureTable);
 	}

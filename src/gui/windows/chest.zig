@@ -30,7 +30,7 @@ const padding: f32 = 8;
 var itemSlots: main.List(*ItemSlot) = .empty;
 
 pub fn deinit() void {
-	itemSlots.clearAndFree(main.globalAllocator);
+	itemSlots.clearAndFree(root.globalAllocator);
 }
 
 pub var openInventory: main.items.Inventory.ClientInventory = undefined;
@@ -47,7 +47,7 @@ pub fn onOpen() void {
 		for (0..10) |x| {
 			const index: usize = y*10 + x;
 			const slot = ItemSlot.init(.{0, 0}, openInventory, @intCast(index), .default, .normal);
-			itemSlots.append(main.globalAllocator, slot);
+			itemSlots.append(root.globalAllocator, slot);
 			row.add(slot);
 		}
 		list.add(row);
@@ -60,7 +60,7 @@ pub fn onOpen() void {
 }
 
 pub fn onClose() void {
-	openInventory.deinit(main.globalAllocator);
+	openInventory.deinit(root.globalAllocator);
 
 	itemSlots.clearRetainingCapacity();
 	if (window.rootComponent) |*comp| {

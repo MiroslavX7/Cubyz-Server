@@ -2,11 +2,11 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 
 const root = @import("root");
-const ServerChunk = main.chunk.ServerChunk;
-const ChunkPosition = main.chunk.ChunkPosition;
-const Cache = main.utils.Cache;
+const ServerChunk = root.chunk.ServerChunk;
+const ChunkPosition = root.chunk.ChunkPosition;
+const Cache = root.utils.Cache;
 const ZonElement = main.ZonElement;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const Vec3i = main.vec.Vec3i;
 
 const terrain = @import("terrain.zig");
@@ -44,7 +44,7 @@ pub const CaveMapFragment = struct { // MARK: CaveMapFragment
 	}
 
 	pub fn deferredDeinit(self: *CaveMapFragment) void {
-		main.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = main.meta.castFunctionSelfToAnyopaque(privateDeinit)});
+		root.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = root.meta.castFunctionSelfToAnyopaque(privateDeinit)});
 	}
 
 	fn getIndex(x: i32, y: i32) usize {
@@ -133,7 +133,7 @@ pub const CaveMapView = struct { // MARK: CaveMapView
 	lowerCorner: Vec3i,
 	widthShift: u5,
 	heightShift: u5,
-	fragments: main.utils.Array3D(*CaveMapFragment),
+	fragments: root.utils.Array3D(*CaveMapFragment),
 
 	pub fn init(allocator: NeverFailingAllocator, pos: ChunkPosition, size: u31, margin: u31) CaveMapView {
 		const widthShift = std.math.log2_int(u31, pos.voxelSize*CaveMapFragment.width);
@@ -275,7 +275,7 @@ const associativity = 8; // 1024 MiB Cache size
 var cache: Cache(CaveMapFragment, cacheSize, associativity, CaveMapFragment.deferredDeinit) = .{};
 var profile: TerrainGenerationProfile = undefined;
 
-var memoryPool: main.heap.MemoryPool(CaveMapFragment) = .init(main.globalArena);
+var memoryPool: root.heap.MemoryPool(CaveMapFragment) = .init(root.globalArena);
 
 fn cacheInit(pos: ChunkPosition) *CaveMapFragment {
 	const mapFragment = memoryPool.create();

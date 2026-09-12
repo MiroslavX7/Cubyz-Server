@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 const ZonElement = main.ZonElement;

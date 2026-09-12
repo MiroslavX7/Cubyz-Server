@@ -21,9 +21,9 @@ pub var window = GuiWindow{
 
 const padding: f32 = 8;
 
-var accountCode: main.network.authentication.AccountCode = undefined;
+var accountCode: root.network.authentication.AccountCode = undefined;
 
-pub fn setAccountCode(accountCode_: main.network.authentication.AccountCode) void {
+pub fn setAccountCode(accountCode_: root.network.authentication.AccountCode) void {
 	accountCode = accountCode_;
 }
 

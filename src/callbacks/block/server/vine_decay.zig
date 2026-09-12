@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const blocks = main.blocks;
 const ZonElement = main.ZonElement;
 const server = main.server;
 
 pub fn init(_: ZonElement, _: main.callbacks.Creator) ?*@This() {
-	return main.worldArena.create(@This());
+	return root.worldArena.create(@This());
 }
 pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.callbacks.Result {
 	const wx = params.chunk.super.pos.wx + params.blockPos.x;
@@ -29,7 +29,7 @@ pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.
 
 	if (blockAbove.typ == params.block.typ) return .ignored;
 	if (blockAbove.replaceable()) return decay(wx, wy, wz, thisBlock);
-	if (blockAboveModel.neighborFacingQuads[main.chunk.Neighbor.dirDown.toInt()].len == 0) return decay(wx, wy, wz, thisBlock);
+	if (blockAboveModel.neighborFacingQuads[root.chunk.Neighbor.dirDown.toInt()].len == 0) return decay(wx, wy, wz, thisBlock);
 
 	return .ignored;
 }

@@ -17,7 +17,7 @@ size: Vec2f,
 texture: Texture,
 
 pub fn init(pos: Vec2f, size: Vec2f, texture: Texture) *Icon {
-	const self = main.globalAllocator.create(Icon);
+	const self = root.globalAllocator.create(Icon);
 	self.* = Icon{
 		.texture = texture,
 		.pos = pos,
@@ -27,7 +27,7 @@ pub fn init(pos: Vec2f, size: Vec2f, texture: Texture) *Icon {
 }
 
 pub fn deinit(self: *const Icon) void {
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn toComponent(self: *Icon) GuiComponent {

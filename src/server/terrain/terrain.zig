@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const ZonElement = main.ZonElement;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const biomes = @import("biomes.zig");
 pub const noise = @import("noise/noise.zig");
@@ -34,7 +34,7 @@ pub const GeneratorState = enum { enabled, disabled };
 /// A generator for setting the actual Blocks in each Chunk.
 pub const BlockGenerator = struct {
 	init: *const fn (parameters: ZonElement) void,
-	generate: *const fn (seed: u64, chunk: *main.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void,
+	generate: *const fn (seed: u64, chunk: *root.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void,
 	/// Used to prioritize certain generators over others.
 	priority: i32,
 	/// To avoid duplicate seeds in similar generation algorithms, the SurfaceGenerator xors the world-seed with the generator specific seed.
@@ -101,16 +101,16 @@ pub const TerrainGenerationProfile = struct {
 		self.climateGenerator.init(generator);
 
 		generator = settings.getChild("caveBiomeGenerators");
-		self.caveBiomeGenerators = CaveBiomeMap.CaveBiomeGenerator.getAndInitGenerators(main.worldArena, generator);
+		self.caveBiomeGenerators = CaveBiomeMap.CaveBiomeGenerator.getAndInitGenerators(root.worldArena, generator);
 
 		generator = settings.getChild("caveGenerators");
-		self.caveGenerators = CaveMap.CaveGenerator.getAndInitGenerators(main.worldArena, generator);
+		self.caveGenerators = CaveMap.CaveGenerator.getAndInitGenerators(root.worldArena, generator);
 
 		generator = settings.getChild("structureMapGenerators");
-		self.structureMapGenerators = StructureMap.StructureMapGenerator.getAndInitGenerators(main.worldArena, generator);
+		self.structureMapGenerators = StructureMap.StructureMapGenerator.getAndInitGenerators(root.worldArena, generator);
 
 		generator = settings.getChild("generators");
-		self.generators = BlockGenerator.getAndInitGenerators(main.worldArena, generator);
+		self.generators = BlockGenerator.getAndInitGenerators(root.worldArena, generator);
 
 		const climateWavelengths = settings.getChild("climateWavelengths");
 		self.climateWavelengths[0] = climateWavelengths.get(f32, "hot_cold") orelse 2400;

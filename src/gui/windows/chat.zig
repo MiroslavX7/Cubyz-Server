@@ -10,7 +10,7 @@ const Button = @import("../components/Button.zig");
 const Label = GuiComponent.Label;
 const TextInput = GuiComponent.TextInput;
 const VerticalList = @import("../components/VerticalList.zig");
-const FixedSizeCircularBuffer = main.utils.FixedSizeCircularBuffer;
+const FixedSizeCircularBuffer = root.utils.FixedSizeCircularBuffer;
 
 pub var window: GuiWindow = GuiWindow{
 	.relativePosition = .{
@@ -32,7 +32,7 @@ const messageFade = 1000;
 const reusableHistoryMaxSize = 8192;
 
 var history: main.ListManaged(*Label) = undefined;
-var messageQueue: main.utils.ConcurrentQueue([]const u8) = undefined;
+var messageQueue: root.utils.ConcurrentQueue([]const u8) = undefined;
 var expirationTime: main.ListManaged(i32) = undefined;
 var historyStart: u32 = 0;
 var fadeOutEnd: u32 = 0;
@@ -46,21 +46,21 @@ pub const History = struct {
 
 	fn init() History {
 		return .{
-			.up = .init(main.globalAllocator),
-			.down = .init(main.globalAllocator),
+			.up = .init(root.globalAllocator),
+			.down = .init(root.globalAllocator),
 		};
 	}
 	fn deinit(self: *History) void {
 		self.clear();
-		self.up.deinit(main.globalAllocator);
-		self.down.deinit(main.globalAllocator);
+		self.up.deinit(root.globalAllocator);
+		self.down.deinit(root.globalAllocator);
 	}
 	fn clear(self: *History) void {
 		while (self.up.popFront()) |msg| {
-			main.globalAllocator.free(msg);
+			root.globalAllocator.free(msg);
 		}
 		while (self.down.popFront()) |msg| {
-			main.globalAllocator.free(msg);
+			root.globalAllocator.free(msg);
 		}
 	}
 	fn flushUp(self: *History) void {
@@ -70,7 +70,7 @@ pub const History = struct {
 			}
 
 			if (self.up.forcePushBack(msg)) |old| {
-				main.globalAllocator.free(old);
+				root.globalAllocator.free(old);
 			}
 		}
 	}
@@ -86,12 +86,12 @@ pub const History = struct {
 	}
 	pub fn pushDown(self: *History, new: []const u8) void {
 		if (self.down.forcePushBack(new)) |old| {
-			main.globalAllocator.free(old);
+			root.globalAllocator.free(old);
 		}
 	}
 	pub fn pushUp(self: *History, new: []const u8) void {
 		if (self.up.forcePushBack(new)) |old| {
-			main.globalAllocator.free(old);
+			root.globalAllocator.free(old);
 		}
 	}
 	pub fn cycleUp(self: *History) bool {
@@ -119,10 +119,10 @@ pub fn clearChat() void {
 }
 
 pub fn init() void {
-	history = .init(main.globalAllocator);
+	history = .init(root.globalAllocator);
 	messageHistory = .init();
-	expirationTime = .init(main.globalAllocator);
-	messageQueue = .init(main.globalAllocator, 16);
+	expirationTime = .init(root.globalAllocator);
+	messageQueue = .init(root.globalAllocator, 16);
 }
 
 pub fn deinit() void {
@@ -131,7 +131,7 @@ pub fn deinit() void {
 	}
 	history.deinit();
 	while (messageQueue.popFront()) |msg| {
-		main.globalAllocator.free(msg);
+		root.globalAllocator.free(msg);
 	}
 	messageHistory.deinit();
 	messageQueue.deinit();
@@ -179,7 +179,7 @@ pub fn loadNextHistoryEntry() void {
 		if (isSuccess) messageHistory.cycleDown();
 		messageHistory.cycleDown();
 	} else {
-		messageHistory.pushDown(main.globalAllocator.dupe(u8, input.currentString.items));
+		messageHistory.pushDown(root.globalAllocator.dupe(u8, input.currentString.items));
 		messageHistory.cycleDown();
 	}
 	const msg = messageHistory.down.peekBack() orelse "";
@@ -189,7 +189,7 @@ pub fn loadNextHistoryEntry() void {
 pub fn loadPreviousHistoryEntry() void {
 	_ = messageHistory.cycleUp();
 	if (messageHistory.isDuplicate(input.currentString.items)) {} else {
-		messageHistory.pushUp(main.globalAllocator.dupe(u8, input.currentString.items));
+		messageHistory.pushUp(root.globalAllocator.dupe(u8, input.currentString.items));
 	}
 	const msg = messageHistory.down.peekBack() orelse "";
 	input.setString(msg);
@@ -198,7 +198,7 @@ pub fn loadPreviousHistoryEntry() void {
 pub fn onClose() void {
 	clearChat();
 	while (messageQueue.popFront()) |msg| {
-		main.globalAllocator.free(msg);
+		root.globalAllocator.free(msg);
 	}
 	messageHistory.clear();
 	input.deinit();
@@ -212,7 +212,7 @@ pub fn update() void {
 		const currentTime: i32 = @truncate(main.timestamp().toMilliseconds());
 		while (messageQueue.popFront()) |msg| {
 			history.append(Label.init(.{0, 0}, 256, msg, .left));
-			main.globalAllocator.free(msg);
+			root.globalAllocator.free(msg);
 			expirationTime.append(currentTime +% messageTimeout);
 		}
 		refresh();
@@ -248,7 +248,7 @@ pub fn render() void {
 }
 
 pub fn addMessage(msg: []const u8) void {
-	messageQueue.pushBack(main.globalAllocator.dupe(u8, msg));
+	messageQueue.pushBack(root.globalAllocator.dupe(u8, msg));
 }
 
 pub fn sendMessage() void {
@@ -259,13 +259,13 @@ pub fn sendMessage() void {
 		} else {
 			messageHistory.flushUp();
 			if (!messageHistory.isDuplicate(data)) {
-				messageHistory.pushUp(main.globalAllocator.dupe(u8, data));
+				messageHistory.pushUp(root.globalAllocator.dupe(u8, data));
 			}
 
 			if (input.currentString.items[0] == '/') {
-				main.sync.client.executeCommand(.{.chatCommand = .{.message = main.globalAllocator.dupe(u8, input.currentString.items[1..])}});
+				root.sync.client.executeCommand(.{.chatCommand = .{.message = root.globalAllocator.dupe(u8, input.currentString.items[1..])}});
 			} else {
-				main.network.protocols.chat.send(main.game.world.?.conn, data);
+				root.network.protocols.chat.send(main.game.world.?.conn, data);
 			}
 			input.clear();
 		}

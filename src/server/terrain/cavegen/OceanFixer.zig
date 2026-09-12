@@ -4,7 +4,7 @@ const sign = std.math.sign;
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveMapFragment = terrain.CaveMap.CaveMapFragment;
 const SurfaceMap = terrain.SurfaceMap;
 const MapFragment = SurfaceMap.MapFragment;
@@ -29,7 +29,7 @@ pub fn init(parameters: ZonElement) void {
 pub fn generate(map: *CaveMapFragment, worldSeed: u64) void {
 	_ = worldSeed;
 	const width = CaveMapFragment.width*map.pos.voxelSize;
-	const biomeMap = CaveBiomeMapView.init(main.stackAllocator, map.pos, width, 0);
+	const biomeMap = CaveBiomeMapView.init(root.stackAllocator, map.pos, width, 0);
 	defer biomeMap.deinit();
 	var x: u31 = 0;
 	while (x < width) : (x += map.pos.voxelSize) {

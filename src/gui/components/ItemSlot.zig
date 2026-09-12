@@ -70,14 +70,14 @@ pub fn globalDeinit() void {
 }
 
 pub fn init(pos: Vec2f, inventory: ClientInventory, itemSlot: u32, texture: TextureParamType, mode: Mode) *ItemSlot {
-	const self = main.globalAllocator.create(ItemSlot);
+	const self = root.globalAllocator.create(ItemSlot);
 	const amount = inventory.getAmount(itemSlot);
 	var buf: [16]u8 = undefined;
 	self.* = ItemSlot{
 		.inventory = inventory,
 		.itemSlot = itemSlot,
 		.pos = pos,
-		.text = TextBuffer.init(main.globalAllocator, std.fmt.bufPrint(&buf, "{}", .{amount}) catch "∞", .{}, false, .right),
+		.text = TextBuffer.init(root.globalAllocator, std.fmt.bufPrint(&buf, "{}", .{amount}) catch "∞", .{}, false, .right),
 		.lastItemAmount = amount,
 		.texture = texture.value(),
 		.mode = mode,
@@ -89,7 +89,7 @@ pub fn init(pos: Vec2f, inventory: ClientInventory, itemSlot: u32, texture: Text
 pub fn deinit(self: *const ItemSlot) void {
 	main.gui.inventory.deleteItemSlotReferences(self);
 	self.text.deinit();
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 fn refreshText(self: *ItemSlot) void {
@@ -99,7 +99,7 @@ fn refreshText(self: *ItemSlot) void {
 	self.text.deinit();
 	var buf: [16]u8 = undefined;
 	self.text = TextBuffer.init(
-		main.globalAllocator,
+		root.globalAllocator,
 		std.fmt.bufPrint(&buf, "{}", .{amount}) catch "∞",
 		.{.color = if (amount == 0) 0xff0000 else 0xffffff},
 		false,

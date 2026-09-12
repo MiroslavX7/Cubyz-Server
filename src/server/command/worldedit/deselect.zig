@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Source = main.server.command.Source;
+const Source = root.server.command.Source;
 
 pub const description = "Clears pos1 and pos2 of selection.";
 pub const usage = "/deselect";
@@ -19,6 +19,6 @@ pub fn execute(_: Args, source: Source) void {
 	user.worldEditData.selectionPosition1 = null;
 	user.worldEditData.selectionPosition2 = null;
 
-	main.network.protocols.genericUpdate.sendWorldEditPos(user.conn, .clear, null);
+	root.network.protocols.genericUpdate.sendWorldEditPos(user.conn, .clear, null);
 	user.sendMessage("Cleared selection.", .{});
 }

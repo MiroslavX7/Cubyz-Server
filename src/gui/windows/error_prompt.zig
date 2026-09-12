@@ -33,7 +33,7 @@ pub fn deinit() void {
 }
 
 fn openLog() void {
-	main.files.openDirInWindow("logs");
+	root.files.openDirInWindow("logs");
 }
 
 const padding: f32 = 8;

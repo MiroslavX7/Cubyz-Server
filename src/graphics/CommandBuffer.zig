@@ -135,8 +135,8 @@ const BeginRenderingOptions = struct {
 };
 
 pub fn beginRendering(self: CommandBuffer, options: BeginRenderingOptions) void {
-	const textures = main.stackAllocator.alloc(c.VkRenderingAttachmentInfo, options.textures.len);
-	defer main.stackAllocator.free(textures);
+	const textures = root.stackAllocator.alloc(c.VkRenderingAttachmentInfo, options.textures.len);
+	defer root.stackAllocator.free(textures);
 	for (0..options.textures.len) |i| {
 		textures[i] = options.textures[i].toVulkan();
 	}
@@ -210,8 +210,8 @@ const BindingInfo = union(enum) {
 };
 
 pub fn bindDescriptors(self: CommandBuffer, pipeline: main.graphics.Pipeline, bindPoint: DescriptorBindPoint, set: u32, bindings: []const BindingInfo) void {
-	const arena = main.stackAllocator.createArena();
-	defer main.stackAllocator.destroyArena(arena);
+	const arena = root.stackAllocator.createArena();
+	defer root.stackAllocator.destroyArena(arena);
 	const writeInfo = arena.alloc(c.VkWriteDescriptorSet, bindings.len);
 	for (0..bindings.len) |i| {
 		writeInfo[i] = .{

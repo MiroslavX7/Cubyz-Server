@@ -19,7 +19,7 @@ pub const RegionFile = struct { // MARK: RegionFile
 
 	chunks: [regionVolume][]u8 = @splat(&.{}),
 	pos: chunk.ChunkPosition,
-	mutex: main.utils.Mutex = .{},
+	mutex: root.utils.Mutex = .{},
 	modified: bool = false,
 	refCount: Atomic(u16) = .init(1),
 	storedInHashMap: bool = false,
@@ -34,18 +34,18 @@ pub const RegionFile = struct { // MARK: RegionFile
 		std.debug.assert(pos.wx & (1 << chunk.chunkShift + regionShift) - 1 == 0);
 		std.debug.assert(pos.wy & (1 << chunk.chunkShift + regionShift) - 1 == 0);
 		std.debug.assert(pos.wz & (1 << chunk.chunkShift + regionShift) - 1 == 0);
-		const self = main.globalAllocator.create(RegionFile);
+		const self = root.globalAllocator.create(RegionFile);
 		self.* = .{
 			.pos = pos,
-			.saveFolder = main.globalAllocator.dupe(u8, saveFolder),
+			.saveFolder = root.globalAllocator.dupe(u8, saveFolder),
 		};
 
-		const path = main.stackAllocator.print("{s}/{}/{}/{}/{}.region", .{saveFolder, pos.voxelSize, pos.wx, pos.wy, pos.wz});
-		defer main.stackAllocator.free(path);
-		const data = main.files.cubyzDir().read(main.stackAllocator, path) catch {
+		const path = root.stackAllocator.print("{s}/{}/{}/{}/{}.region", .{saveFolder, pos.voxelSize, pos.wx, pos.wy, pos.wz});
+		defer root.stackAllocator.free(path);
+		const data = root.files.cubyzDir().read(root.stackAllocator, path) catch {
 			return self;
 		};
-		defer main.stackAllocator.free(data);
+		defer root.stackAllocator.free(data);
 		self.load(path, data) catch {
 			std.log.err("Corrupted region file: {s}", .{path});
 			if (@errorReturnTrace()) |trace| std.log.info("{f}", .{main.fmt.FormatErrorTrace{.stackTrace = trace.*}});
@@ -79,7 +79,7 @@ pub const RegionFile = struct { // MARK: RegionFile
 		for (0..regionVolume) |j| {
 			const chunkDataLength = chunkDataLengths[j];
 			if (chunkDataLength != 0) {
-				self.chunks[j] = main.globalAllocator.dupe(u8, try reader.readSlice(chunkDataLength));
+				self.chunks[j] = root.globalAllocator.dupe(u8, try reader.readSlice(chunkDataLength));
 			}
 		}
 		if (reader.remaining.len != 0) {
@@ -91,10 +91,10 @@ pub const RegionFile = struct { // MARK: RegionFile
 		std.debug.assert(self.refCount.raw == 0);
 		std.debug.assert(!self.modified);
 		for (self.chunks) |ch| {
-			main.globalAllocator.free(ch);
+			root.globalAllocator.free(ch);
 		}
-		main.globalAllocator.free(self.saveFolder);
-		main.globalAllocator.destroy(self);
+		root.globalAllocator.free(self.saveFolder);
+		root.globalAllocator.destroy(self);
 	}
 
 	pub fn increaseRefCount(self: *RegionFile) void {
@@ -129,7 +129,7 @@ pub const RegionFile = struct { // MARK: RegionFile
 			return;
 		}
 
-		var writer = BinaryWriter.initCapacity(main.stackAllocator, totalSize + headerSize);
+		var writer = BinaryWriter.initCapacity(root.stackAllocator, totalSize + headerSize);
 		defer writer.deinit();
 
 		writer.writeInt(u32, version);
@@ -143,16 +143,16 @@ pub const RegionFile = struct { // MARK: RegionFile
 		}
 		std.debug.assert(writer.data.items.len == totalSize + headerSize);
 
-		const path = main.stackAllocator.print("{s}/{}/{}/{}/{}.region", .{self.saveFolder, self.pos.voxelSize, self.pos.wx, self.pos.wy, self.pos.wz});
-		defer main.stackAllocator.free(path);
-		const folder = main.stackAllocator.print("{s}/{}/{}/{}", .{self.saveFolder, self.pos.voxelSize, self.pos.wx, self.pos.wy});
-		defer main.stackAllocator.free(folder);
+		const path = root.stackAllocator.print("{s}/{}/{}/{}/{}.region", .{self.saveFolder, self.pos.voxelSize, self.pos.wx, self.pos.wy, self.pos.wz});
+		defer root.stackAllocator.free(path);
+		const folder = root.stackAllocator.print("{s}/{}/{}/{}", .{self.saveFolder, self.pos.voxelSize, self.pos.wx, self.pos.wy});
+		defer root.stackAllocator.free(folder);
 
-		main.files.cubyzDir().makePath(folder) catch |err| {
+		root.files.cubyzDir().makePath(folder) catch |err| {
 			std.log.err("Error while writing to file {s}: {s}", .{path, @errorName(err)});
 		};
 
-		main.files.cubyzDir().write(path, writer.data.items) catch |err| {
+		root.files.cubyzDir().write(path, writer.data.items) catch |err| {
 			std.log.err("Error while writing to file {s}: {s}", .{path, @errorName(err)});
 		};
 	}
@@ -161,16 +161,16 @@ pub const RegionFile = struct { // MARK: RegionFile
 		self.mutex.lock();
 		defer self.mutex.unlock();
 		const index = getIndex(relX, relY, relZ);
-		self.chunks[index] = main.globalAllocator.realloc(self.chunks[index], ch.len);
+		self.chunks[index] = root.globalAllocator.realloc(self.chunks[index], ch.len);
 		@memcpy(self.chunks[index], ch);
 		if (!self.modified) {
 			self.modified = true;
 			self.increaseRefCount();
-			main.server.world.?.queueRegionFileUpdateAndDecreaseRefCount(self);
+			root.server.world.?.queueRegionFileUpdateAndDecreaseRefCount(self);
 		}
 	}
 
-	pub fn getChunk(self: *RegionFile, allocator: main.heap.NeverFailingAllocator, relX: usize, relY: usize, relZ: usize) ?[]const u8 {
+	pub fn getChunk(self: *RegionFile, allocator: root.heap.NeverFailingAllocator, relX: usize, relY: usize, relZ: usize) ?[]const u8 {
 		self.mutex.lock();
 		defer self.mutex.unlock();
 		const index = getIndex(relX, relY, relZ);
@@ -183,7 +183,7 @@ pub const RegionFile = struct { // MARK: RegionFile
 // MARK: cache
 const cacheSize = 1 << 8; // Must be a power of 2!
 const associativity = 8;
-var cache: main.utils.Cache(RegionFile, cacheSize, associativity, cacheDeinit) = .{};
+var cache: root.utils.Cache(RegionFile, cacheSize, associativity, cacheDeinit) = .{};
 const HashContext = struct {
 	pub fn hash(_: HashContext, a: chunk.ChunkPosition) u64 {
 		return a.hashCode();
@@ -193,7 +193,7 @@ const HashContext = struct {
 	}
 };
 var stillUsedHashMap: std.HashMap(chunk.ChunkPosition, *RegionFile, HashContext, 50) = undefined;
-var hashMapMutex: main.utils.Mutex = .{};
+var hashMapMutex: root.utils.Mutex = .{};
 
 fn cacheDeinit(region: *RegionFile) void {
 	if (region.refCount.load(.monotonic) != 1) { // Someone else might still use it, so we store it in the hashmap.
@@ -214,8 +214,8 @@ fn cacheInit(pos: chunk.ChunkPosition) *RegionFile {
 		return region;
 	}
 	hashMapMutex.unlock();
-	const path: []const u8 = main.stackAllocator.print("saves/{s}/chunks", .{server.world.?.path});
-	defer main.stackAllocator.free(path);
+	const path: []const u8 = root.stackAllocator.print("saves/{s}/chunks", .{server.world.?.path});
+	defer root.stackAllocator.free(path);
 	return RegionFile.init(pos, path);
 }
 fn tryHashmapDeinit(region: *RegionFile) void {
@@ -231,7 +231,7 @@ fn tryHashmapDeinit(region: *RegionFile) void {
 }
 
 pub fn init() void {
-	stillUsedHashMap = .init(main.globalAllocator.allocator);
+	stillUsedHashMap = .init(root.globalAllocator.allocator);
 }
 
 pub fn deinit() void {
@@ -265,7 +265,7 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 
 	const Target = enum { toClient, toDisk };
 
-	pub fn storeChunk(allocator: main.heap.NeverFailingAllocator, ch: *chunk.Chunk, comptime target: Target, allowLossy: bool) []const u8 {
+	pub fn storeChunk(allocator: root.heap.NeverFailingAllocator, ch: *chunk.Chunk, comptime target: Target, allowLossy: bool) []const u8 {
 		var writer = BinaryWriter.init(allocator);
 
 		compressBlockData(ch, allowLossy, &writer);
@@ -274,7 +274,7 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 		return writer.data.toOwnedSlice();
 	}
 
-	pub fn loadChunk(ch: *chunk.Chunk, comptime side: main.sync.Side, data: []const u8) !void {
+	pub fn loadChunk(ch: *chunk.Chunk, comptime side: root.sync.Side, data: []const u8) !void {
 		var reader = BinaryReader.init(data);
 		try decompressBlockData(ch, &reader);
 		try decompressBlockEntityData(ch, side, &reader);
@@ -293,7 +293,7 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 				uncompressedData[i] = @intCast(ch.data.impl.raw.data.getValue(i));
 				if (allowLossy) {
 					const block = ch.data.palette()[uncompressedData[i]].load(.unordered);
-					const model = main.blocks.meshes.model(block).model();
+					const model = root.blocks.meshes.model(block).model();
 					const occluder = model.allNeighborsOccluded and !block.viewThrough();
 					if (occluder) {
 						solidMask[i >> 5] |= @as(u32, 1) << @intCast(i & 31);
@@ -318,8 +318,8 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 					}
 				}
 			}
-			const compressedData = main.utils.Compression.deflate(main.stackAllocator, &uncompressedData, .default);
-			defer main.stackAllocator.free(compressedData);
+			const compressedData = root.utils.Compression.deflate(root.stackAllocator, &uncompressedData, .default);
+			defer root.stackAllocator.free(compressedData);
 
 			writer.writeEnum(ChunkCompressionAlgo, .deflate_with_8bit_palette);
 			writer.writeInt(u8, @intCast(ch.data.palette().len));
@@ -331,14 +331,14 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 			writer.writeSlice(compressedData);
 			return;
 		}
-		var uncompressedWriter = BinaryWriter.initCapacity(main.stackAllocator, chunk.chunkVolume*@sizeOf(u32));
+		var uncompressedWriter = BinaryWriter.initCapacity(root.stackAllocator, chunk.chunkVolume*@sizeOf(u32));
 		defer uncompressedWriter.deinit();
 
 		for (0..chunk.chunkVolume) |i| {
 			uncompressedWriter.writeInt(u32, ch.data.getValue(i).toInt());
 		}
-		const compressedData = main.utils.Compression.deflate(main.stackAllocator, uncompressedWriter.data.items, .default);
-		defer main.stackAllocator.free(compressedData);
+		const compressedData = root.utils.Compression.deflate(root.stackAllocator, uncompressedWriter.data.items, .default);
+		defer root.stackAllocator.free(compressedData);
 
 		writer.writeEnum(ChunkCompressionAlgo, .deflate);
 		writer.writeVarInt(usize, compressedData.len);
@@ -353,18 +353,18 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 		switch (compressionAlgorithm) {
 			.deflate, .deflate_no_block_entities, .deflate_with_position_no_block_entities => {
 				if (compressionAlgorithm == .deflate_with_position_no_block_entities) _ = try reader.readSlice(16);
-				const decompressedData = main.stackAllocator.alloc(u8, chunk.chunkVolume*@sizeOf(u32));
-				defer main.stackAllocator.free(decompressedData);
+				const decompressedData = root.stackAllocator.alloc(u8, chunk.chunkVolume*@sizeOf(u32));
+				defer root.stackAllocator.free(decompressedData);
 
 				const compressedDataLen = if (compressionAlgorithm == .deflate) try reader.readVarInt(usize) else reader.remaining.len;
 				const compressedData = try reader.readSlice(compressedDataLen);
-				const decompressedLength = try main.utils.Compression.inflateTo(decompressedData, compressedData);
+				const decompressedLength = try root.utils.Compression.inflateTo(decompressedData, compressedData);
 				if (decompressedLength != chunk.chunkVolume*@sizeOf(u32)) return error.corrupted;
 
 				var decompressedReader = BinaryReader.init(decompressedData);
 
 				for (0..chunk.chunkVolume) |i| {
-					ch.data.setValue(i, main.blocks.Block.fromInt(try decompressedReader.readInt(u32)));
+					ch.data.setValue(i, root.blocks.Block.fromInt(try decompressedReader.readInt(u32)));
 				}
 			},
 			.deflate_with_8bit_palette, .deflate_with_8bit_palette_no_block_entities => {
@@ -374,16 +374,16 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 				ch.data.initCapacity(paletteLength);
 
 				for (0..paletteLength) |i| {
-					ch.data.palette()[i] = .init(main.blocks.Block.fromInt(try reader.readInt(u32)));
+					ch.data.palette()[i] = .init(root.blocks.Block.fromInt(try reader.readInt(u32)));
 				}
 
-				const decompressedData = main.stackAllocator.alloc(u8, chunk.chunkVolume);
-				defer main.stackAllocator.free(decompressedData);
+				const decompressedData = root.stackAllocator.alloc(u8, chunk.chunkVolume);
+				defer root.stackAllocator.free(decompressedData);
 
 				const compressedDataLen = if (compressionAlgorithm == .deflate_with_8bit_palette) try reader.readVarInt(usize) else reader.remaining.len;
 				const compressedData = try reader.readSlice(compressedDataLen);
 
-				const decompressedLength = try main.utils.Compression.inflateTo(decompressedData, compressedData);
+				const decompressedLength = try root.utils.Compression.inflateTo(decompressedData, compressedData);
 				if (decompressedLength != chunk.chunkVolume) return error.corrupted;
 
 				for (0..chunk.chunkVolume) |i| {
@@ -391,7 +391,7 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 				}
 			},
 			.uniform => {
-				ch.data.palette()[0] = .init(main.blocks.Block.fromInt(try reader.readInt(u32)));
+				ch.data.palette()[0] = .init(root.blocks.Block.fromInt(try reader.readInt(u32)));
 			},
 		}
 	}
@@ -411,7 +411,7 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 			const block = ch.data.getValue(pos.toIndex());
 			const blockEntity = block.blockEntity() orelse continue;
 
-			var tempWriter = BinaryWriter.init(main.stackAllocator);
+			var tempWriter = BinaryWriter.init(root.stackAllocator);
 			defer tempWriter.deinit();
 
 			if (target == .toDisk) {
@@ -428,7 +428,7 @@ pub const ChunkCompression = struct { // MARK: ChunkCompression
 		}
 	}
 
-	pub fn decompressBlockEntityData(ch: *chunk.Chunk, comptime side: main.sync.Side, reader: *BinaryReader) !void {
+	pub fn decompressBlockEntityData(ch: *chunk.Chunk, comptime side: root.sync.Side, reader: *BinaryReader) !void {
 		if (reader.remaining.len == 0) return;
 
 		const compressionAlgo = try reader.readEnum(BlockEntityCompressionAlgo);

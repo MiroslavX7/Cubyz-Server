@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
-const User = main.server.User;
+const User = root.server.User;
 
 pub const description = "Get or set a player's / the world spawn point";
 pub const usage =
@@ -34,11 +34,11 @@ pub fn execute(args: Args, source: Source) void {
 		},
 		.@"/spawn <world> <x> <y> <z>" => |params| {
 			const pos = command.resolveCoordinates(params.x, params.y, params.z, source) catch return;
-			const world = main.server.world.?;
+			const world = root.server.world.?;
 			world.spawn = @trunc(pos);
 		},
 		.@"/spawn <world>" => {
-			const world = main.server.world.?;
+			const world = root.server.world.?;
 			source.sendMessage("#ffff00World spawn: {}", .{world.spawn});
 		},
 	}

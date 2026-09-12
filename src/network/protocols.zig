@@ -2,7 +2,7 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const chunk = main.chunk;
 const particles = main.particles;
 const items = main.items;
@@ -15,7 +15,7 @@ const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const BlockUpdate = renderer.mesh_storage.BlockUpdate;
 
 const network = main.network;
@@ -65,18 +65,18 @@ pub const reload = struct { // MARK: reload
 	pub const id: u8 = 0;
 
 	pub fn informClientOfRestart(conn: *Connection) void {
-		var writer = utils.BinaryWriter.init(main.stackAllocator);
+		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 
 		writer.writeInt(u32, conn.restartCounter);
-		writer.writeEnum(main.server.User.State, conn.user.?.state);
+		writer.writeEnum(root.server.User.State, conn.user.?.state);
 
 		conn.send(.secure, id, writer.data.items);
 		conn.send(.lossy, id, writer.data.items);
 		conn.send(.slow, id, writer.data.items);
 	}
 	pub fn informServerOfRestart(conn: *Connection) void {
-		var writer = utils.BinaryWriter.init(main.stackAllocator);
+		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 
 		writer.writeInt(u32, conn.restartCounter);
@@ -88,7 +88,7 @@ pub const reload = struct { // MARK: reload
 
 pub const handShake = struct { // MARK: handShake
 	pub const id: u8 = 1;
-	var assetsLoadedCondition: main.utils.Condition = .{};
+	var assetsLoadedCondition: root.utils.Condition = .{};
 	var hasFinishedLoadingAssets: bool = false;
 	var handshakeZon: ZonElement = undefined;
 
@@ -104,7 +104,7 @@ pub const handShake = struct { // MARK: handShake
 					const signature2Len = try reader.readVarInt(usize);
 					const signature2 = try reader.readSlice(signature2Len);
 
-					var writer: utils.BinaryWriter = .init(main.stackAllocator);
+					var writer: utils.BinaryWriter = .init(root.stackAllocator);
 					defer writer.deinit();
 					writer.writeEnum(Connection.HandShakeState, .signatureResponse);
 					conn.handShakeState.store(.signatureResponse, .monotonic);
@@ -117,14 +117,14 @@ pub const handShake = struct { // MARK: handShake
 				},
 				.assets => {
 					std.log.info("Received assets.", .{});
-					main.files.cubyzDir().deleteTree("serverAssets") catch {}; // Delete old assets.
-					var dir = try main.files.cubyzDir().openDir("serverAssets");
+					root.files.cubyzDir().deleteTree("serverAssets") catch {}; // Delete old assets.
+					var dir = try root.files.cubyzDir().openDir("serverAssets");
 					defer dir.close();
 					try utils.Compression.unpack(dir, reader.remaining);
 				},
 				.serverData => {
-					handshakeZon = ZonElement.parseFromString(main.stackAllocator, null, reader.remaining);
-					defer handshakeZon.deinit(main.stackAllocator);
+					handshakeZon = ZonElement.parseFromString(root.stackAllocator, null, reader.remaining);
+					defer handshakeZon.deinit(root.stackAllocator);
 					conn.handShakeState.store(.complete, .monotonic);
 					conn.handShakeWaiting.broadcast(); // Notify the waiting client thread.
 					conn.mutex.lock();
@@ -148,8 +148,8 @@ pub const handShake = struct { // MARK: handShake
 			stateSwitch: switch (newState) {
 				.userData => {
 					conn.secureChannel.finishedCollectingClientVerificationData = true;
-					const zon = ZonElement.parseFromString(main.stackAllocator, null, reader.remaining);
-					defer zon.deinit(main.stackAllocator);
+					const zon = ZonElement.parseFromString(root.stackAllocator, null, reader.remaining);
+					defer zon.deinit(root.stackAllocator);
 					const name = zon.get([]const u8, "name") orelse "unnamed";
 					if (!std.unicode.utf8ValidateSlice(name)) {
 						std.log.err("Received player name with invalid UTF-8 characters.", .{});
@@ -167,11 +167,11 @@ pub const handShake = struct { // MARK: handShake
 						return error.IncompatibleVersion;
 					}
 
-					if (main.server.world.?.mode != .singleplayer) {
+					if (root.server.world.?.mode != .singleplayer) {
 						const keys = zon.getChild("keys");
-						try conn.user.?.identifyFromKeysAndName(name, keys, main.server.world.?.settings.whitelistEnabled.load(.monotonic));
+						try conn.user.?.identifyFromKeysAndName(name, keys, root.server.world.?.settings.whitelistEnabled.load(.monotonic));
 
-						var writer: utils.BinaryWriter = .init(main.stackAllocator);
+						var writer: utils.BinaryWriter = .init(root.stackAllocator);
 						defer writer.deinit();
 						writer.writeEnum(Connection.HandShakeState, .signatureRequest);
 						conn.handShakeState.store(.signatureRequest, .monotonic);
@@ -191,7 +191,7 @@ pub const handShake = struct { // MARK: handShake
 				},
 				.signatureResponse, .reload => {
 					if (newState != .reload) {
-						if (main.server.world.?.mode != .singleplayer) {
+						if (root.server.world.?.mode != .singleplayer) {
 							try conn.user.?.verifySignatures(reader);
 						}
 						conn.user.?.state = .connectedVerified;
@@ -200,11 +200,11 @@ pub const handShake = struct { // MARK: handShake
 						if (conn.user.?.state != .awaitingReloadVerified) return error.KeysNotVerified;
 					}
 					{
-						const path = main.stackAllocator.print("saves/{s}/assets/", .{main.server.world.?.path});
-						defer main.stackAllocator.free(path);
-						var dir = try main.files.cubyzDir().openIterableDir(path);
+						const path = root.stackAllocator.print("saves/{s}/assets/", .{root.server.world.?.path});
+						defer root.stackAllocator.free(path);
+						var dir = try root.files.cubyzDir().openIterableDir(path);
 						defer dir.close();
-						var writer = try std.Io.Writer.Allocating.initCapacity(main.stackAllocator.allocator, 16);
+						var writer = try std.Io.Writer.Allocating.initCapacity(root.stackAllocator.allocator, 16);
 						defer writer.deinit();
 						try writer.writer.writeByte(@intFromEnum(Connection.HandShakeState.assets));
 						try utils.Compression.pack(dir, &writer.writer);
@@ -212,7 +212,7 @@ pub const handShake = struct { // MARK: handShake
 					}
 					conn.handShakeState.store(.assets, .monotonic);
 
-					main.server.connect(conn.user.?);
+					root.server.connect(conn.user.?);
 				},
 				.assets, .serverData, .signatureRequest => return error.InvalidSide,
 				.start, .complete => {},
@@ -227,40 +227,40 @@ pub const handShake = struct { // MARK: handShake
 	}
 
 	pub fn sendServerPlayerData(conn: *Connection) void {
-		const zonObject = ZonElement.initObject(main.stackAllocator);
-		defer zonObject.deinit(main.stackAllocator);
-		zonObject.put("player", conn.user.?.player().save(main.stackAllocator, .playerHimself));
+		const zonObject = ZonElement.initObject(root.stackAllocator);
+		defer zonObject.deinit(root.stackAllocator);
+		zonObject.put("player", conn.user.?.player().save(root.stackAllocator, .playerHimself));
 		zonObject.put("player_id", @intFromEnum(conn.user.?.id));
 		zonObject.put("gamemode", @intFromEnum(conn.user.?.gamemode.raw));
-		zonObject.put("blockPalette", main.server.world.?.blockPalette.storeToZon(main.stackAllocator));
-		zonObject.put("itemPalette", main.server.world.?.itemPalette.storeToZon(main.stackAllocator));
-		zonObject.put("toolPalette", main.server.world.?.proceduralItemPalette.storeToZon(main.stackAllocator));
-		zonObject.put("biomePalette", main.server.world.?.biomePalette.storeToZon(main.stackAllocator));
-		zonObject.put("entityModelPalette", main.server.world.?.entityModelPalette.storeToZon(main.stackAllocator));
-		zonObject.put("entityComponentPalette", main.server.world.?.entityComponentPalette.storeToZon(main.stackAllocator));
+		zonObject.put("blockPalette", root.server.world.?.blockPalette.storeToZon(root.stackAllocator));
+		zonObject.put("itemPalette", root.server.world.?.itemPalette.storeToZon(root.stackAllocator));
+		zonObject.put("toolPalette", root.server.world.?.proceduralItemPalette.storeToZon(root.stackAllocator));
+		zonObject.put("biomePalette", root.server.world.?.biomePalette.storeToZon(root.stackAllocator));
+		zonObject.put("entityModelPalette", root.server.world.?.entityModelPalette.storeToZon(root.stackAllocator));
+		zonObject.put("entityComponentPalette", root.server.world.?.entityComponentPalette.storeToZon(root.stackAllocator));
 
-		const outData = zonObject.toStringEfficient(main.stackAllocator, &[1]u8{@intFromEnum(Connection.HandShakeState.serverData)});
-		defer main.stackAllocator.free(outData);
+		const outData = zonObject.toStringEfficient(root.stackAllocator, &[1]u8{@intFromEnum(Connection.HandShakeState.serverData)});
+		defer root.stackAllocator.free(outData);
 		conn.send(.secure, id, outData);
 	}
 
 	pub fn clientSide(conn: *Connection, name: []const u8) !ZonElement {
 		switch (conn.handShakeState.load(.monotonic)) {
 			.start => {
-				const zonObject = ZonElement.initObject(main.stackAllocator);
-				defer zonObject.deinit(main.stackAllocator);
+				const zonObject = ZonElement.initObject(root.stackAllocator);
+				defer zonObject.deinit(root.stackAllocator);
 
 				zonObject.putOwnedString("version", settings.version.version);
 				zonObject.putOwnedString("name", name);
-				if (main.network.authentication.KeyCollection.initialized) {
-					zonObject.put("keys", main.network.authentication.KeyCollection.getPublicKeys(main.stackAllocator));
+				if (root.network.authentication.KeyCollection.initialized) {
+					zonObject.put("keys", root.network.authentication.KeyCollection.getPublicKeys(root.stackAllocator));
 				}
 				try conn.secureChannel.startTlsHandshake();
 				conn.secureChannel.finishedCollectingClientVerificationData = true;
 
 				const prefix: [1]u8 = .{@intFromEnum(Connection.HandShakeState.userData)};
-				const data = zonObject.toStringEfficient(main.stackAllocator, &prefix);
-				defer main.stackAllocator.free(data);
+				const data = zonObject.toStringEfficient(root.stackAllocator, &prefix);
+				defer root.stackAllocator.free(data);
 
 				conn.send(.secure, id, data);
 			},
@@ -277,7 +277,7 @@ pub const handShake = struct { // MARK: handShake
 			while (true) {
 				try main.io.checkCancel();
 				conn.handShakeWaiting.timedWait(&conn.mutex, .fromMilliseconds(16)) catch {
-					main.heap.GarbageCollection.syncPoint();
+					root.heap.GarbageCollection.syncPoint();
 					continue;
 				};
 				break;
@@ -292,8 +292,8 @@ pub const handShake = struct { // MARK: handShake
 	}
 
 	pub fn signalLoadedAssets() void {
-		main.network.protocols.handShake.hasFinishedLoadingAssets = true;
-		main.network.protocols.handShake.assetsLoadedCondition.signal();
+		root.network.protocols.handShake.hasFinishedLoadingAssets = true;
+		root.network.protocols.handShake.assetsLoadedCondition.signal();
 	}
 };
 
@@ -316,12 +316,12 @@ pub const chunkRequest = struct { // MARK: chunkRequest
 				.wz = (z << voxelSizeShift + chunk.chunkShift) +% (basePosition[2] & positionMask),
 				.voxelSize = @as(u31, 1) << voxelSizeShift,
 			};
-			main.server.world.?.queueChunk(request, conn.user.?);
+			root.server.world.?.queueChunk(request, conn.user.?);
 		}
 	}
 	pub fn sendRequest(conn: *Connection, requests: []chunk.ChunkPosition, basePosition: Vec3i, renderDistance: u16) void {
 		if (requests.len == 0) return;
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 14 + 4*requests.len);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 14 + 4*requests.len);
 		defer writer.deinit();
 		writer.writeVec(Vec3i, basePosition);
 		writer.writeInt(u16, renderDistance);
@@ -345,10 +345,10 @@ pub const chunkTransmission = struct { // MARK: chunkTransmission
 		data: []const u8,
 
 		pub const vtable = utils.ThreadPool.VTable{
-			.getPriority = main.meta.castFunctionSelfToAnyopaque(getPriority),
-			.isStillNeeded = main.meta.castFunctionSelfToAnyopaque(isStillNeeded),
-			.run = main.meta.castFunctionSelfToAnyopaque(run),
-			.clean = main.meta.castFunctionSelfToAnyopaque(clean),
+			.getPriority = root.meta.castFunctionSelfToAnyopaque(getPriority),
+			.isStillNeeded = root.meta.castFunctionSelfToAnyopaque(isStillNeeded),
+			.run = root.meta.castFunctionSelfToAnyopaque(run),
+			.clean = root.meta.castFunctionSelfToAnyopaque(clean),
 			.taskType = .meshgenAndLighting,
 		};
 
@@ -376,13 +376,13 @@ pub const chunkTransmission = struct { // MARK: chunkTransmission
 		}
 
 		pub fn clean(self: *MeshGenerationTask) void {
-			main.globalAllocator.free(self.data);
-			main.globalAllocator.destroy(self);
+			root.globalAllocator.free(self.data);
+			root.globalAllocator.destroy(self);
 		}
 	};
 	fn clientReceive(_: *Connection, reader: *utils.BinaryReader) !void {
-		const task = main.globalAllocator.create(MeshGenerationTask);
-		errdefer main.globalAllocator.destroy(task);
+		const task = root.globalAllocator.create(MeshGenerationTask);
+		errdefer root.globalAllocator.destroy(task);
 		task.* = .{
 			.pos = .{
 				.wx = try reader.readInt(i32),
@@ -390,16 +390,16 @@ pub const chunkTransmission = struct { // MARK: chunkTransmission
 				.wz = try reader.readInt(i32),
 				.voxelSize = try reader.readInt(u31),
 			},
-			.data = main.globalAllocator.dupe(u8, reader.remaining),
+			.data = root.globalAllocator.dupe(u8, reader.remaining),
 		};
 		main.threadPool.addTask(task, &MeshGenerationTask.vtable);
 	}
 	fn sendChunkOverTheNetwork(conn: *Connection, ch: *chunk.ServerChunk) void {
 		ch.mutex.lock();
-		const chunkData = main.server.storage.ChunkCompression.storeChunk(main.stackAllocator, &ch.super, .toClient, ch.super.pos.voxelSize != 1);
+		const chunkData = root.server.storage.ChunkCompression.storeChunk(root.stackAllocator, &ch.super, .toClient, ch.super.pos.voxelSize != 1);
 		ch.mutex.unlock();
-		defer main.stackAllocator.free(chunkData);
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, chunkData.len + 16);
+		defer root.stackAllocator.free(chunkData);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, chunkData.len + 16);
 		defer writer.deinit();
 		writer.writeInt(i32, ch.super.pos.wx);
 		writer.writeInt(i32, ch.super.pos.wy);
@@ -425,7 +425,7 @@ pub const playerPosition = struct { // MARK: playerPosition
 			return; // Only send at most once every 50 ms.
 		}
 		lastPositionSent = time;
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 62);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 62);
 		defer writer.deinit();
 		writer.writeInt(u64, @bitCast(playerPos[0]));
 		writer.writeInt(u64, @bitCast(playerPos[1]));
@@ -455,9 +455,9 @@ pub const entityPosition = struct { // MARK: entityPosition
 		if (conn.manager.world) |world| {
 			const time = try reader.readInt(i16);
 			const playerPos = try reader.readVec(Vec3d);
-			var entityData: main.ListManaged(main.entity.EntityNetworkData) = .init(main.stackAllocator);
+			var entityData: main.ListManaged(root.entity.EntityNetworkData) = .init(root.stackAllocator);
 			defer entityData.deinit();
-			var itemData: main.ListManaged(main.itemdrop.ItemDropNetworkData) = .init(main.stackAllocator);
+			var itemData: main.ListManaged(main.itemdrop.ItemDropNetworkData) = .init(root.stackAllocator);
 			defer itemData.deinit();
 			while (reader.remaining.len != 0) {
 				const typ = try reader.readEnum(Type);
@@ -470,7 +470,7 @@ pub const entityPosition = struct { // MARK: entityPosition
 								.f32VelocityEntity => @floatCast(try reader.readVec(@Vector(3, f32))),
 								else => unreachable,
 							},
-							.id = try reader.readEnum(main.entity.Entity),
+							.id = try reader.readEnum(root.entity.Entity),
 							.pos = playerPos + try reader.readVec(Vec3f),
 							.rot = try reader.readVec(Vec3f),
 						});
@@ -489,12 +489,12 @@ pub const entityPosition = struct { // MARK: entityPosition
 					},
 				}
 			}
-			main.client.entity_manager.serverUpdate(time, entityData.items);
+			root.client.entity_manager.serverUpdate(time, entityData.items);
 			world.itemDrops.readPosition(time, itemData.items);
 		}
 	}
-	pub fn send(conn: *Connection, playerPos: Vec3d, entityData: []const main.entity.EntityNetworkData, itemData: []const main.itemdrop.ItemDropNetworkData) void {
-		var writer = utils.BinaryWriter.init(main.stackAllocator);
+	pub fn send(conn: *Connection, playerPos: Vec3d, entityData: []const root.entity.EntityNetworkData, itemData: []const main.itemdrop.ItemDropNetworkData) void {
+		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 
 		writer.writeInt(i16, @truncate(main.timestamp().toMilliseconds()));
@@ -510,7 +510,7 @@ pub const entityPosition = struct { // MARK: entityPosition
 				writer.writeEnum(Type, .f16VelocityEntity);
 				writer.writeVec(@Vector(3, f16), @floatCast(data.vel));
 			}
-			writer.writeEnum(main.entity.Entity, data.id);
+			writer.writeEnum(root.entity.Entity, data.id);
 			writer.writeVec(Vec3f, @floatCast(data.pos - playerPos));
 			writer.writeVec(Vec3f, data.rot);
 		}
@@ -545,7 +545,7 @@ pub const blockUpdate = struct { // MARK: blockUpdate
 		}
 	}
 	pub fn send(conn: *Connection, updates: []const BlockUpdate) void {
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 16);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 16);
 		defer writer.deinit();
 
 		for (updates) |update| {
@@ -562,17 +562,17 @@ pub const entity = struct { // MARK: entity
 	pub const id: u8 = 8;
 
 	fn clientReceive(conn: *Connection, reader: *utils.BinaryReader) !void {
-		const zonArray = ZonElement.parseFromString(main.stackAllocator, null, reader.remaining);
-		defer zonArray.deinit(main.stackAllocator);
+		const zonArray = ZonElement.parseFromString(root.stackAllocator, null, reader.remaining);
+		defer zonArray.deinit(root.stackAllocator);
 		var i: u32 = 0;
 		while (i < zonArray.array.items.len) : (i += 1) {
 			const elem = zonArray.array.items[i];
 			switch (elem) {
 				.int => {
-					main.client.entity_manager.removeEntity(@enumFromInt(elem.as(u32) orelse return error.Invalid));
+					root.client.entity_manager.removeEntity(@enumFromInt(elem.as(u32) orelse return error.Invalid));
 				},
 				.object => {
-					try main.client.entity_manager.addEntity(elem);
+					try root.client.entity_manager.addEntity(elem);
 				},
 				.null => {
 					i += 1;
@@ -625,7 +625,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 	fn clientReceive(conn: *Connection, reader: *utils.BinaryReader) !void {
 		switch (try reader.readEnum(UpdateType)) {
 			.gamemode => {
-				main.sync.setGamemode(null, try reader.readEnum(main.game.Gamemode));
+				root.sync.setGamemode(null, try reader.readEnum(main.game.Gamemode));
 			},
 			.teleport => {
 				game.Player.setPosBlocking(try reader.readVec(Vec3d));
@@ -666,7 +666,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 				const world = conn.manager.world.?;
 				const biomeId = try reader.readInt(u32);
 
-				const newBiome = main.server.terrain.biomes.getByIndex(biomeId) orelse return error.MissingBiome;
+				const newBiome = root.server.terrain.biomes.getByIndex(biomeId) orelse return error.MissingBiome;
 				const oldBiome = world.playerBiome.swap(newBiome, .monotonic);
 				if (oldBiome != newBiome) {
 					main.audio.setMusic(newBiome.preferredMusic);
@@ -683,8 +683,8 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 
 				var emitter: particles.Emitter = undefined;
 				if (spawnZonLen != 0) {
-					const zon = ZonElement.parseFromString(main.stackAllocator, null, spawnZon);
-					defer zon.deinit(main.stackAllocator);
+					const zon = ZonElement.parseFromString(root.stackAllocator, null, spawnZon);
+					defer zon.deinit(root.stackAllocator);
 					emitter = .initFromZon(particleId, collides, zon);
 				} else {
 					const emitterProperties = particles.EmitterProperties{
@@ -732,7 +732,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 	}
 
 	pub fn sendTPCoordinates(conn: *Connection, pos: Vec3d) void {
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 25);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 25);
 		defer writer.deinit();
 
 		writer.writeEnum(UpdateType, .teleport);
@@ -742,7 +742,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 	}
 
 	pub fn sendWorldEditPos(conn: *Connection, posType: WorldEditPosition, maybePos: ?Vec3i) void {
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 25);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 25);
 		defer writer.deinit();
 
 		writer.writeEnum(UpdateType, .worldEditPos);
@@ -755,7 +755,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 	}
 
 	pub fn sendBiome(conn: *Connection, biomeIndex: u32) void {
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 13);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 13);
 		defer writer.deinit();
 
 		writer.writeEnum(UpdateType, .biome);
@@ -766,7 +766,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 
 	pub fn sendParticles(conn: *Connection, particleId: []const u8, pos: Vec3d, collides: bool, count: u32, spawnZon: []const u8) void {
 		const bufferSize = particleId.len*8 + 32;
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, bufferSize);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, bufferSize);
 		defer writer.deinit();
 
 		writer.writeEnum(UpdateType, .particles);
@@ -781,8 +781,8 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 		conn.send(.secure, id, writer.data.items);
 	}
 
-	pub fn sendTime(conn: *Connection, world: *const main.server.ServerWorld) void {
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 13);
+	pub fn sendTime(conn: *Connection, world: *const root.server.ServerWorld) void {
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 13);
 		defer writer.deinit();
 
 		writer.writeEnum(UpdateType, .time);
@@ -818,7 +818,7 @@ pub const chat = struct { // MARK: chat
 			std.log.err("Received too long chat message with {}/{} characters.", .{main.graphics.TextBuffer.Parser.countVisibleCharacters(msg), msg.len});
 			return error.Invalid;
 		}
-		main.server.messageFrom(msg, user);
+		root.server.messageFrom(msg, user);
 	}
 
 	pub fn send(conn: *Connection, msg: []const u8) void {
@@ -834,20 +834,20 @@ pub const lightMapRequest = struct { // MARK: lightMapRequest
 			const wx = try reader.readInt(i32);
 			const wy = try reader.readInt(i32);
 			const voxelSizeShift = try reader.readInt(u5);
-			const request = main.server.terrain.SurfaceMap.MapFragmentPosition{
+			const request = root.server.terrain.SurfaceMap.MapFragmentPosition{
 				.wx = wx,
 				.wy = wy,
 				.voxelSize = @as(u31, 1) << voxelSizeShift,
 				.voxelSizeShift = voxelSizeShift,
 			};
 			if (conn.user) |user| {
-				main.server.world.?.queueLightMap(request, user);
+				root.server.world.?.queueLightMap(request, user);
 			}
 		}
 	}
-	pub fn sendRequest(conn: *Connection, requests: []main.server.terrain.SurfaceMap.MapFragmentPosition) void {
+	pub fn sendRequest(conn: *Connection, requests: []root.server.terrain.SurfaceMap.MapFragmentPosition) void {
 		if (requests.len == 0) return;
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 9*requests.len);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 9*requests.len);
 		defer writer.deinit();
 		for (requests) |req| {
 			writer.writeInt(i32, req.wx);
@@ -868,10 +868,10 @@ pub const lightMapTransmission = struct { // MARK: lightMapTransmission
 		data: []const u8,
 
 		const vtable = utils.ThreadPool.VTable{
-			.getPriority = main.meta.castFunctionSelfToAnyopaque(getPriority),
-			.isStillNeeded = main.meta.castFunctionSelfToAnyopaque(isStillNeeded),
-			.run = main.meta.castFunctionSelfToAnyopaque(run),
-			.clean = main.meta.castFunctionSelfToAnyopaque(clean),
+			.getPriority = root.meta.castFunctionSelfToAnyopaque(getPriority),
+			.isStillNeeded = root.meta.castFunctionSelfToAnyopaque(isStillNeeded),
+			.run = root.meta.castFunctionSelfToAnyopaque(run),
+			.clean = root.meta.castFunctionSelfToAnyopaque(clean),
 			.taskType = .misc,
 		};
 
@@ -887,26 +887,26 @@ pub const lightMapTransmission = struct { // MARK: lightMapTransmission
 		pub fn run(self: *LightMapTask) void {
 			defer self.clean();
 
-			const pos = main.server.terrain.SurfaceMap.MapFragmentPosition{
+			const pos = root.server.terrain.SurfaceMap.MapFragmentPosition{
 				.wx = self.wx,
 				.wy = self.wy,
 				.voxelSize = @as(u31, 1) << self.voxelSizeShift,
 				.voxelSizeShift = self.voxelSizeShift,
 			};
-			const _inflatedData = main.stackAllocator.alloc(u8, main.server.terrain.LightMap.LightMapFragment.mapSize*main.server.terrain.LightMap.LightMapFragment.mapSize*2);
-			defer main.stackAllocator.free(_inflatedData);
+			const _inflatedData = root.stackAllocator.alloc(u8, root.server.terrain.LightMap.LightMapFragment.mapSize*root.server.terrain.LightMap.LightMapFragment.mapSize*2);
+			defer root.stackAllocator.free(_inflatedData);
 			const _inflatedLen = utils.Compression.inflateTo(_inflatedData, self.data) catch |err| {
 				std.log.err("Got error {s} while decompressing lightmap data at position {} with data {any}", .{@errorName(err), pos, self.data});
 				main.game.world.?.conn.disconnect();
 				return;
 			};
-			if (_inflatedLen != main.server.terrain.LightMap.LightMapFragment.mapSize*main.server.terrain.LightMap.LightMapFragment.mapSize*2) {
+			if (_inflatedLen != root.server.terrain.LightMap.LightMapFragment.mapSize*root.server.terrain.LightMap.LightMapFragment.mapSize*2) {
 				std.log.err("Transmission of light map has invalid size: {}. Input data: {any}, After inflate: {any}", .{_inflatedLen, self.data, _inflatedData[0.._inflatedLen]});
 				main.game.world.?.conn.disconnect();
 				return;
 			}
 			var ligthMapReader = utils.BinaryReader.init(_inflatedData);
-			const map = main.globalAllocator.create(main.server.terrain.LightMap.LightMapFragment);
+			const map = root.globalAllocator.create(root.server.terrain.LightMap.LightMapFragment);
 			map.init(pos.wx, pos.wy, pos.voxelSize);
 			for (&map.startHeight) |*val| {
 				val.* = ligthMapReader.readInt(i16) catch |err| {
@@ -919,31 +919,31 @@ pub const lightMapTransmission = struct { // MARK: lightMapTransmission
 		}
 
 		pub fn clean(self: *LightMapTask) void {
-			main.globalAllocator.free(self.data);
-			main.globalAllocator.destroy(self);
+			root.globalAllocator.free(self.data);
+			root.globalAllocator.destroy(self);
 		}
 	};
 
 	fn clientReceive(_: *Connection, reader: *utils.BinaryReader) !void {
-		const task = main.globalAllocator.create(LightMapTask);
-		errdefer main.globalAllocator.destroy(task);
+		const task = root.globalAllocator.create(LightMapTask);
+		errdefer root.globalAllocator.destroy(task);
 		task.* = .{
 			.wx = try reader.readInt(i32),
 			.wy = try reader.readInt(i32),
 			.voxelSizeShift = try reader.readInt(u5),
-			.data = main.globalAllocator.dupe(u8, reader.remaining),
+			.data = root.globalAllocator.dupe(u8, reader.remaining),
 		};
 		main.threadPool.addTask(task, &LightMapTask.vtable);
 	}
-	pub fn sendLightMap(conn: *Connection, map: *main.server.terrain.LightMap.LightMapFragment) void {
-		var ligthMapWriter = utils.BinaryWriter.initCapacity(main.stackAllocator, @sizeOf(@TypeOf(map.startHeight)));
+	pub fn sendLightMap(conn: *Connection, map: *root.server.terrain.LightMap.LightMapFragment) void {
+		var ligthMapWriter = utils.BinaryWriter.initCapacity(root.stackAllocator, @sizeOf(@TypeOf(map.startHeight)));
 		defer ligthMapWriter.deinit();
 		for (&map.startHeight) |val| {
 			ligthMapWriter.writeInt(i16, val);
 		}
-		const compressedData = utils.Compression.deflate(main.stackAllocator, ligthMapWriter.data.items, .default);
-		defer main.stackAllocator.free(compressedData);
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, 9 + compressedData.len);
+		const compressedData = utils.Compression.deflate(root.stackAllocator, ligthMapWriter.data.items, .default);
+		defer root.stackAllocator.free(compressedData);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, 9 + compressedData.len);
 		defer writer.deinit();
 		writer.writeInt(i32, map.pos.wx);
 		writer.writeInt(i32, map.pos.wy);
@@ -959,30 +959,30 @@ pub const inventory = struct { // MARK: inventory
 	fn clientReceive(_: *Connection, reader: *utils.BinaryReader) !void {
 		const typ = try reader.readInt(u8);
 		if (typ == 0xff) { // Confirmation
-			try main.sync.client.receiveConfirmation(reader);
+			try root.sync.client.receiveConfirmation(reader);
 		} else if (typ == 0xfe) { // Failure
-			main.sync.client.receiveFailure();
+			root.sync.client.receiveFailure();
 		} else {
-			try main.sync.client.receiveSyncOperation(reader);
+			try root.sync.client.receiveSyncOperation(reader);
 		}
 	}
 	fn serverReceive(conn: *Connection, reader: *utils.BinaryReader) !void {
 		const user = conn.user.?;
 		if (reader.remaining[0] == 0xff) return error.Invalid;
-		main.sync.server.receiveCommand(user, reader);
+		root.sync.server.receiveCommand(user, reader);
 	}
-	pub fn sendCommand(conn: *Connection, payloadType: main.sync.Command.PayloadType, _data: []const u8) void {
+	pub fn sendCommand(conn: *Connection, payloadType: root.sync.Command.PayloadType, _data: []const u8) void {
 		std.debug.assert(conn.user == null);
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, _data.len + 1);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, _data.len + 1);
 		defer writer.deinit();
-		writer.writeEnum(main.sync.Command.PayloadType, payloadType);
+		writer.writeEnum(root.sync.Command.PayloadType, payloadType);
 		std.debug.assert(writer.data.items[0] != 0xff);
 		writer.writeSlice(_data);
 		conn.send(.secure, id, writer.data.items);
 	}
 	pub fn sendConfirmation(conn: *Connection, _data: []const u8) void {
 		std.debug.assert(conn.isServerSide());
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, _data.len + 1);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, _data.len + 1);
 		defer writer.deinit();
 		writer.writeInt(u8, 0xff);
 		writer.writeSlice(_data);
@@ -994,7 +994,7 @@ pub const inventory = struct { // MARK: inventory
 	}
 	pub fn sendSyncOperation(conn: *Connection, _data: []const u8) void {
 		std.debug.assert(conn.isServerSide());
-		var writer = utils.BinaryWriter.initCapacity(main.stackAllocator, _data.len + 1);
+		var writer = utils.BinaryWriter.initCapacity(root.stackAllocator, _data.len + 1);
 		defer writer.deinit();
 		writer.writeInt(u8, 0);
 		writer.writeSlice(_data);
@@ -1008,7 +1008,7 @@ pub const blockEntityUpdate = struct { // MARK: blockEntityUpdate
 	fn serverReceive(_: *Connection, reader: *utils.BinaryReader) !void {
 		const pos = try reader.readVec(Vec3i);
 		const blockType = try reader.readInt(u16);
-		const simChunk = main.server.world.?.getSimulationChunkAndIncreaseRefCount(pos[0], pos[1], pos[2]) orelse return;
+		const simChunk = root.server.world.?.getSimulationChunkAndIncreaseRefCount(pos[0], pos[1], pos[2]) orelse return;
 		defer simChunk.decreaseRefCount();
 		const ch = simChunk.chunk.load(.monotonic) orelse return;
 		ch.mutex.lock();
@@ -1030,7 +1030,7 @@ pub const blockEntityUpdate = struct { // MARK: blockEntityUpdate
 		const block = mesh.chunk.data.getValue(localPos.toIndex());
 		const blockEntity = block.blockEntity() orelse return;
 
-		var writer = utils.BinaryWriter.init(main.stackAllocator);
+		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 		writer.writeVec(Vec3i, pos);
 		writer.writeInt(u16, block.typ);
@@ -1040,12 +1040,12 @@ pub const blockEntityUpdate = struct { // MARK: blockEntityUpdate
 	}
 
 	fn sendServerDataUpdateToClientsInternal(pos: Vec3i, ch: *chunk.Chunk, block: Block, blockEntity: *const main.block_entity.BlockEntityType) void {
-		var writer = utils.BinaryWriter.init(main.stackAllocator);
+		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 		blockEntity.getServerToClientData(pos, ch, &writer);
 
-		const users = main.server.getUserList(main.stackAllocator);
-		defer main.stackAllocator.free(users);
+		const users = root.server.getUserList(root.stackAllocator);
+		defer root.stackAllocator.free(users);
 
 		for (users) |user| {
 			blockUpdate.send(user.conn, &.{.{.pos = pos, .newBlock = block, .blockEntityData = writer.data.items}});
@@ -1053,7 +1053,7 @@ pub const blockEntityUpdate = struct { // MARK: blockEntityUpdate
 	}
 
 	pub fn sendServerDataUpdateToClients(pos: Vec3i) void {
-		const simChunk = main.server.world.?.getSimulationChunkAndIncreaseRefCount(pos[0], pos[1], pos[2]) orelse return;
+		const simChunk = root.server.world.?.getSimulationChunkAndIncreaseRefCount(pos[0], pos[1], pos[2]) orelse return;
 		defer simChunk.decreaseRefCount();
 		const ch = simChunk.chunk.load(.monotonic) orelse return;
 		ch.mutex.lock();
@@ -1074,19 +1074,19 @@ pub const EntityComponentUpdate = struct { // MARK: EntityComponentUpdate
 	};
 
 	fn clientReceive(_: *Connection, reader: *utils.BinaryReader) !void {
-		const entityId: main.entity.Entity = @enumFromInt(try reader.readVarInt(u32));
+		const entityId: root.entity.Entity = @enumFromInt(try reader.readVarInt(u32));
 		const componentId = try reader.readVarInt(u32);
 		const actionType: ActionType = try reader.readEnum(ActionType);
 
 		if (actionType == .load) {
 			const componentVersion = try reader.readVarInt(u32);
-			try main.entity.loadComponent(.client, componentId, entityId, reader.remaining, componentVersion);
+			try root.entity.loadComponent(.client, componentId, entityId, reader.remaining, componentVersion);
 		} else if (actionType == .unload) {
-			try main.entity.unloadComponent(.client, componentId, entityId);
+			try root.entity.unloadComponent(.client, componentId, entityId);
 		}
 	}
-	pub fn unload(conn: *Connection, entityId: main.entity.Entity, componentId: u32) void {
-		var writer = utils.BinaryWriter.init(main.stackAllocator);
+	pub fn unload(conn: *Connection, entityId: root.entity.Entity, componentId: u32) void {
+		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 
 		writer.writeVarInt(u32, @intFromEnum(entityId));
@@ -1095,8 +1095,8 @@ pub const EntityComponentUpdate = struct { // MARK: EntityComponentUpdate
 
 		conn.send(.secure, id, writer.data.items);
 	}
-	pub fn load(conn: *Connection, entityId: main.entity.Entity, componentId: u32, version: u32, componentData: []const u8) void {
-		var writer = utils.BinaryWriter.init(main.stackAllocator);
+	pub fn load(conn: *Connection, entityId: root.entity.Entity, componentId: u32, version: u32, componentData: []const u8) void {
+		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 
 		writer.writeVarInt(u32, @intFromEnum(entityId));

@@ -26,9 +26,9 @@ pub var window = GuiWindow{
 pub fn render() void {
 	var y: f32 = 0;
 	if (main.game.world != null) {
-		if (main.server.world != null) {
-			const userList = main.server.getUserList(main.stackAllocator);
-			defer main.stackAllocator.free(userList);
+		if (root.server.world != null) {
+			const userList = root.server.getUserList(root.stackAllocator);
+			defer root.stackAllocator.free(userList);
 			draw.print("Players Connected: {}", .{userList.len}, 0, y, 8);
 			y += 8;
 		}

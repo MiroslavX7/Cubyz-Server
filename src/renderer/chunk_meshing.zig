@@ -128,12 +128,12 @@ pub fn init() void {
 	vao = .init(graphics.VertexArray.EmptyVertex, &.{}, &rawData);
 
 	for (0..settings.highestSupportedLod + 1) |i| {
-		faceBuffers[i].init(main.globalAllocator, 1 << 20, 3);
-		lightBuffers[i].init(main.globalAllocator, 1 << 20, 10);
+		faceBuffers[i].init(root.globalAllocator, 1 << 20, 3);
+		lightBuffers[i].init(root.globalAllocator, 1 << 20, 10);
 	}
-	chunkBuffer.init(main.globalAllocator, 1 << 20, 6);
-	commandBuffer.init(main.globalAllocator, 1 << 20, 8);
-	chunkIDBuffer.init(main.globalAllocator, 1 << 20, 9);
+	chunkBuffer.init(root.globalAllocator, 1 << 20, 6);
+	commandBuffer.init(root.globalAllocator, 1 << 20, 8);
+	chunkIDBuffer.init(root.globalAllocator, 1 << 20, 9);
 }
 
 pub fn deinit() void {
@@ -326,11 +326,11 @@ const FaceGroups = enum(u32) {
 	neighborLod5,
 	optional,
 
-	pub fn neighbor(n: main.chunk.Neighbor) FaceGroups {
+	pub fn neighbor(n: root.chunk.Neighbor) FaceGroups {
 		return @enumFromInt(@intFromEnum(FaceGroups.neighbor0) + @intFromEnum(n));
 	}
 
-	pub fn neighborLod(n: main.chunk.Neighbor) FaceGroups {
+	pub fn neighborLod(n: root.chunk.Neighbor) FaceGroups {
 		return @enumFromInt(@intFromEnum(FaceGroups.neighborLod0) + @intFromEnum(n));
 	}
 };
@@ -347,11 +347,11 @@ const PrimitiveMesh = struct { // MARK: PrimitiveMesh
 
 	fn deinit(self: *PrimitiveMesh) void {
 		faceBuffers[self.lod].free(self.bufferAllocation);
-		self.completeList.deinit(main.globalAllocator);
+		self.completeList.deinit(root.globalAllocator);
 	}
 
 	fn replaceRange(self: *PrimitiveMesh, group: FaceGroups, items: []const FaceData) void {
-		self.completeList.replaceRange(main.globalAllocator, group, items);
+		self.completeList.replaceRange(root.globalAllocator, group, items);
 	}
 
 	fn finish(self: *PrimitiveMesh, parent: *ChunkMesh, lightList: *main.ListManaged(u32), lightMap: *std.AutoHashMap([4]u32, u16)) void {
@@ -472,14 +472,14 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 
 	opaqueMesh: PrimitiveMesh,
 	transparentMesh: PrimitiveMesh,
-	meshUploadMutex: main.utils.Mutex = .{},
+	meshUploadMutex: root.utils.Mutex = .{},
 	finishedLightingMeshData: bool = false,
 	chunkAllocation: graphics.SubAllocation = .{.start = 0, .len = 0},
 
 	lightList: []u32 = &.{},
 	lightAllocation: graphics.SubAllocation = .{.start = 0, .len = 0},
 
-	blockUpdateQueue: main.utils.CircularBufferQueue(Vec3i) = undefined,
+	blockUpdateQueue: root.utils.CircularBufferQueue(Vec3i) = undefined,
 
 	lastNeighborsSameLod: [6]?*const ChunkMesh = @splat(null),
 	lastNeighborsHigherLod: [6]?*const ChunkMesh = @splat(null),
@@ -495,7 +495,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 	finishedMeshing: bool = false, // Must be synced with node.finishedMeshing in mesh_storage.zig
 	finishedLighting: bool = false,
 	litNeighbors: Atomic(u32) = .init(0),
-	mutex: main.utils.Mutex = .{},
+	mutex: root.utils.Mutex = .{},
 	min: Vec3f = undefined,
 	max: Vec3f = undefined,
 
@@ -508,7 +508,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		errdefer mesh_storage.meshMemoryPool.destroy(self);
 		self.chunk = .init(pos);
 		errdefer self.chunk.deinit();
-		try main.server.storage.ChunkCompression.loadChunk(self.chunk, .client, chunkData);
+		try root.server.storage.ChunkCompression.loadChunk(self.chunk, .client, chunkData);
 		self.* = ChunkMesh{
 			.pos = pos,
 			.size = chunk.chunkSize*pos.voxelSize,
@@ -518,13 +518,13 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 			.transparentMesh = .{
 				.lod = @intCast(std.math.log2_int(u32, pos.voxelSize)),
 			},
-			.blockUpdateQueue = .init(main.globalAllocator, 8),
+			.blockUpdateQueue = .init(root.globalAllocator, 8),
 			.chunk = self.chunk,
 			.lightingData = .{
 				lighting.ChannelChunk.init(self.chunk, false),
 				lighting.ChannelChunk.init(self.chunk, true),
 			},
-			.blockBreakingFaces = .init(main.globalAllocator),
+			.blockBreakingFaces = .init(root.globalAllocator),
 		};
 		return self;
 	}
@@ -535,21 +535,21 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		self.transparentMesh.deinit();
 		self.chunk.unloadBlockEntities(.client);
 		self.chunk.deinit();
-		main.globalAllocator.free(self.currentSorting);
-		main.globalAllocator.free(self.sortingOutputBuffer);
+		root.globalAllocator.free(self.currentSorting);
+		root.globalAllocator.free(self.sortingOutputBuffer);
 		for (self.lightingData) |lightingChunk| {
 			lightingChunk.deinit();
 		}
 		self.blockBreakingFaces.deinit();
-		main.globalAllocator.free(self.blockBreakingFacesSortingData);
-		main.globalAllocator.free(self.lightList);
+		root.globalAllocator.free(self.blockBreakingFacesSortingData);
+		root.globalAllocator.free(self.lightList);
 		lightBuffers[std.math.log2_int(u32, self.pos.voxelSize)].free(self.lightAllocation);
 		self.blockUpdateQueue.deinit();
 		mesh_storage.meshMemoryPool.destroy(self);
 	}
 
 	pub fn deferredDeinit(self: *ChunkMesh) void {
-		main.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = main.meta.castFunctionSelfToAnyopaque(privateDeinit)});
+		root.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = root.meta.castFunctionSelfToAnyopaque(privateDeinit)});
 	}
 
 	pub fn isEmpty(self: *const ChunkMesh) bool {
@@ -558,7 +558,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 
 	fn initLight(self: *ChunkMesh, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
 		self.mutex.lock();
-		var lightEmittingBlocks = main.ListManaged(chunk.BlockPos).init(main.stackAllocator);
+		var lightEmittingBlocks = main.ListManaged(chunk.BlockPos).init(root.stackAllocator);
 		defer lightEmittingBlocks.deinit();
 		for (0..chunk.chunkVolume) |index| {
 			const block = self.chunk.data.getValue(index);
@@ -597,7 +597,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 	pub fn generateLightingData(self: *ChunkMesh) error{ AlreadyStored, NoLongerNeeded }!void {
 		try mesh_storage.addMeshToStorage(self);
 
-		var lightRefreshList = main.ListManaged(chunk.ChunkPosition).init(main.stackAllocator);
+		var lightRefreshList = main.ListManaged(chunk.ChunkPosition).init(root.stackAllocator);
 		defer lightRefreshList.deinit();
 		self.initLight(&lightRefreshList);
 
@@ -678,13 +678,13 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		@memset(std.mem.asBytes(&hasFaces), 0);
 		self.mutex.lock();
 
-		var transparentCore: main.ListManaged(FaceData) = .init(main.stackAllocator);
+		var transparentCore: main.ListManaged(FaceData) = .init(root.stackAllocator);
 		defer transparentCore.deinit();
-		var opaqueCore: main.ListManaged(FaceData) = .init(main.stackAllocator);
+		var opaqueCore: main.ListManaged(FaceData) = .init(root.stackAllocator);
 		defer opaqueCore.deinit();
-		var transparentOptional: main.ListManaged(FaceData) = .init(main.stackAllocator);
+		var transparentOptional: main.ListManaged(FaceData) = .init(root.stackAllocator);
 		defer transparentOptional.deinit();
-		var opaqueOptional: main.ListManaged(FaceData) = .init(main.stackAllocator);
+		var opaqueOptional: main.ListManaged(FaceData) = .init(root.stackAllocator);
 		defer opaqueOptional.deinit();
 
 		const OcclusionInfo = packed struct {
@@ -694,8 +694,8 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 			hasInternalQuads: bool = false,
 			alwaysViewThrough: bool = false,
 		};
-		var paletteCache = main.stackAllocator.alloc(OcclusionInfo, self.chunk.data.palette().len);
-		defer main.stackAllocator.free(paletteCache);
+		var paletteCache = root.stackAllocator.alloc(OcclusionInfo, self.chunk.data.palette().len);
+		defer root.stackAllocator.free(paletteCache);
 		for (0..self.chunk.data.palette().len) |i| {
 			const block = self.chunk.data.palette()[i].load(.unordered);
 			const model = blocks.meshes.model(block).model();
@@ -975,13 +975,13 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 				self.lastNeighborsSameLod[neighbor.toInt()] = neighborMesh;
 				neighborMesh.lastNeighborsSameLod[neighbor.reverse().toInt()] = self;
 
-				var transparentSelf: main.ListManaged(FaceData) = .init(main.stackAllocator);
+				var transparentSelf: main.ListManaged(FaceData) = .init(root.stackAllocator);
 				defer transparentSelf.deinit();
-				var opaqueSelf: main.ListManaged(FaceData) = .init(main.stackAllocator);
+				var opaqueSelf: main.ListManaged(FaceData) = .init(root.stackAllocator);
 				defer opaqueSelf.deinit();
-				var transparentNeighbor: main.ListManaged(FaceData) = .init(main.stackAllocator);
+				var transparentNeighbor: main.ListManaged(FaceData) = .init(root.stackAllocator);
 				defer transparentNeighbor.deinit();
-				var opaqueNeighbor: main.ListManaged(FaceData) = .init(main.stackAllocator);
+				var opaqueNeighbor: main.ListManaged(FaceData) = .init(root.stackAllocator);
 				defer opaqueNeighbor.deinit();
 
 				const x3: i32 = if (neighbor.isPositive()) chunk.chunkMask else 0;
@@ -1063,9 +1063,9 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 			if (self.lastNeighborsHigherLod[neighbor.toInt()] == neighborMesh) continue;
 			self.lastNeighborsHigherLod[neighbor.toInt()] = neighborMesh;
 
-			var transparentSelf: main.ListManaged(FaceData) = .init(main.stackAllocator);
+			var transparentSelf: main.ListManaged(FaceData) = .init(root.stackAllocator);
 			defer transparentSelf.deinit();
-			var opaqueSelf: main.ListManaged(FaceData) = .init(main.stackAllocator);
+			var opaqueSelf: main.ListManaged(FaceData) = .init(root.stackAllocator);
 			defer opaqueSelf.deinit();
 
 			const x3: i32 = if (neighbor.isPositive()) chunk.chunkMask else 0;
@@ -1124,7 +1124,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		mesh_storage.finishMesh(self.pos);
 	}
 
-	fn deadlockFreeDoubleLock(m1: *main.utils.Mutex, m2: *main.utils.Mutex) void {
+	fn deadlockFreeDoubleLock(m1: *root.utils.Mutex, m2: *root.utils.Mutex) void {
 		if (@intFromPtr(m1) < @intFromPtr(m2)) {
 			m1.lock();
 			m2.lock();
@@ -1237,7 +1237,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 
 		if (oldBlock == newBlock) {
 			if (newBlock.blockEntity()) |blockEntity| {
-				var reader = main.utils.BinaryReader.init(blockUpdate.blockEntityData);
+				var reader = root.utils.BinaryReader.init(blockUpdate.blockEntityData);
 				blockEntity.updateClientData(blockUpdate.pos, self.chunk, .{.update = &reader}) catch |err| {
 					std.log.err("Got error {s} while trying to apply block entity data {any} in position {} for block {s}", .{@errorName(err), blockUpdate.blockEntityData, blockUpdate.pos, newBlock.id()});
 				};
@@ -1263,16 +1263,16 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 	const BlockUpdateTask = struct {
 		pos: chunk.ChunkPosition,
 
-		pub const vtable = main.utils.ThreadPool.VTable{
-			.getPriority = main.meta.castFunctionSelfToAnyopaque(getPriority),
-			.isStillNeeded = main.meta.castFunctionSelfToAnyopaque(isStillNeeded),
-			.run = main.meta.castFunctionSelfToAnyopaque(run),
-			.clean = main.meta.castFunctionSelfToAnyopaque(clean),
+		pub const vtable = root.utils.ThreadPool.VTable{
+			.getPriority = root.meta.castFunctionSelfToAnyopaque(getPriority),
+			.isStillNeeded = root.meta.castFunctionSelfToAnyopaque(isStillNeeded),
+			.run = root.meta.castFunctionSelfToAnyopaque(run),
+			.clean = root.meta.castFunctionSelfToAnyopaque(clean),
 			.taskType = .blockUpdate,
 		};
 
 		pub fn schedule(pos: chunk.ChunkPosition) void {
-			const task = main.globalAllocator.create(BlockUpdateTask);
+			const task = root.globalAllocator.create(BlockUpdateTask);
 			task.* = .{
 				.pos = pos,
 			};
@@ -1289,12 +1289,12 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		}
 
 		pub fn run(self: *BlockUpdateTask) void {
-			defer main.globalAllocator.destroy(self);
+			defer root.globalAllocator.destroy(self);
 
-			var lightRefreshList: main.ListManaged(chunk.ChunkPosition) = .init(main.stackAllocator);
+			var lightRefreshList: main.ListManaged(chunk.ChunkPosition) = .init(root.stackAllocator);
 			defer lightRefreshList.deinit();
 
-			var regenerateMeshList: main.ListManaged(*ChunkMesh) = .init(main.stackAllocator);
+			var regenerateMeshList: main.ListManaged(*ChunkMesh) = .init(root.stackAllocator);
 			defer regenerateMeshList.deinit();
 
 			{
@@ -1323,7 +1323,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		}
 
 		pub fn clean(self: *BlockUpdateTask) void {
-			main.globalAllocator.destroy(self);
+			root.globalAllocator.destroy(self);
 		}
 	};
 
@@ -1340,16 +1340,16 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 	const LightRefreshTask = struct {
 		pos: chunk.ChunkPosition,
 
-		pub const vtable = main.utils.ThreadPool.VTable{
-			.getPriority = main.meta.castFunctionSelfToAnyopaque(getPriority),
-			.isStillNeeded = main.meta.castFunctionSelfToAnyopaque(isStillNeeded),
-			.run = main.meta.castFunctionSelfToAnyopaque(run),
-			.clean = main.meta.castFunctionSelfToAnyopaque(clean),
+		pub const vtable = root.utils.ThreadPool.VTable{
+			.getPriority = root.meta.castFunctionSelfToAnyopaque(getPriority),
+			.isStillNeeded = root.meta.castFunctionSelfToAnyopaque(isStillNeeded),
+			.run = root.meta.castFunctionSelfToAnyopaque(run),
+			.clean = root.meta.castFunctionSelfToAnyopaque(clean),
 			.taskType = .misc,
 		};
 
 		pub fn schedule(pos: chunk.ChunkPosition) void {
-			const task = main.globalAllocator.create(LightRefreshTask);
+			const task = root.globalAllocator.create(LightRefreshTask);
 			task.* = .{
 				.pos = pos,
 			};
@@ -1366,7 +1366,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		}
 
 		pub fn run(self: *LightRefreshTask) void {
-			defer main.globalAllocator.destroy(self);
+			defer root.globalAllocator.destroy(self);
 			const mesh = mesh_storage.getMesh(self.pos) orelse return;
 			if (mesh.needsLightRefresh.swap(false, .acq_rel)) {
 				mesh.mutex.lock();
@@ -1377,16 +1377,16 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		}
 
 		pub fn clean(self: *LightRefreshTask) void {
-			main.globalAllocator.destroy(self);
+			root.globalAllocator.destroy(self);
 		}
 	};
 
 	pub fn finishData(self: *ChunkMesh) void {
 		self.mutex.assertLocked();
 
-		var lightList: main.ListManaged(u32) = .init(main.stackAllocator);
+		var lightList: main.ListManaged(u32) = .init(root.stackAllocator);
 		defer lightList.deinit();
-		var lightMap = std.AutoHashMap([4]u32, u16).init(main.stackAllocator.allocator);
+		var lightMap = std.AutoHashMap([4]u32, u16).init(root.stackAllocator.allocator);
 		defer lightMap.deinit();
 
 		{
@@ -1395,7 +1395,7 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 			self.opaqueMesh.finish(self, &lightList, &lightMap);
 			self.transparentMesh.finish(self, &lightList, &lightMap);
 
-			self.lightList = main.globalAllocator.realloc(self.lightList, lightList.items.len);
+			self.lightList = root.globalAllocator.realloc(self.lightList, lightList.items.len);
 			@memcpy(self.lightList, lightList.items);
 			self.finishedLightingMeshData = true;
 		}
@@ -1464,8 +1464,8 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 			}
 			len += list[i].len;
 		}
-		self.currentSorting = main.globalAllocator.realloc(self.currentSorting, len);
-		self.sortingOutputBuffer = main.globalAllocator.realloc(self.sortingOutputBuffer, len + self.blockBreakingFaces.items.len);
+		self.currentSorting = root.globalAllocator.realloc(self.currentSorting, len);
+		self.sortingOutputBuffer = root.globalAllocator.realloc(self.sortingOutputBuffer, len + self.blockBreakingFaces.items.len);
 		for (0..coreList.len) |i| {
 			self.currentSorting[i].face = coreList[i];
 		}
@@ -1501,8 +1501,8 @@ pub const ChunkMesh = struct { // MARK: ChunkMesh
 		}
 		if (self.blockBreakingFacesChanged) {
 			self.blockBreakingFacesChanged = false;
-			self.sortingOutputBuffer = main.globalAllocator.realloc(self.sortingOutputBuffer, self.currentSorting.len + self.blockBreakingFaces.items.len);
-			self.blockBreakingFacesSortingData = main.globalAllocator.realloc(self.blockBreakingFacesSortingData, self.blockBreakingFaces.items.len);
+			self.sortingOutputBuffer = root.globalAllocator.realloc(self.sortingOutputBuffer, self.currentSorting.len + self.blockBreakingFaces.items.len);
+			self.blockBreakingFacesSortingData = root.globalAllocator.realloc(self.blockBreakingFacesSortingData, self.blockBreakingFaces.items.len);
 			for (0..self.blockBreakingFaces.items.len) |i| {
 				self.blockBreakingFacesSortingData[i].face = self.blockBreakingFaces.items[i];
 			}

@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const description = "Set edit mask. When used with no mask expression it will clear current mask.";
 pub const usage =
@@ -38,7 +38,7 @@ pub fn execute(args: Args, source: Source) void {
 	const user = source.user;
 	switch (args) {
 		.@"/mask <mask>" => |cmd| {
-			user.worldEditData.mask = cmd.mask.mask.clone(main.globalAllocator);
+			user.worldEditData.mask = cmd.mask.mask.clone(root.globalAllocator);
 			user.sendMessage("#00ff00Mask set.", .{});
 		},
 		.@"/mask" => {

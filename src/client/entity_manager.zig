@@ -14,25 +14,25 @@ const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec4f = vec.Vec4f;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
 var lastTime: i16 = 0;
 var timeDifference: utils.TimeDifference = utils.TimeDifference{};
 
-pub var entities: main.utils.VirtualList(main.client.Entity, 1 << 20) = undefined;
+pub var entities: root.utils.VirtualList(root.client.Entity, 1 << 20) = undefined;
 pub var idMapping: main.ListManaged(?u32) = undefined;
-pub var mutex: main.utils.Mutex = .{};
+pub var mutex: root.utils.Mutex = .{};
 
 pub fn init() void {
 	entities = .init();
-	idMapping = .init(main.globalAllocator);
+	idMapping = .init(root.globalAllocator);
 }
 
 pub fn deinit() void {
 	for (entities.items()) |ent| {
-		ent.deinit(main.globalAllocator);
+		ent.deinit(root.globalAllocator);
 	}
 	entities.deinit();
 	idMapping.deinit();
@@ -40,7 +40,7 @@ pub fn deinit() void {
 
 pub fn clear() void {
 	for (entities.items()) |ent| {
-		ent.deinit(main.globalAllocator);
+		ent.deinit(root.globalAllocator);
 	}
 	entities.clearRetainingCapacity();
 	idMapping.clearRetainingCapacity();
@@ -72,14 +72,14 @@ pub fn addEntity(zon: ZonElement) !void {
 	}
 	idMapping.items[id] = index;
 
-	try ent.init(zon, main.globalAllocator);
+	try ent.init(zon, root.globalAllocator);
 }
-pub fn getEntity(entity: main.entity.Entity) ?*main.client.Entity {
+pub fn getEntity(entity: root.entity.Entity) ?*root.client.Entity {
 	mutex.assertLocked();
 	if (@intFromEnum(entity) >= idMapping.items.len) return null;
 	return &entities.items()[idMapping.items[@intFromEnum(entity)] orelse return null];
 }
-pub fn removeEntity(entity: main.entity.Entity) void {
+pub fn removeEntity(entity: root.entity.Entity) void {
 	mutex.lock();
 	defer mutex.unlock();
 
@@ -93,7 +93,7 @@ pub fn removeEntity(entity: main.entity.Entity) void {
 	// remove entity
 	{
 		std.debug.assert(ent.id == entity);
-		ent.deinit(main.globalAllocator);
+		ent.deinit(root.globalAllocator);
 		_ = entities.swapRemove(index);
 
 		if (index != entities.len) {
@@ -104,7 +104,7 @@ pub fn removeEntity(entity: main.entity.Entity) void {
 	}
 }
 
-pub fn serverUpdate(time: i16, entityData: []main.entity.EntityNetworkData) void {
+pub fn serverUpdate(time: i16, entityData: []root.entity.EntityNetworkData) void {
 	mutex.lock();
 	defer mutex.unlock();
 	timeDifference.addDataPoint(time);

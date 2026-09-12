@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveMap = terrain.CaveMap;
 const CaveBiomeMap = terrain.CaveBiomeMap;
 const vec = main.vec;
@@ -19,24 +19,24 @@ pub const generatorSeed = 0x88773787bc9e0105;
 
 pub const defaultState = .enabled;
 
-var ores: []main.blocks.Ore = undefined;
+var ores: []root.blocks.Ore = undefined;
 
 // TODO: Idea:
 // Add a RotationMode that allows you to overlay the ore texture onto a regular block to get more ore-in-stone-types for free.
 
 pub fn init(parameters: ZonElement) void {
 	_ = parameters;
-	ores = main.blocks.ores.items;
+	ores = root.blocks.ores.items;
 }
 
 // Works basically similar to cave generation, but considers a lot less chunks and has a few other differences.
-pub fn generate(worldSeed: u64, chunk: *main.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
+pub fn generate(worldSeed: u64, chunk: *root.chunk.ServerChunk, caveMap: CaveMap.CaveMapView, biomeMap: CaveBiomeMap.CaveBiomeMapView) void {
 	_ = caveMap;
 	_ = biomeMap;
 	if (chunk.super.pos.voxelSize != 1) return;
-	const cx = chunk.super.pos.wx >> main.chunk.chunkShift;
-	const cy = chunk.super.pos.wy >> main.chunk.chunkShift;
-	const cz = chunk.super.pos.wz >> main.chunk.chunkShift;
+	const cx = chunk.super.pos.wx >> root.chunk.chunkShift;
+	const cy = chunk.super.pos.wy >> root.chunk.chunkShift;
+	const cz = chunk.super.pos.wz >> root.chunk.chunkShift;
 	// Generate caves from all nearby chunks:
 	var x = cx - 1;
 	while (x < cx + 1) : (x +%= 1) {
@@ -45,11 +45,11 @@ pub fn generate(worldSeed: u64, chunk: *main.chunk.ServerChunk, caveMap: CaveMap
 			var z = cz - 1;
 			while (z < cz + 1) : (z +%= 1) {
 				const seed = random.initSeed3D(worldSeed, .{x, y, z});
-				const relX: f32 = @floatFromInt(x - cx << main.chunk.chunkShift);
-				const relY: f32 = @floatFromInt(y - cy << main.chunk.chunkShift);
-				const relZ: f32 = @floatFromInt(z - cz << main.chunk.chunkShift);
+				const relX: f32 = @floatFromInt(x - cx << root.chunk.chunkShift);
+				const relY: f32 = @floatFromInt(y - cy << root.chunk.chunkShift);
+				const relZ: f32 = @floatFromInt(z - cz << root.chunk.chunkShift);
 				for (ores) |*ore| {
-					if (ore.maxHeight <= z << main.chunk.chunkShift or ore.minHeight > z << main.chunk.chunkShift) continue;
+					if (ore.maxHeight <= z << root.chunk.chunkShift or ore.minHeight > z << root.chunk.chunkShift) continue;
 					considerCoordinates(ore, relX, relY, relZ, chunk, seed);
 				}
 			}
@@ -57,8 +57,8 @@ pub fn generate(worldSeed: u64, chunk: *main.chunk.ServerChunk, caveMap: CaveMap
 	}
 }
 
-fn considerCoordinates(ore: *const main.blocks.Ore, relX: f32, relY: f32, relZ: f32, chunk: *main.chunk.ServerChunk, startSeed: u64) void {
-	const chunkSizeFloat: f32 = @floatFromInt(main.chunk.chunkSize);
+fn considerCoordinates(ore: *const root.blocks.Ore, relX: f32, relY: f32, relZ: f32, chunk: *root.chunk.ServerChunk, startSeed: u64) void {
+	const chunkSizeFloat: f32 = @floatFromInt(root.chunk.chunkSize);
 	// Compose the seeds from some random stats of the ore. They generally shouldn't be the same for two different ores. TODO: Give each block a hash function (id based) that can be used in cases like this.
 	var seed = startSeed ^ ore.seed;
 	// Determine how many veins of this type start in this chunk. The number depends on parameters set for the specific ore:

@@ -17,9 +17,9 @@ size: Vec2f,
 children: main.ListManaged(GuiComponent),
 
 pub fn init() *HorizontalList {
-	const self = main.globalAllocator.create(HorizontalList);
+	const self = root.globalAllocator.create(HorizontalList);
 	self.* = HorizontalList{
-		.children = .init(main.globalAllocator),
+		.children = .init(root.globalAllocator),
 		.pos = .{0, 0},
 		.size = .{0, 0},
 	};
@@ -31,7 +31,7 @@ pub fn deinit(self: *const HorizontalList) void {
 		child.deinit();
 	}
 	self.children.deinit();
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn toComponent(self: *HorizontalList) GuiComponent {

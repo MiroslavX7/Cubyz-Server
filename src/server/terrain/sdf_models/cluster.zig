@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array3D = main.utils.Array3D;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const sdf = main.server.terrain.sdf;
+const Array3D = root.utils.Array3D;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const sdf = root.server.terrain.sdf;
 const SdfInstance = sdf.SdfInstance;
 const vec = main.vec;
 const Vec3f = vec.Vec3f;
@@ -28,7 +28,7 @@ const Instance = struct {
 
 pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
 	var list: main.List(Entry) = .empty;
-	defer list.deinit(main.stackAllocator);
+	defer list.deinit(root.stackAllocator);
 
 	var maxExtend: vec.Boxi = .{
 		.min = @splat(1e9),
@@ -44,7 +44,7 @@ pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
 		};
 		maxExtend.min = @min(maxExtend.min, @as(Vec3i, @floor(@as(Vec3f, @floatFromInt(childModelAndExtend.maxExtend.min)) + childEntry.positionOffset - childEntry.randomOffset)));
 		maxExtend.max = @max(maxExtend.max, @as(Vec3i, @ceil(@as(Vec3f, @floatFromInt(childModelAndExtend.maxExtend.max)) + childEntry.positionOffset + childEntry.randomOffset)));
-		list.append(main.stackAllocator, childEntry);
+		list.append(root.stackAllocator, childEntry);
 	}
 
 	if (list.items.len == 0) {
@@ -52,8 +52,8 @@ pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
 		return null;
 	}
 
-	const self = main.worldArena.create(@This());
-	self.children = main.worldArena.dupe(Entry, list.items);
+	const self = root.worldArena.create(@This());
+	self.children = root.worldArena.dupe(Entry, list.items);
 	self.smoothness = zon.get(f32, "smothness") orelse 4;
 	return .{.model = self, .maxExtend = maxExtend};
 }
@@ -62,7 +62,7 @@ pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) Sdf
 	var minPos: Vec3i = @splat(1e9);
 	var maxPos: Vec3i = @splat(-1e9);
 	var children: main.List(SdfInstance) = .empty;
-	defer children.deinit(main.stackAllocator);
+	defer children.deinit(root.stackAllocator);
 	for (self.children) |entry| {
 		const amount: usize = @floor(entry.model.minAmount + main.random.nextFloat(seed)*(entry.model.maxAmount - entry.model.minAmount) + main.random.nextFloat(seed));
 		for (0..amount) |_| {
@@ -72,7 +72,7 @@ pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) Sdf
 			result.maxBounds +%= @trunc(offset);
 			minPos = @min(minPos, result.minBounds);
 			maxPos = @max(maxPos, result.maxBounds);
-			children.append(main.stackAllocator, result);
+			children.append(root.stackAllocator, result);
 		}
 	}
 	const instance = arena.create(Instance);
@@ -82,7 +82,7 @@ pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) Sdf
 	};
 	return .{
 		.data = instance,
-		.generateFn = main.meta.castFunctionSelfToAnyopaque(generate),
+		.generateFn = root.meta.castFunctionSelfToAnyopaque(generate),
 		.minBounds = minPos,
 		.maxBounds = maxPos,
 		.centerPosOffset = @floatFromInt(-minPos),

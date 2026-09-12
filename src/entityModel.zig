@@ -16,7 +16,7 @@ const Vec3f = vec.Vec3f;
 const Vec4f = vec.Vec4f;
 const CoordinateSystem = vec.CoordinateSystem;
 const Quat = vec.Quat;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
 
@@ -84,25 +84,25 @@ pub const EntityModel = struct { // MARK: EntityModel
 	pub fn init(assetFolder: []const u8, entityModelId: []const u8, index: EntityModelIndex, zon: ZonElement) EntityModel {
 		var self: EntityModel = undefined;
 		if (zon.get([]const u8, "model")) |modelId| {
-			self.modelId = main.worldArena.dupe(u8, modelId);
+			self.modelId = root.worldArena.dupe(u8, modelId);
 		} else {
 			self.modelId = null;
 		}
-		self.entityModelId = main.worldArena.dupe(u8, entityModelId);
+		self.entityModelId = root.worldArena.dupe(u8, entityModelId);
 		self.height = zon.get(f32, "height") orelse 1;
 		self.defaultTexture = null;
 		self.vao = null;
 		self.indexCount = 0;
 		self.coordinateSystem = zon.get(CoordinateSystem, "coordinateSystem") orelse .right_handed_z_up;
 
-		self.nodeIndexMap = .init(main.worldArena.allocator);
+		self.nodeIndexMap = .init(root.worldArena.allocator);
 		self.nodes = &.{};
 		self.nodeParents = &.{};
 		self.nodePivots = &.{};
 		self.nodeCount = 0;
 
 		var isPlayerModel = false;
-		const tags = main.Tag.loadTagsFromZon(main.worldArena, zon.getChild("tags"));
+		const tags = main.Tag.loadTagsFromZon(root.worldArena, zon.getChild("tags"));
 		for (tags) |tag| {
 			if (tag == .playerModel) {
 				isPlayerModel = true;
@@ -110,7 +110,7 @@ pub const EntityModel = struct { // MARK: EntityModel
 		}
 
 		if (isPlayerModel) {
-			playerEntityModels.append(main.worldArena, index);
+			playerEntityModels.append(root.worldArena, index);
 		}
 
 		// get TexturePath
@@ -121,10 +121,10 @@ pub const EntityModel = struct { // MARK: EntityModel
 				var split = std.mem.splitScalar(u8, texture, ':');
 				const mod = split.first();
 				const textureName = split.next().?;
-				self.texturePath = main.worldArena.print("{s}/{s}/entity_models/textures/{s}{s}", .{assetFolder, mod, textureName, fileEnding});
-				main.files.cubyzDir().dir.access(main.io, self.texturePath, .{}) catch {
-					main.worldArena.free(self.texturePath);
-					self.texturePath = main.worldArena.print("assets/{s}/entity_models/textures/{s}{s}", .{mod, textureName, fileEnding});
+				self.texturePath = root.worldArena.print("{s}/{s}/entity_models/textures/{s}{s}", .{assetFolder, mod, textureName, fileEnding});
+				root.files.cubyzDir().dir.access(main.io, self.texturePath, .{}) catch {
+					root.worldArena.free(self.texturePath);
+					self.texturePath = root.worldArena.print("assets/{s}/entity_models/textures/{s}{s}", .{mod, textureName, fileEnding});
 				};
 			}
 		}
@@ -141,14 +141,14 @@ pub const EntityModel = struct { // MARK: EntityModel
 	}
 
 	fn cloneMetaData(self: *EntityModel) EntityModel {
-		const newNodes = main.worldArena.dupe(Node, self.nodes);
-		const newNodeParents = main.worldArena.dupe(?u16, self.nodeParents);
-		const newNodePivots = main.worldArena.dupe(Mat4f, self.nodePivots);
+		const newNodes = root.worldArena.dupe(Node, self.nodes);
+		const newNodeParents = root.worldArena.dupe(?u16, self.nodeParents);
+		const newNodePivots = root.worldArena.dupe(Mat4f, self.nodePivots);
 		return .{
 			.height = self.height,
-			.texturePath = main.worldArena.dupe(u8, self.texturePath),
-			.modelId = if (self.modelId) |modelId| main.worldArena.dupe(u8, modelId) else null,
-			.entityModelId = main.worldArena.dupe(u8, self.entityModelId),
+			.texturePath = root.worldArena.dupe(u8, self.texturePath),
+			.modelId = if (self.modelId) |modelId| root.worldArena.dupe(u8, modelId) else null,
+			.entityModelId = root.worldArena.dupe(u8, self.entityModelId),
 			.vao = null,
 			.indexCount = 0,
 			.defaultTexture = null,
@@ -165,8 +165,8 @@ pub const EntityModel = struct { // MARK: EntityModel
 		self.defaultTexture = main.graphics.Texture.initFromFile(self.texturePath);
 		if (self.modelId == null) return error.NoModelSpecified;
 
-		const file = try main.assets.readAsset(main.stackAllocator, "entity_models/models", self.modelId.?, ".glb");
-		defer main.stackAllocator.free(file);
+		const file = try main.assets.readAsset(root.stackAllocator, "entity_models/models", self.modelId.?, ".glb");
+		defer root.stackAllocator.free(file);
 
 		var options: c.cgltf_options = .{};
 		var data: *c.cgltf_data = undefined;
@@ -192,9 +192,9 @@ pub const EntityModel = struct { // MARK: EntityModel
 		}
 
 		var vertices: main.List(Vertex) = .empty;
-		defer vertices.deinit(main.stackAllocator);
+		defer vertices.deinit(root.stackAllocator);
 		var indices: main.List(u32) = .empty;
-		defer indices.deinit(main.stackAllocator);
+		defer indices.deinit(root.stackAllocator);
 		var baseVertex: u32 = 0;
 
 		const NodeRemap = struct {
@@ -206,12 +206,12 @@ pub const EntityModel = struct { // MARK: EntityModel
 			}
 		};
 		var nodeDepthRemap: main.List(NodeRemap) = .empty;
-		defer nodeDepthRemap.deinit(main.stackAllocator);
+		defer nodeDepthRemap.deinit(root.stackAllocator);
 
 		var nodeIdx: u16 = 0;
 		for (data.nodes, 0..data.nodes_count) |node, gltfNodeIdx| {
 			if (node.children_count == 0) continue;
-			nodeDepthRemap.append(main.stackAllocator, .{
+			nodeDepthRemap.append(root.stackAllocator, .{
 				.depth = getHierarchyDepth(node, 0),
 				.gltfNodeIndex = @intCast(gltfNodeIdx),
 			});
@@ -222,15 +222,15 @@ pub const EntityModel = struct { // MARK: EntityModel
 
 		std.mem.sort(NodeRemap, nodeDepthRemap.items, {}, NodeRemap.compareDepth);
 
-		self.nodes = main.worldArena.alloc(Node, nodeCount);
-		self.nodeParents = main.worldArena.alloc(?u16, nodeCount);
+		self.nodes = root.worldArena.alloc(Node, nodeCount);
+		self.nodeParents = root.worldArena.alloc(?u16, nodeCount);
 		@memset(self.nodeParents, null);
-		self.nodePivots = main.worldArena.alloc(Mat4f, nodeCount);
+		self.nodePivots = root.worldArena.alloc(Mat4f, nodeCount);
 
 		for (nodeDepthRemap.items, 0..) |nodeRemap, i| {
 			const node = data.nodes[nodeRemap.gltfNodeIndex];
 
-			const name = main.globalArena.dupe(u8, std.mem.span(node.name));
+			const name = root.globalArena.dupe(u8, std.mem.span(node.name));
 			self.nodeIndexMap.put(name, @intCast(i)) catch return error.EntityModelNodeWithTheSameName;
 
 			var pivotMat = Mat4f.translation(self.coordinateSystem.convertVec(node.translation, @splat(0)));
@@ -265,9 +265,9 @@ pub const EntityModel = struct { // MARK: EntityModel
 
 					const indicesAccessor = primitive.indices.*;
 					const vertCount = primitive.attributes[0].data.*.count;
-					var indicesSlice = indices.addMany(main.stackAllocator, indicesAccessor.count);
+					var indicesSlice = indices.addMany(root.stackAllocator, indicesAccessor.count);
 					baseVertex = @intCast(vertices.items.len);
-					const vertSlice: []Vertex = vertices.addMany(main.stackAllocator, vertCount);
+					const vertSlice: []Vertex = vertices.addMany(root.stackAllocator, vertCount);
 
 					for (0..indicesAccessor.count) |i| {
 						const idx = indicesAccessor.read_index(i);
@@ -358,8 +358,8 @@ pub var entityModels: main.List(EntityModel) = .empty;
 
 pub fn register(assetFolder: []const u8, entityModelId: []const u8, zon: ZonElement) EntityModelIndex {
 	const index = EntityModelIndex{.index = @intCast(entityModels.items.len)};
-	entityModels.append(main.worldArena, EntityModel.init(assetFolder, entityModelId, index, zon));
-	reverseIndices.put(main.worldArena.allocator, entityModelId, index) catch unreachable;
+	entityModels.append(root.worldArena, EntityModel.init(assetFolder, entityModelId, index, zon));
+	reverseIndices.put(root.worldArena.allocator, entityModelId, index) catch unreachable;
 	return index;
 }
 pub fn reset() void {

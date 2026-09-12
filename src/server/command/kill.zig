@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Kills the player";
@@ -17,5 +17,5 @@ pub const Args = union(enum) {
 pub fn execute(args: Args, source: Source) void {
 	const target = command.Target.fromPlayerIndex(args.@"/kill <playerIndex>".playerIndex, source) catch return;
 
-	main.sync.addHealth(-std.math.floatMax(f32), .kill, .server, target.user.id);
+	root.sync.addHealth(-std.math.floatMax(f32), .kill, .server, target.user.id);
 }

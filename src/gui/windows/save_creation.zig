@@ -3,10 +3,10 @@ const std = @import("std");
 const build_options = @import("build_options");
 
 const root = @import("root");
-const ConnectionManager = main.network.ConnectionManager;
+const ConnectionManager = root.network.ConnectionManager;
 const settings = main.settings;
 const Vec2f = main.vec.Vec2f;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ZonElement = main.ZonElement;
 
 const gui = @import("../gui.zig");
@@ -30,7 +30,7 @@ var seedInput: *TextInput = undefined;
 
 var gamemodeInput: *Button = undefined;
 
-var worldSettings = main.server.world_zig.Settings.defaults;
+var worldSettings = root.server.world_zig.Settings.defaults;
 
 const ZonMapEntry = std.StringHashMapUnmanaged(ZonElement).Entry;
 var worldPresets: []ZonMapEntry = &.{};
@@ -71,7 +71,7 @@ fn createWorld() void {
 	const worldName = nameInput.currentString.items;
 	worldSettings.seed = chooseSeed(seedInput.currentString.items);
 
-	main.server.world_zig.tryCreateWorld(worldName, worldSettings, worldPresets[selectedPreset].value_ptr.*) catch |err| {
+	root.server.world_zig.tryCreateWorld(worldName, worldSettings, worldPresets[selectedPreset].value_ptr.*) catch |err| {
 		std.log.err("Error while creating new world: {s}", .{@errorName(err)});
 	};
 	gui.closeWindowFromRef(&window);
@@ -84,7 +84,7 @@ pub fn onOpen() void {
 
 	if (worldPresets.len == 0) {
 		var presetMap = main.assets.worldPresets();
-		var entryList: main.List(ZonMapEntry) = .initCapacity(main.globalArena, presetMap.count());
+		var entryList: main.List(ZonMapEntry) = .initCapacity(root.globalArena, presetMap.count());
 		var iterator = presetMap.iterator();
 		while (iterator.next()) |entry| {
 			entryList.appendAssumeCapacity(entry);
@@ -106,13 +106,13 @@ pub fn onOpen() void {
 
 	var num: usize = 1;
 	while (true) {
-		const path = main.stackAllocator.print("saves/Save{}", .{num});
-		defer main.stackAllocator.free(path);
-		if (!main.files.cubyzDir().hasDir(path)) break;
+		const path = root.stackAllocator.print("saves/Save{}", .{num});
+		defer root.stackAllocator.free(path);
+		if (!root.files.cubyzDir().hasDir(path)) break;
 		num += 1;
 	}
-	const name = main.stackAllocator.print("Save{}", .{num});
-	defer main.stackAllocator.free(name);
+	const name = root.stackAllocator.print("Save{}", .{num});
+	defer root.stackAllocator.free(name);
 	nameInput = TextInput.init(.{0, 0}, 128, 22, name, .{.onNewline = .init(createWorld)});
 	list.add(nameInput);
 

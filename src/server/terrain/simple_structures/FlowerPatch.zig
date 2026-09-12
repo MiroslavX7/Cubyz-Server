@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
@@ -11,7 +11,7 @@ const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const id = "cubyz:flower_patch";
 
@@ -19,13 +19,13 @@ pub const generationMode = .floor;
 
 const FlowerPatch = @This();
 
-blocks: []main.blocks.Block,
+blocks: []root.blocks.Block,
 width: f32,
 variation: f32,
 density: f32,
 
 pub fn loadModel(parameters: ZonElement) ?*FlowerPatch {
-	const self = main.worldArena.create(FlowerPatch);
+	const self = root.worldArena.create(FlowerPatch);
 	self.* = .{
 		.blocks = blk: {
 			const blockZons = parameters.getChild("blocks").toSlice();
@@ -33,9 +33,9 @@ pub fn loadModel(parameters: ZonElement) ?*FlowerPatch {
 				std.log.err("'blocks' field of flower_patch cannot be empty.", .{});
 				return null;
 			}
-			const output = main.worldArena.alloc(main.blocks.Block, blockZons.len);
+			const output = root.worldArena.alloc(root.blocks.Block, blockZons.len);
 			for (blockZons, output) |zon, *block| {
-				block.* = main.blocks.parseBlock(zon.as([]const u8) orelse {
+				block.* = root.blocks.parseBlock(zon.as([]const u8) orelse {
 					std.log.err("Got unknown entry in flowerpatch block list: found {s}, expected string", .{@tagName(zon)});
 					return null;
 				});
@@ -49,7 +49,7 @@ pub fn loadModel(parameters: ZonElement) ?*FlowerPatch {
 	return self;
 }
 
-pub fn generate(self: *FlowerPatch, mode: GenerationMode, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, caveMap: CaveMapView, caveBiomeMap: CaveBiomeMapView, seed: *u64, isCeiling: bool) void {
+pub fn generate(self: *FlowerPatch, mode: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, caveMap: CaveMapView, caveBiomeMap: CaveBiomeMapView, seed: *u64, isCeiling: bool) void {
 	const width = self.width + (random.nextFloat(seed) - 0.5)*self.variation;
 	const orientation = 2*std.math.pi*random.nextFloat(seed);
 	const ellipseParam = 1 + random.nextFloat(seed);

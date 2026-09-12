@@ -25,8 +25,8 @@
 
 const std = @import("std");
 const root = @import("root");
-const Mutex = main.utils.Mutex;
-const Condition = main.utils.Condition;
+const Mutex = root.utils.Mutex;
+const Condition = root.utils.Condition;
 
 const Semaphore = @This();
 

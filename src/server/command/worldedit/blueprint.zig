@@ -1,17 +1,17 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
-const User = main.server.User;
+const User = root.server.User;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 
-const Dir = main.files.Dir;
+const Dir = root.files.Dir;
 const ListManaged = main.ListManaged;
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const Blueprint = main.blueprint.Blueprint;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const description = "Input-output operations on blueprints.";
 pub const usage =
@@ -75,8 +75,8 @@ pub fn execute(args: Args, source: Source) void {
 
 fn blueprintSave(filePath: FilePath, user: *User) void {
 	if (user.worldEditData.clipboard) |clipboard| {
-		const storedBlueprint = clipboard.store(main.stackAllocator);
-		defer main.stackAllocator.free(storedBlueprint);
+		const storedBlueprint = clipboard.store(root.stackAllocator);
+		defer root.stackAllocator.free(storedBlueprint);
 
 		var blueprintsDir = openBlueprintsDir(user) orelse return;
 		defer blueprintsDir.close();
@@ -102,7 +102,7 @@ fn sendInfoAndLog(comptime fmt: []const u8, args: anytype, user: *User) void {
 }
 
 fn openBlueprintsDir(user: *User) ?Dir {
-	return main.files.cubyzDir().openDir("blueprints") catch |err| {
+	return root.files.cubyzDir().openDir("blueprints") catch |err| {
 		sendWarningAndLog("Failed to open 'blueprints' directory ({s})", .{@errorName(err)}, user);
 		return null;
 	};
@@ -120,12 +120,12 @@ fn blueprintDelete(filePath: FilePath, user: *User) void {
 }
 
 fn blueprintList(user: *User) void {
-	var blueprintsDir = main.files.cubyzDir().openIterableDir("blueprints") catch |err| {
+	var blueprintsDir = root.files.cubyzDir().openIterableDir("blueprints") catch |err| {
 		return sendWarningAndLog("Failed to open 'blueprints' directory ({s})", .{@errorName(err)}, user);
 	};
 	defer blueprintsDir.close();
 
-	var directoryWalker = blueprintsDir.walk(main.stackAllocator);
+	var directoryWalker = blueprintsDir.walk(root.stackAllocator);
 	defer directoryWalker.deinit();
 
 	while (directoryWalker.next(main.io) catch |err| {
@@ -142,16 +142,16 @@ fn blueprintLoad(filePath: FilePath, user: *User) void {
 	var blueprintsDir = openBlueprintsDir(user) orelse return;
 	defer blueprintsDir.close();
 
-	const storedBlueprint = blueprintsDir.read(main.stackAllocator, filePath.path) catch |err| {
+	const storedBlueprint = blueprintsDir.read(root.stackAllocator, filePath.path) catch |err| {
 		sendWarningAndLog("Failed to read blueprint file '{s}' ({s})", .{filePath.path, @errorName(err)}, user);
 		return;
 	};
-	defer main.stackAllocator.free(storedBlueprint);
+	defer root.stackAllocator.free(storedBlueprint);
 
 	if (user.worldEditData.clipboard) |oldClipboard| {
-		oldClipboard.deinit(main.globalAllocator);
+		oldClipboard.deinit(root.globalAllocator);
 	}
-	user.worldEditData.clipboard = Blueprint.load(main.globalAllocator, storedBlueprint) catch |err| {
+	user.worldEditData.clipboard = Blueprint.load(root.globalAllocator, storedBlueprint) catch |err| {
 		return sendWarningAndLog("Failed to load blueprint file '{s}' ({s})", .{filePath.path, @errorName(err)}, user);
 	};
 

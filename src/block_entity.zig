@@ -1,16 +1,16 @@
 const std = @import("std");
 
 const main = @import("main.zig");
-const Block = main.blocks.Block;
-const Chunk = main.chunk.Chunk;
-const ChunkPosition = main.chunk.ChunkPosition;
-const getIndex = main.chunk.getIndex;
+const Block = root.blocks.Block;
+const Chunk = root.chunk.Chunk;
+const ChunkPosition = root.chunk.ChunkPosition;
+const getIndex = root.chunk.getIndex;
 const graphics = main.graphics;
 const server = main.server;
 const User = server.User;
 const mesh_storage = main.renderer.mesh_storage;
-const BinaryReader = main.utils.BinaryReader;
-const BinaryWriter = main.utils.BinaryWriter;
+const BinaryReader = root.utils.BinaryReader;
+const BinaryWriter = root.utils.BinaryWriter;
 const vec = main.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
@@ -95,10 +95,10 @@ pub const BlockEntity = enum(u32) { // MARK: BlockEntity
 
 	var freeIndexList: main.List(BlockEntity) = .empty;
 	var nextIndex: BlockEntity = @enumFromInt(0);
-	var mutex: main.utils.Mutex = .{};
+	var mutex: root.utils.Mutex = .{};
 
 	fn globalDeinit() void {
-		freeIndexList.deinit(main.globalAllocator);
+		freeIndexList.deinit(root.globalAllocator);
 		nextIndex = undefined;
 		freeIndexList = undefined;
 	}
@@ -120,21 +120,21 @@ pub const BlockEntity = enum(u32) { // MARK: BlockEntity
 	fn destroy(self: BlockEntity) void {
 		mutex.lock();
 		defer mutex.unlock();
-		freeIndexList.append(main.globalAllocator, self);
+		freeIndexList.append(root.globalAllocator, self);
 	}
 };
 
 fn BlockEntityDataStorage(T: type) type { // MARK: BlockEntityDataStorage
 	return struct {
 		pub const DataT = T;
-		var storage: main.utils.SparseSet(DataT, BlockEntity) = undefined;
-		pub var mutex: main.utils.Mutex = .{};
+		var storage: root.utils.SparseSet(DataT, BlockEntity) = undefined;
+		pub var mutex: root.utils.Mutex = .{};
 
 		pub fn init() void {
 			storage = .{};
 		}
 		pub fn deinit() void {
-			storage.deinit(main.globalAllocator);
+			storage.deinit(root.globalAllocator);
 			storage = undefined;
 		}
 		pub fn reset() void {
@@ -146,7 +146,7 @@ fn BlockEntityDataStorage(T: type) type { // MARK: BlockEntityDataStorage
 			const localPos = chunk.getLocalBlockPos(pos);
 
 			chunk.blockPosToEntityDataMapMutex.lock();
-			chunk.blockPosToEntityDataMap.put(main.globalAllocator.allocator, localPos, entity) catch unreachable;
+			chunk.blockPosToEntityDataMap.put(root.globalAllocator.allocator, localPos, entity) catch unreachable;
 			chunk.blockPosToEntityDataMapMutex.unlock();
 			return entity;
 		}
@@ -155,7 +155,7 @@ fn BlockEntityDataStorage(T: type) type { // MARK: BlockEntityDataStorage
 			defer mutex.unlock();
 
 			const entity = createEntry(pos, chunk);
-			storage.set(main.globalAllocator, entity, value);
+			storage.set(root.globalAllocator, entity, value);
 		}
 		pub fn removeAtIndex(entity: BlockEntity) ?DataT {
 			mutex.assertLocked();
@@ -202,7 +202,7 @@ fn BlockEntityDataStorage(T: type) type { // MARK: BlockEntityDataStorage
 			if (get(pos, chunk)) |result| return .{.valuePtr = result, .foundExisting = true};
 
 			const entity = createEntry(pos, chunk);
-			return .{.valuePtr = storage.add(main.globalAllocator, entity), .foundExisting = false};
+			return .{.valuePtr = storage.add(root.globalAllocator, entity), .foundExisting = false};
 		}
 	};
 }
@@ -226,7 +226,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 
 		fn onInventoryUpdateCallback(source: main.items.Inventory.Source) void {
 			const pos = source.blockInventory;
-			const simChunk = main.server.world.?.getSimulationChunkAndIncreaseRefCount(pos[0], pos[1], pos[2]) orelse return;
+			const simChunk = root.server.world.?.getSimulationChunkAndIncreaseRefCount(pos[0], pos[1], pos[2]) orelse return;
 			defer simChunk.decreaseRefCount();
 			const ch = simChunk.getChunk() orelse return;
 			ch.mutex.lock();
@@ -301,19 +301,19 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			text: []const u8,
 			renderedTexture: ?main.graphics.Texture = null,
 			blockPos: Vec3i,
-			block: main.blocks.Block,
+			block: root.blocks.Block,
 
 			fn deinit(self: @This()) void {
-				main.globalAllocator.free(self.text);
+				root.globalAllocator.free(self.text);
 				if (self.renderedTexture) |texture| {
 					textureDeinitLock.lock();
 					defer textureDeinitLock.unlock();
-					textureDeinitList.append(main.globalAllocator, texture);
+					textureDeinitList.append(root.globalAllocator, texture);
 				}
 			}
 		});
 		var textureDeinitList: main.List(graphics.Texture) = .empty;
-		var textureDeinitLock: main.utils.Mutex = .{};
+		var textureDeinitLock: root.utils.Mutex = .{};
 		var pipeline: graphics.Pipeline = undefined;
 		var uniforms: struct {
 			ambientLight: c_int,
@@ -350,7 +350,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			while (textureDeinitList.popOrNull()) |texture| {
 				texture.deinit();
 			}
-			textureDeinitList.deinit(main.globalAllocator);
+			textureDeinitList.deinit(root.globalAllocator);
 			if (!main.settings.launchConfig.headlessServer) {
 				pipeline.deinit();
 			}
@@ -372,7 +372,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			StorageServer.mutex.lock();
 			defer StorageServer.mutex.unlock();
 			const entry = StorageServer.removeAtIndex(entity).?;
-			main.globalAllocator.free(entry.text);
+			root.globalAllocator.free(entry.text);
 		}
 
 		pub fn onLoadClient(pos: Vec3i, chunk: *Chunk, reader: *BinaryReader) ErrorSet!void {
@@ -396,7 +396,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				.blockPos = pos,
 				.block = chunk.data.getValue(chunk.getLocalBlockPos(pos).toIndex()),
 				.renderedTexture = null,
-				.text = main.globalAllocator.dupe(u8, event.update.remaining),
+				.text = root.globalAllocator.dupe(u8, event.update.remaining),
 			};
 		}
 
@@ -406,7 +406,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 		pub fn updateServerData(pos: Vec3i, chunk: *Chunk, event: UpdateEvent) ErrorSet!void {
 			if (event == .remove or event.update.remaining.len == 0) {
 				const entry = StorageServer.remove(pos, chunk) orelse return;
-				main.globalAllocator.free(entry.text);
+				root.globalAllocator.free(entry.text);
 				return;
 			}
 
@@ -421,8 +421,8 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			}
 
 			const data = StorageServer.getOrPut(pos, chunk);
-			if (data.foundExisting) main.globalAllocator.free(data.valuePtr.text);
-			data.valuePtr.text = main.globalAllocator.dupe(u8, event.update.remaining);
+			if (data.foundExisting) root.globalAllocator.free(data.valuePtr.text);
+			data.valuePtr.text = root.globalAllocator.dupe(u8, event.update.remaining);
 		}
 
 		pub const onStoreServerToClient = onStoreServerToDisk;
@@ -470,11 +470,11 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 					.blockPos = pos,
 					.block = mesh.chunk.data.getValue(localPos.toIndex()),
 					.renderedTexture = null,
-					.text = main.globalAllocator.dupe(u8, newText),
+					.text = root.globalAllocator.dupe(u8, newText),
 				};
 			}
 
-			main.network.protocols.blockEntityUpdate.sendClientDataUpdateToServer(main.game.world.?.conn, pos);
+			root.network.protocols.blockEntityUpdate.sendClientDataUpdateToServer(main.game.world.?.conn, pos);
 		}
 
 		pub fn renderAll(ambientLight: Vec3f) void {
@@ -505,7 +505,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				const oldClip = graphics.draw.setClip(.{textureWidth - 2*textureMargin, textureHeight - 2*textureMargin});
 				defer graphics.draw.restoreClip(oldClip);
 
-				var textBuffer = graphics.TextBuffer.init(main.stackAllocator, signData.text, .{.color = 0x000000}, false, .center); // TODO: Make the color configurable in the zon
+				var textBuffer = graphics.TextBuffer.init(root.stackAllocator, signData.text, .{.color = 0x000000}, false, .center); // TODO: Make the color configurable in the zon
 				defer textBuffer.deinit();
 				_ = textBuffer.calculateLineBreaks(16, textureWidth - 2*textureMargin);
 				textBuffer.renderTextWithoutShadow(0, 0, 16);
@@ -519,17 +519,17 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			c.glUniform3f(uniforms.ambientLight, ambientLight[0], ambientLight[1], ambientLight[2]);
 
 			outer: for (StorageClient.storage.dense.items) |signData| {
-				if (main.blocks.meshes.model(signData.block).model().internalQuads.len == 0) continue;
-				const quad = main.blocks.meshes.model(signData.block).model().internalQuads[0];
+				if (root.blocks.meshes.model(signData.block).model().internalQuads.len == 0) continue;
+				const quad = root.blocks.meshes.model(signData.block).model().internalQuads[0];
 
 				signData.renderedTexture.?.bindTo(0);
 
 				c.glUniform1i(uniforms.quadIndex, @intFromEnum(quad));
-				const mesh = main.renderer.mesh_storage.getMesh(main.chunk.ChunkPosition.initFromWorldPos(signData.blockPos, 1)) orelse continue :outer;
+				const mesh = main.renderer.mesh_storage.getMesh(root.chunk.ChunkPosition.initFromWorldPos(signData.blockPos, 1)) orelse continue :outer;
 				const light: [4]u32 = main.renderer.lighting.getLight(mesh, signData.blockPos -% Vec3i{mesh.pos.wx, mesh.pos.wy, mesh.pos.wz}, 0, quad);
 				c.glUniform4ui(uniforms.lightData, light[0], light[1], light[2], light[3]);
-				c.glUniform3i(uniforms.chunkPos, signData.blockPos[0] & ~main.chunk.chunkMask, signData.blockPos[1] & ~main.chunk.chunkMask, signData.blockPos[2] & ~main.chunk.chunkMask);
-				c.glUniform3i(uniforms.blockPos, signData.blockPos[0] & main.chunk.chunkMask, signData.blockPos[1] & main.chunk.chunkMask, signData.blockPos[2] & main.chunk.chunkMask);
+				c.glUniform3i(uniforms.chunkPos, signData.blockPos[0] & ~root.chunk.chunkMask, signData.blockPos[1] & ~root.chunk.chunkMask, signData.blockPos[2] & ~root.chunk.chunkMask);
+				c.glUniform3i(uniforms.blockPos, signData.blockPos[0] & root.chunk.chunkMask, signData.blockPos[1] & root.chunk.chunkMask, signData.blockPos[2] & root.chunk.chunkMask);
 
 				c.glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, null);
 			}
@@ -542,7 +542,7 @@ var blockyEntityTypes: std.StringHashMapUnmanaged(BlockEntityType) = .{};
 pub fn init() void {
 	inline for (@typeInfo(BlockEntityTypes).@"struct".decls) |declaration| {
 		const class = BlockEntityType.init(@field(BlockEntityTypes, declaration.name), declaration.name);
-		blockyEntityTypes.putNoClobber(main.globalAllocator.allocator, class.id, class) catch unreachable;
+		blockyEntityTypes.putNoClobber(root.globalAllocator.allocator, class.id, class) catch unreachable;
 		std.log.debug("Registered BlockEntityType '{s}'", .{class.id});
 	}
 }
@@ -559,7 +559,7 @@ pub fn deinit() void {
 		@field(BlockEntityTypes, declaration.name).deinit();
 	}
 	BlockEntity.globalDeinit();
-	blockyEntityTypes.deinit(main.globalAllocator.allocator);
+	blockyEntityTypes.deinit(root.globalAllocator.allocator);
 }
 
 pub fn getByID(_id: ?[]const u8) ?*const BlockEntityType {

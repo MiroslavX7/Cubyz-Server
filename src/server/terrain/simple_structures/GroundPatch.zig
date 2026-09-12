@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
@@ -11,7 +11,7 @@ const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const id = "cubyz:ground_patch";
 
@@ -19,16 +19,16 @@ pub const generationMode = .floor;
 
 const GroundPatch = @This();
 
-block: main.blocks.Block,
+block: root.blocks.Block,
 width: f32,
 variation: f32,
 depth: i32,
 smoothness: f32,
 
 pub fn loadModel(parameters: ZonElement) ?*GroundPatch {
-	const self = main.worldArena.create(GroundPatch);
+	const self = root.worldArena.create(GroundPatch);
 	self.* = .{
-		.block = main.blocks.parseBlock(parameters.get([]const u8, "block") orelse ""),
+		.block = root.blocks.parseBlock(parameters.get([]const u8, "block") orelse ""),
 		.width = parameters.get(f32, "width") orelse 5,
 		.variation = parameters.get(f32, "variation") orelse 1,
 		.depth = parameters.get(i32, "depth") orelse 2,
@@ -37,7 +37,7 @@ pub fn loadModel(parameters: ZonElement) ?*GroundPatch {
 	return self;
 }
 
-pub fn generate(self: *GroundPatch, mode: GenerationMode, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, caveMap: CaveMapView, caveBiomeMap: CaveBiomeMapView, seed: *u64, _: bool) void {
+pub fn generate(self: *GroundPatch, mode: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, caveMap: CaveMapView, caveBiomeMap: CaveBiomeMapView, seed: *u64, _: bool) void {
 	const width = self.width + (random.nextFloat(seed) - 0.5)*self.variation;
 	const orientation = 2*std.math.pi*random.nextFloat(seed);
 	const ellipseParam = 1 + random.nextFloat(seed);

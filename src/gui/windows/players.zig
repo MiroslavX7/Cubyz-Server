@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const ConnectionManager = main.network.ConnectionManager;
+const ConnectionManager = root.network.ConnectionManager;
 const settings = main.settings;
 const Vec2f = main.vec.Vec2f;
 
@@ -23,51 +23,51 @@ const padding: f32 = 8;
 var lastLen: usize = 0;
 var entityCount: usize = 0;
 
-fn kickbyConnection(conn: *main.network.Connection) void {
+fn kickbyConnection(conn: *root.network.Connection) void {
 	conn.disconnect();
 }
 
 fn kickByPlayerIndex(playerIndex: usize) void {
-	const command = main.globalAllocator.print("kick @{d}", .{playerIndex});
-	main.sync.client.executeCommand(.{.chatCommand = .{.message = command}});
+	const command = root.globalAllocator.print("kick @{d}", .{playerIndex});
+	root.sync.client.executeCommand(.{.chatCommand = .{.message = command}});
 }
 
 pub fn onOpen() void {
 	const list = VerticalList.init(.{padding, 16 + padding}, 300, 16);
-	if (main.server.world == null) blk: {
-		entityCount = main.client.entity_manager.entities.len;
+	if (root.server.world == null) blk: {
+		entityCount = root.client.entity_manager.entities.len;
 		if (entityCount == 0) {
 			list.add(Label.init(.{0, 0}, 200, "No other players", .left));
 			break :blk;
 		}
 
-		for (main.client.entity_manager.entities.items()) |ent| {
-			const playerComponent = main.entity.components.@"cubyz:player".client.get(ent.id) orelse continue;
+		for (root.client.entity_manager.entities.items()) |ent| {
+			const playerComponent = root.entity.components.@"cubyz:player".client.get(ent.id) orelse continue;
 			const row = HorizontalList.init();
 
-			const string = main.stackAllocator.print("{f}", .{std.fmt.alt(ent, .formatWithPlayerIndex)});
-			defer main.stackAllocator.free(string);
+			const string = root.stackAllocator.print("{f}", .{std.fmt.alt(ent, .formatWithPlayerIndex)});
+			defer root.stackAllocator.free(string);
 			row.add(Label.init(.{0, 0}, 200, string, .left));
 			row.add(Button.initText(.{0, 0}, 100, "Kick", .{.onAction = .initWithInt(kickByPlayerIndex, playerComponent.playerIndex)}));
 			list.add(row);
 		}
 	} else {
-		main.server.connectionManager.mutex.lock();
-		defer main.server.connectionManager.mutex.unlock();
+		root.server.connectionManager.mutex.lock();
+		defer root.server.connectionManager.mutex.unlock();
 		std.debug.assert(lastLen == 0);
-		lastLen = main.server.connectionManager.connections.items.len;
-		for (main.server.connectionManager.connections.items) |connection| {
+		lastLen = root.server.connectionManager.connections.items.len;
+		for (root.server.connectionManager.connections.items) |connection| {
 			const user = connection.user.?;
 			if (user.id == main.game.Player.id and connection.isConnected()) continue;
 			const row = HorizontalList.init();
 			if (connection.handShakeState.load(.monotonic) == .complete) {
-				const string = main.stackAllocator.print("{f}", .{connection.user.?});
-				defer main.stackAllocator.free(string);
+				const string = root.stackAllocator.print("{f}", .{connection.user.?});
+				defer root.stackAllocator.free(string);
 				row.add(Label.init(.{0, 0}, 200, string, .left));
 				row.add(Button.initText(.{0, 0}, 100, "Kick", .{.onAction = .initWithPtr(kickbyConnection, connection)}));
 			} else {
-				const ip = main.stackAllocator.print("{f}", .{connection.remoteAddress});
-				defer main.stackAllocator.free(ip);
+				const ip = root.stackAllocator.print("{f}", .{connection.remoteAddress});
+				defer root.stackAllocator.free(ip);
 				row.add(Label.init(.{0, 0}, 200, ip, .left));
 				row.add(Button.initText(.{0, 0}, 100, "Cancel", .{.onAction = .initWithPtr(kickbyConnection, connection)}));
 			}
@@ -84,7 +84,7 @@ pub fn onOpen() void {
 }
 
 pub fn onClose() void {
-	if (main.server.world != null) {
+	if (root.server.world != null) {
 		lastLen = 0;
 	}
 	if (window.rootComponent) |*comp| {
@@ -93,15 +93,15 @@ pub fn onClose() void {
 }
 
 pub fn update() void {
-	if (main.server.world == null) {
-		if (main.client.entity_manager.entities.len != entityCount) {
+	if (root.server.world == null) {
+		if (root.client.entity_manager.entities.len != entityCount) {
 			onClose();
 			onOpen();
 		}
 	} else {
-		main.server.connectionManager.mutex.lock();
-		const serverListLen = main.server.connectionManager.connections.items.len;
-		main.server.connectionManager.mutex.unlock();
+		root.server.connectionManager.mutex.lock();
+		const serverListLen = root.server.connectionManager.connections.items.len;
+		root.server.connectionManager.mutex.unlock();
 		if (lastLen != serverListLen) {
 			onClose();
 			onOpen();

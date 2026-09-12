@@ -61,8 +61,8 @@ fn updateResult(_: main.items.Inventory.Source) void {
 }
 
 fn openInventory() void {
-	craftingGridInv = ClientInventory.init(main.globalAllocator, 25, .serverShared, .{.workbench = .{.playerId = main.game.Player.id, .proceduralItemIndex = proceduralItemTypes.items[currentProceduralItemType]}}, .{.onUpdateCallback = &updateResult, .canPutInto = items.ProceduralItem.canPutIntoWorkbenchCallback});
-	craftingResultInv = ClientInventory.init(main.globalAllocator, 1, .{.workbenchResult = craftingGridInv.super.id}, .other, .{});
+	craftingGridInv = ClientInventory.init(root.globalAllocator, 25, .serverShared, .{.workbench = .{.playerId = main.game.Player.id, .proceduralItemIndex = proceduralItemTypes.items[currentProceduralItemType]}}, .{.onUpdateCallback = &updateResult, .canPutInto = items.ProceduralItem.canPutIntoWorkbenchCallback});
+	craftingResultInv = ClientInventory.init(root.globalAllocator, 1, .{.workbenchResult = craftingGridInv.super.id}, .other, .{});
 	const list = HorizontalList.init();
 	{ // crafting grid
 		const grid = VerticalList.init(.{0, 0}, 300, 0);
@@ -100,8 +100,8 @@ fn openInventory() void {
 }
 
 fn closeInventory() void {
-	craftingGridInv.deinit(main.globalAllocator);
-	craftingResultInv.deinit(main.globalAllocator);
+	craftingGridInv.deinit(root.globalAllocator);
+	craftingResultInv.deinit(root.globalAllocator);
 	if (window.rootComponent) |*comp| {
 		comp.deinit();
 		window.rootComponent = null;
@@ -135,13 +135,13 @@ pub fn onOpen() void {
 	proceduralItemTypes = .empty;
 	var iterator = ProceduralItemTypeIndex.iterator();
 	while (iterator.next()) |proceduralItemType| {
-		proceduralItemTypes.append(main.globalAllocator, proceduralItemType);
+		proceduralItemTypes.append(root.globalAllocator, proceduralItemType);
 	}
 
 	openInventory();
 }
 
 pub fn onClose() void {
-	proceduralItemTypes.deinit(main.globalAllocator);
+	proceduralItemTypes.deinit(root.globalAllocator);
 	closeInventory();
 }

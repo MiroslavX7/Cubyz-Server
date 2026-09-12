@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const BinaryWriter = main.utils.BinaryWriter;
-const BinaryReader = main.utils.BinaryReader;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const BinaryWriter = root.utils.BinaryWriter;
+const BinaryReader = root.utils.BinaryReader;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ZonElement = main.ZonElement;
 
 var wordlist: ?[2048][]const u8 = null;
@@ -19,7 +19,7 @@ fn wordToIndex(word: []const u8) ?u11 {
 }
 
 pub fn init() void {
-	const wordlistString = main.files.cwd().read(main.globalArena, "assets/cubyz/wordlist") catch |err| {
+	const wordlistString = root.files.cwd().read(root.globalArena, "assets/cubyz/wordlist") catch |err| {
 		std.log.err("Got error while reading word list: {s}", .{@errorName(err)});
 		return;
 	};
@@ -64,8 +64,8 @@ pub const KeyCollection = struct { // Provides multiple methods to allow server 
 			"u89564epogz1qi9up5zc94309",
 		};
 		inline for (comptime std.meta.declarations(Storage), 0..) |decl, i| {
-			const hashableString = std.mem.concat(main.stackAllocator.allocator, u8, &.{accountCode.text, keySalts[i]}) catch unreachable;
-			defer main.stackAllocator.free(hashableString);
+			const hashableString = std.mem.concat(root.stackAllocator.allocator, u8, &.{accountCode.text, keySalts[i]}) catch unreachable;
+			defer root.stackAllocator.free(hashableString);
 			defer @memset(hashableString, 0);
 
 			var hashedResult: [64]u8 = undefined;
@@ -177,8 +177,8 @@ pub const AccountCode = struct { // MARK: AccountCode
 	}
 
 	pub fn initFromUserInput(text: []const u8, failureText: *main.ListManaged(u8)) AccountCode {
-		var result: main.List(u8) = .initCapacity(main.stackAllocator, text.len);
-		defer result.deinit(main.stackAllocator);
+		var result: main.List(u8) = .initCapacity(root.stackAllocator, text.len);
+		defer result.deinit(root.stackAllocator);
 		defer std.crypto.secureZero(u8, result.items);
 
 		const trimmed = std.mem.trim(u8, text, &std.ascii.whitespace);
@@ -244,7 +244,7 @@ pub const AccountCode = struct { // MARK: AccountCode
 		}
 
 		return .{
-			.text = main.globalAllocator.dupe(u8, result.items),
+			.text = root.globalAllocator.dupe(u8, result.items),
 		};
 	}
 
@@ -259,7 +259,7 @@ pub const AccountCode = struct { // MARK: AccountCode
 		bits[20] = sha256Result[0];
 
 		var result: main.List(u8) = .empty;
-		defer result.deinit(main.stackAllocator);
+		defer result.deinit(root.stackAllocator);
 		defer std.crypto.secureZero(u8, result.items);
 
 		for (0..15) |i| {
@@ -269,18 +269,18 @@ pub const AccountCode = struct { // MARK: AccountCode
 			const containingRegion = @as(usize, bits[byteIndex]) << 16 | @as(usize, bits[byteIndex + 1]) << 8 | if (byteIndex + 2 < bits.len) bits[byteIndex + 2] else 0;
 			const wordIndex: u11 = @truncate(containingRegion >> @intCast(8*3 - 11 - bitIndex%8));
 
-			if (i != 0) result.append(main.stackAllocator, ' ');
-			result.appendSlice(main.stackAllocator, wordlist.?[wordIndex]);
+			if (i != 0) result.append(root.stackAllocator, ' ');
+			result.appendSlice(root.stackAllocator, wordlist.?[wordIndex]);
 		}
 
 		return .{
-			.text = main.globalAllocator.dupe(u8, result.items),
+			.text = root.globalAllocator.dupe(u8, result.items),
 		};
 	}
 
 	pub fn deinit(self: AccountCode) void {
 		std.crypto.secureZero(u8, self.text);
-		main.globalAllocator.free(self.text);
+		root.globalAllocator.free(self.text);
 	}
 };
 
@@ -352,8 +352,8 @@ pub const PasswordEncodedAccountCode = struct { // MARK: PasswordEncodedAccountC
 				if (self.nonce.len != std.crypto.aead.aes_gcm.Aes256Gcm.nonce_length) return error.Invalid;
 				const authenticationTag = self.authenticationTag[0..std.crypto.aead.aes_gcm.Aes256Gcm.tag_length];
 				const nonce = self.nonce[0..std.crypto.aead.aes_gcm.Aes256Gcm.nonce_length];
-				const decryptedBuffer = main.stackAllocator.alloc(u8, self.data.len);
-				defer main.stackAllocator.free(decryptedBuffer);
+				const decryptedBuffer = root.stackAllocator.alloc(u8, self.data.len);
+				defer root.stackAllocator.free(decryptedBuffer);
 				defer std.crypto.secureZero(u8, decryptedBuffer);
 				try std.crypto.aead.aes_gcm.Aes256Gcm.decrypt(decryptedBuffer, self.data, authenticationTag.*, &.{}, nonce.*, key);
 				return AccountCode.initFromUserInput(decryptedBuffer, failureText);
@@ -365,7 +365,7 @@ pub const PasswordEncodedAccountCode = struct { // MARK: PasswordEncodedAccountC
 		switch (typ) {
 			.none => unreachable,
 			.argon2_aes_gcm => {
-				std.crypto.pwhash.argon2.kdf(main.globalAllocator.allocator, key, password, salt, .{
+				std.crypto.pwhash.argon2.kdf(root.globalAllocator.allocator, key, password, salt, .{
 					.t = 10,
 					.m = 32000,
 					.p = 1,
@@ -409,16 +409,16 @@ pub const PasswordEncodedAccountCode = struct { // MARK: PasswordEncodedAccountC
 		zon.put("type", @tagName(self.typ));
 		zon.putOwnedString("salt", self.salt);
 
-		const base64EncodedData = main.stackAllocator.alloc(u8, std.base64.standard.Encoder.calcSize(self.data.len));
-		defer main.stackAllocator.free(base64EncodedData);
+		const base64EncodedData = root.stackAllocator.alloc(u8, std.base64.standard.Encoder.calcSize(self.data.len));
+		defer root.stackAllocator.free(base64EncodedData);
 		zon.putOwnedString("data", std.base64.standard.Encoder.encode(base64EncodedData, self.data));
 
-		const base64EncodedTag = main.stackAllocator.alloc(u8, std.base64.standard.Encoder.calcSize(self.authenticationTag.len));
-		defer main.stackAllocator.free(base64EncodedTag);
+		const base64EncodedTag = root.stackAllocator.alloc(u8, std.base64.standard.Encoder.calcSize(self.authenticationTag.len));
+		defer root.stackAllocator.free(base64EncodedTag);
 		zon.putOwnedString("authenticationTag", std.base64.standard.Encoder.encode(base64EncodedTag, self.authenticationTag));
 
-		const base64EncodedNonce = main.stackAllocator.alloc(u8, std.base64.standard.Encoder.calcSize(self.nonce.len));
-		defer main.stackAllocator.free(base64EncodedNonce);
+		const base64EncodedNonce = root.stackAllocator.alloc(u8, std.base64.standard.Encoder.calcSize(self.nonce.len));
+		defer root.stackAllocator.free(base64EncodedNonce);
 		zon.putOwnedString("nonce", std.base64.standard.Encoder.encode(base64EncodedNonce, self.nonce));
 
 		return zon;

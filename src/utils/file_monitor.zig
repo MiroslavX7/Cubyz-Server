@@ -53,15 +53,15 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 	var fd: c_int = undefined;
 	var watchDescriptors: std.StringHashMap(*DirectoryInfo) = undefined;
 	var callbacks: std.AutoHashMap(c_int, *DirectoryInfo) = undefined;
-	var mutex: main.utils.Mutex = .{};
+	var mutex: root.utils.Mutex = .{};
 
 	fn init() void {
 		fd = c.inotify_init();
 		if (fd == -1) {
 			std.log.err("Error while initializing inotifiy: {}", .{std.posix.errno(fd)});
 		}
-		watchDescriptors = .init(main.globalAllocator.allocator);
-		callbacks = .init(main.globalAllocator.allocator);
+		watchDescriptors = .init(root.globalAllocator.allocator);
+		callbacks = .init(root.globalAllocator.allocator);
 	}
 
 	fn deinit() void {
@@ -71,9 +71,9 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 		}
 		var iterator = watchDescriptors.iterator();
 		while (iterator.next()) |entry| {
-			main.globalAllocator.free(entry.key_ptr.*);
-			entry.value_ptr.*.watchDescriptors.deinit(main.globalAllocator);
-			main.globalAllocator.destroy(entry.value_ptr.*);
+			root.globalAllocator.free(entry.key_ptr.*);
+			entry.value_ptr.*.watchDescriptors.deinit(root.globalAllocator);
+			root.globalAllocator.destroy(entry.value_ptr.*);
 		}
 		watchDescriptors.deinit();
 		callbacks.deinit();
@@ -81,7 +81,7 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 
 	fn addWatchDescriptorsRecursive(info: *DirectoryInfo, path: []const u8) void {
 		mutex.assertLocked();
-		var iterableDir = main.files.cwd().openIterableDir(path) catch |err| {
+		var iterableDir = root.files.cwd().openIterableDir(path) catch |err| {
 			std.log.err("Error while opening dirs {s}: {s}", .{path, @errorName(err)});
 			return;
 		};
@@ -92,8 +92,8 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 			return;
 		}) |entry| {
 			if (entry.kind == .directory) {
-				const subPath = main.stackAllocator.printSentinel("{s}/{s}", .{path, entry.name}, 0);
-				defer main.stackAllocator.free(subPath);
+				const subPath = root.stackAllocator.printSentinel("{s}/{s}", .{path, entry.name}, 0);
+				defer root.stackAllocator.free(subPath);
 				addWatchDescriptor(info, subPath);
 				addWatchDescriptorsRecursive(info, subPath);
 			}
@@ -118,14 +118,14 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 			std.log.err("Error while checking the number of available bytes for the inotify file descriptor: {}", .{std.posix.errno(result)});
 		}
 		if (available == 0) return;
-		const events: []u8 = main.stackAllocator.alloc(u8, available);
-		defer main.stackAllocator.free(events);
+		const events: []u8 = root.stackAllocator.alloc(u8, available);
+		defer root.stackAllocator.free(events);
 		const readBytes = c.read(fd, events.ptr, available);
 		if (readBytes == -1) {
 			std.log.err("Error while reading inotify event: {}", .{std.posix.errno(readBytes)});
 			return;
 		}
-		var triggeredCallbacks = std.AutoHashMap(*DirectoryInfo, void).init(main.stackAllocator.allocator); // Avoid duplicate calls
+		var triggeredCallbacks = std.AutoHashMap(*DirectoryInfo, void).init(root.stackAllocator.allocator); // Avoid duplicate calls
 		defer triggeredCallbacks.deinit();
 		var offset: usize = 0;
 		while (offset < available) {
@@ -155,7 +155,7 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 			std.log.err("Error while adding watch descriptor for path {s}: {}", .{path, std.posix.errno(watchDescriptor)});
 		}
 		callbacks.put(watchDescriptor, info) catch unreachable;
-		info.watchDescriptors.append(main.globalAllocator, watchDescriptor);
+		info.watchDescriptors.append(root.globalAllocator, watchDescriptor);
 	}
 
 	fn removeWatchDescriptor(watchDescriptor: c_int, path: []const u8) void {
@@ -175,12 +175,12 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 			std.log.err("Tried to add duplicate watch descriptor for path {s}", .{path});
 			return;
 		}
-		const callbackInfo = main.globalAllocator.create(DirectoryInfo);
+		const callbackInfo = root.globalAllocator.create(DirectoryInfo);
 		callbackInfo.* = .{
 			.callback = callback,
 			.userData = userData,
 			.watchDescriptors = .empty,
-			.path = main.globalAllocator.dupe(u8, path),
+			.path = root.globalAllocator.dupe(u8, path),
 			.needsUpdate = false,
 		};
 		watchDescriptors.putNoClobber(callbackInfo.path, callbackInfo) catch unreachable;
@@ -195,9 +195,9 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 			for (kv.value.watchDescriptors.items) |watchDescriptor| {
 				removeWatchDescriptor(watchDescriptor, path);
 			}
-			main.globalAllocator.free(kv.key);
-			kv.value.watchDescriptors.deinit(main.globalAllocator);
-			main.globalAllocator.destroy(kv.value);
+			root.globalAllocator.free(kv.key);
+			kv.value.watchDescriptors.deinit(root.globalAllocator);
+			root.globalAllocator.destroy(kv.value);
 		} else {
 			std.log.err("Tried to remove non-existent watch descriptor for path {s}", .{path});
 		}
@@ -209,7 +209,7 @@ const WindowsImpl = struct { // MARK: WindowsImpl
 	var notificationHandlers: std.StringHashMap(*DirectoryInfo) = undefined;
 	var callbacks: main.ListManaged(*DirectoryInfo) = undefined;
 	var justTheHandles: main.ListManaged(HANDLE) = undefined;
-	var mutex: main.utils.Mutex = .{};
+	var mutex: root.utils.Mutex = .{};
 
 	const DirectoryInfo = struct {
 		callback: CallbackFunction,
@@ -220,16 +220,16 @@ const WindowsImpl = struct { // MARK: WindowsImpl
 	};
 
 	fn init() void {
-		notificationHandlers = .init(main.globalAllocator.allocator);
-		callbacks = .init(main.globalAllocator);
-		justTheHandles = .init(main.globalAllocator);
+		notificationHandlers = .init(root.globalAllocator.allocator);
+		callbacks = .init(root.globalAllocator);
+		justTheHandles = .init(root.globalAllocator);
 	}
 
 	fn deinit() void {
 		var iterator = notificationHandlers.iterator();
 		while (iterator.next()) |entry| {
-			main.globalAllocator.free(entry.key_ptr.*);
-			main.globalAllocator.destroy(entry.value_ptr.*);
+			root.globalAllocator.free(entry.key_ptr.*);
+			root.globalAllocator.destroy(entry.value_ptr.*);
 		}
 		notificationHandlers.deinit();
 		callbacks.deinit();
@@ -274,12 +274,12 @@ const WindowsImpl = struct { // MARK: WindowsImpl
 			std.log.err("Got error while creating notification handler for path {s}: {}", .{path, std.os.windows.GetLastError()});
 		}
 
-		const callbackInfo = main.globalAllocator.create(DirectoryInfo);
+		const callbackInfo = root.globalAllocator.create(DirectoryInfo);
 		callbackInfo.* = .{
 			.callback = callback,
 			.userData = userData,
 			.notificationHandler = handle.?,
-			.path = main.globalAllocator.dupe(u8, path),
+			.path = root.globalAllocator.dupe(u8, path),
 			.needsUpdate = false,
 		};
 		notificationHandlers.putNoClobber(callbackInfo.path, callbackInfo) catch unreachable;
@@ -297,8 +297,8 @@ const WindowsImpl = struct { // MARK: WindowsImpl
 			if (c.FindCloseChangeNotification(kv.value.notificationHandler) == 0) {
 				std.log.err("Error while closing notification handler for path {s}: {}", .{path, std.os.windows.GetLastError()});
 			}
-			main.globalAllocator.free(kv.key);
-			main.globalAllocator.destroy(kv.value);
+			root.globalAllocator.free(kv.key);
+			root.globalAllocator.destroy(kv.value);
 		} else {
 			std.log.err("Tried to remove non-existent notification handler for path {s}", .{path});
 		}

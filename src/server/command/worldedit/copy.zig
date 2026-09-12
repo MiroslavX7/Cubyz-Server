@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const Blueprint = main.blueprint.Blueprint;
 
 pub const description = "Copy selection to clipboard.";
@@ -23,11 +23,11 @@ pub fn execute(_: Args, source: Source) void {
 	const selection = command.getCurrentSelection(user) catch return;
 	user.sendMessage("Copying: {f}", .{selection});
 
-	const result = Blueprint.capture(main.globalAllocator, selection);
+	const result = Blueprint.capture(root.globalAllocator, selection);
 	switch (result) {
 		.success => {
 			if (user.worldEditData.clipboard != null) {
-				user.worldEditData.clipboard.?.deinit(main.globalAllocator);
+				user.worldEditData.clipboard.?.deinit(root.globalAllocator);
 			}
 			user.worldEditData.clipboard = result.success;
 

@@ -34,7 +34,7 @@ pub fn globalDeinit() void {
 
 pub fn init(pos: Vec2f, width: f32, height: f32, initialState: f32) *ScrollBar {
 	const button = Button.initText(.{0, 0}, undefined, "", .{});
-	const self = main.globalAllocator.create(ScrollBar);
+	const self = root.globalAllocator.create(ScrollBar);
 	self.* = ScrollBar{
 		.pos = pos,
 		.size = Vec2f{width, height},
@@ -48,7 +48,7 @@ pub fn init(pos: Vec2f, width: f32, height: f32, initialState: f32) *ScrollBar {
 
 pub fn deinit(self: *const ScrollBar) void {
 	self.button.deinit();
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn toComponent(self: *ScrollBar) GuiComponent {

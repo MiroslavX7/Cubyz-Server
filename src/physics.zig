@@ -38,7 +38,7 @@ pub const collision = struct { // MARK: collision
 
 	const Direction = enum(u2) { x = 0, y = 1, z = 2 };
 
-	pub fn collideWithBlock(block: main.blocks.Block, x: i32, y: i32, z: i32, entityPosition: Vec3d, entityBoundingBoxExtent: Vec3d, directionVector: Vec3d) ?struct { box: Box, dist: f64 } {
+	pub fn collideWithBlock(block: root.blocks.Block, x: i32, y: i32, z: i32, entityPosition: Vec3d, entityBoundingBoxExtent: Vec3d, directionVector: Vec3d) ?struct { box: Box, dist: f64 } {
 		var resultBox: ?Box = null;
 		var minDistance: f64 = std.math.floatMax(f64);
 		if (block.collide()) {
@@ -67,7 +67,7 @@ pub const collision = struct { // MARK: collision
 		return .{.box = resultBox orelse return null, .dist = minDistance};
 	}
 
-	pub fn collides(comptime side: main.sync.Side, dir: Direction, amount: f64, pos: Vec3d, hitBox: Box) ?Box {
+	pub fn collides(comptime side: root.sync.Side, dir: Direction, amount: f64, pos: Vec3d, hitBox: Box) ?Box {
 		var boundingBox: Box = .{
 			.min = pos + hitBox.min,
 			.max = pos + hitBox.max,
@@ -130,7 +130,7 @@ pub const collision = struct { // MARK: collision
 		bounciness: f32,
 	};
 
-	pub fn calculateSurfaceProperties(comptime side: main.sync.Side, pos: Vec3d, hitBox: Box, defaultFriction: f32) SurfaceProperties {
+	pub fn calculateSurfaceProperties(comptime side: root.sync.Side, pos: Vec3d, hitBox: Box, defaultFriction: f32) SurfaceProperties {
 		const boundingBox: Box = .{
 			.min = pos + hitBox.min - Vec3d{0, 0, 0.01},
 			.max = pos + hitBox.max,
@@ -204,7 +204,7 @@ pub const collision = struct { // MARK: collision
 		return @reduce(.Mul, max - min);
 	}
 
-	pub fn calculateVolumeProperties(comptime side: main.sync.Side, pos: Vec3d, hitBox: Box, defaults: VolumeProperties) VolumeProperties {
+	pub fn calculateVolumeProperties(comptime side: root.sync.Side, pos: Vec3d, hitBox: Box, defaults: VolumeProperties) VolumeProperties {
 		const boundingBox: Box = .{
 			.min = pos + hitBox.min,
 			.max = pos + hitBox.max,
@@ -237,8 +237,8 @@ pub const collision = struct { // MARK: collision
 
 					if (main.game.getBlockWithSide(side, x, y, z)) |block| {
 						const collisionBox: Box = .{ // TODO: Check all AABBs individually
-							.min = totalBox.min + main.blocks.meshes.model(block).model().min,
-							.max = totalBox.min + main.blocks.meshes.model(block).model().max,
+							.min = totalBox.min + root.blocks.meshes.model(block).model().min,
+							.max = totalBox.min + root.blocks.meshes.model(block).model().max,
 						};
 						const filledVolume = @min(gridVolume, overlapVolume(collisionBox, totalBox));
 						const emptyVolume = gridVolume - filledVolume;
@@ -266,7 +266,7 @@ pub const collision = struct { // MARK: collision
 		};
 	}
 
-	pub fn collideOrStep(comptime side: main.sync.Side, comptime dir: Direction, amount: f64, pos: Vec3d, hitBox: Box, steppingHeight: f64) Vec3d {
+	pub fn collideOrStep(comptime side: root.sync.Side, comptime dir: Direction, amount: f64, pos: Vec3d, hitBox: Box, steppingHeight: f64) Vec3d {
 		const index = @intFromEnum(dir);
 
 		// First argument is amount we end up moving in dir, second argument is how far up we step
@@ -299,7 +299,7 @@ pub const collision = struct { // MARK: collision
 		return resultingMovement;
 	}
 
-	fn isBlockIntersecting(block: main.blocks.Block, posX: i32, posY: i32, posZ: i32, center: Vec3d, extent: Vec3d) bool {
+	fn isBlockIntersecting(block: root.blocks.Block, posX: i32, posY: i32, posZ: i32, center: Vec3d, extent: Vec3d) bool {
 		const model = block.mode().model(block).model();
 		const position = Vec3d{@floatFromInt(posX), @floatFromInt(posY), @floatFromInt(posZ)};
 		const entityBox = Box{.min = center - extent, .max = center + extent};
@@ -313,7 +313,7 @@ pub const collision = struct { // MARK: collision
 		return false;
 	}
 
-	pub fn touchBlocks(comptime side: main.sync.Side, entity: *main.server.Entity, hitBox: Box, deltaTime: f64) void {
+	pub fn touchBlocks(comptime side: root.sync.Side, entity: *root.server.Entity, hitBox: Box, deltaTime: f64) void {
 		const boundingBox: Box = .{.min = entity.pos + hitBox.min, .max = entity.pos + hitBox.max};
 
 		const minX: i32 = @floor(boundingBox.min[0] - 0.01);
@@ -355,13 +355,13 @@ pub const FrictionState = struct {
 	mobile: f32,
 };
 
-pub fn calculateVolumeProperties(comptime side: main.sync.Side, volumeProperties: *collision.VolumeProperties, pos: @Vector(3, f64), hitBox: collision.Box, airTerminalVelocity: f64) void {
+pub fn calculateVolumeProperties(comptime side: root.sync.Side, volumeProperties: *collision.VolumeProperties, pos: @Vector(3, f64), hitBox: collision.Box, airTerminalVelocity: f64) void {
 	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
 		volumeProperties.* = collision.calculateVolumeProperties(side, pos, hitBox, .{.density = airDensity, .terminalVelocity = airTerminalVelocity, .maxDensity = airDensity, .mobileFriction = 1.0/airTerminalVelocity});
 	}
 }
 
-pub fn calculateFriction(comptime side: main.sync.Side, volumeProperties: *const collision.VolumeProperties, friction: *FrictionState, pos: @Vector(3, f64), hitBox: collision.Box, onGround: bool) void {
+pub fn calculateFriction(comptime side: root.sync.Side, volumeProperties: *const collision.VolumeProperties, friction: *FrictionState, pos: @Vector(3, f64), hitBox: collision.Box, onGround: bool) void {
 	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
 		const groundFriction = if (!onGround) 0 else collision.calculateSurfaceProperties(side, pos, hitBox, 20).friction;
 		const volumeFrictionCoeffecient: f32 = @floatCast(baseGravity/volumeProperties.terminalVelocity);
@@ -371,7 +371,7 @@ pub fn calculateFriction(comptime side: main.sync.Side, volumeProperties: *const
 	}
 }
 
-pub fn calculateMotion(comptime side: main.sync.Side, deltaTime: f64, friction: FrictionState, volumeProperties: collision.VolumeProperties, density: f64, pos: Vec3d, velocity: *Vec3d, inputAcc: Vec3d, gravity: f64, jumpHeight: f64) Vec3d {
+pub fn calculateMotion(comptime side: root.sync.Side, deltaTime: f64, friction: FrictionState, volumeProperties: collision.VolumeProperties, density: f64, pos: Vec3d, velocity: *Vec3d, inputAcc: Vec3d, gravity: f64, jumpHeight: f64) Vec3d {
 	var move: Vec3d = .{0, 0, 0};
 
 	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
@@ -417,7 +417,7 @@ pub fn calculateMotion(comptime side: main.sync.Side, deltaTime: f64, friction: 
 	return move;
 }
 
-pub fn calculateEyeMovement(comptime side: main.sync.Side, deltaTime: f64, pos: Vec3d, vel: Vec3d, eye: *Player.EyeData, stepAmount: f64) void {
+pub fn calculateEyeMovement(comptime side: root.sync.Side, deltaTime: f64, pos: Vec3d, vel: Vec3d, eye: *Player.EyeData, stepAmount: f64) void {
 	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
 		var directionalFrictionCoefficients: Vec3f = @splat(0);
 		var acc: Vec3d = @splat(0);
@@ -511,7 +511,7 @@ pub fn calculateEyeMovement(comptime side: main.sync.Side, deltaTime: f64, pos: 
 	}
 }
 
-pub fn calculateWallCollision(comptime side: main.sync.Side, motion: *Vec3d, pos: *Vec3d, vel: *Vec3d, onGround: *bool, frictionState: FrictionState, hitBox: collision.Box, steppingHeight: f64, steppingHeightLimit: ?f64, crouching: bool) f64 {
+pub fn calculateWallCollision(comptime side: root.sync.Side, motion: *Vec3d, pos: *Vec3d, vel: *Vec3d, onGround: *bool, frictionState: FrictionState, hitBox: collision.Box, steppingHeight: f64, steppingHeightLimit: ?f64, crouching: bool) f64 {
 	var adjustedSteppingHeight = steppingHeight;
 	if (vel[2] > 0) {
 		adjustedSteppingHeight = vel[2]*vel[2]/baseGravity/2;
@@ -554,7 +554,7 @@ pub fn calculateWallCollision(comptime side: main.sync.Side, motion: *Vec3d, pos
 	return stepAmount;
 }
 
-pub fn calculateVerticalCollision(comptime side: main.sync.Side, deltaTime: f64, pos: *Vec3d, vel: *Vec3d, jumpCoyote: ?*f64, onGround: *bool, hitBox: collision.Box, motion: Vec3d, bouncinessMultiplier: f64) bool {
+pub fn calculateVerticalCollision(comptime side: root.sync.Side, deltaTime: f64, pos: *Vec3d, vel: *Vec3d, jumpCoyote: ?*f64, onGround: *bool, hitBox: collision.Box, motion: Vec3d, bouncinessMultiplier: f64) bool {
 	const wasOnGround = onGround.*;
 	onGround.* = false;
 	pos[2] += motion[2];

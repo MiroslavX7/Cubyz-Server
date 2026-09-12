@@ -61,8 +61,8 @@ fn addItemStackToAvailable(itemStack: ItemStack) void {
 }
 
 fn findAvailableRecipes(list: *VerticalList) bool {
-	const oldAmounts = main.stackAllocator.dupe(u32, itemAmount.items);
-	defer main.stackAllocator.free(oldAmounts);
+	const oldAmounts = root.stackAllocator.dupe(u32, itemAmount.items);
+	defer root.stackAllocator.free(oldAmounts);
 	for (itemAmount.items) |*amount| {
 		amount.* = 0;
 	}
@@ -80,7 +80,7 @@ fn findAvailableRecipes(list: *VerticalList) bool {
 		}
 	}
 	for (inventories.items) |inv| {
-		inv.deinit(main.globalAllocator);
+		inv.deinit(root.globalAllocator);
 	}
 	inventories.clearRetainingCapacity();
 	// Find all recipes the player can make:
@@ -94,7 +94,7 @@ fn findAvailableRecipes(list: *VerticalList) bool {
 			continue :outer; // Ingredient not found.
 		}
 		// All ingredients found: Add it to the list.
-		const inv = ClientInventory.init(main.globalAllocator, recipe.sourceItems.len + 1, .{.crafting = recipe}, .other, .{});
+		const inv = ClientInventory.init(root.globalAllocator, recipe.sourceItems.len + 1, .{.crafting = recipe}, .other, .{});
 
 		for (0..recipe.sourceAmounts.len) |index| {
 			inv.super._items[index].amount = recipe.sourceAmounts[index];
@@ -138,7 +138,7 @@ fn refresh() void {
 		return;
 	}
 	if (window.rootComponent) |*comp| {
-		main.heap.GarbageCollection.deferredFree(.{.ptr = comp.verticalList, .freeFunction = main.meta.castFunctionSelfToAnyopaque(VerticalList.deinit)});
+		root.heap.GarbageCollection.deferredFree(.{.ptr = comp.verticalList, .freeFunction = root.meta.castFunctionSelfToAnyopaque(VerticalList.deinit)});
 	}
 	if (list.children.items.len == 0) {
 		list.add(Label.init(.{0, 0}, 120, "No craftable\nrecipes found", .center));
@@ -152,9 +152,9 @@ fn refresh() void {
 }
 
 pub fn onOpen() void {
-	availableItems = .init(main.globalAllocator);
-	itemAmount = .init(main.globalAllocator);
-	inventories = .init(main.globalAllocator);
+	availableItems = .init(root.globalAllocator);
+	itemAmount = .init(root.globalAllocator);
+	inventories = .init(root.globalAllocator);
 	refresh();
 }
 
@@ -166,7 +166,7 @@ pub fn onClose() void {
 	availableItems.deinit();
 	itemAmount.deinit();
 	for (inventories.items) |inv| {
-		inv.deinit(main.globalAllocator);
+		inv.deinit(root.globalAllocator);
 	}
 	inventories.deinit();
 }

@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array3D = main.utils.Array3D;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const sdf = main.server.terrain.sdf;
+const Array3D = root.utils.Array3D;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const sdf = root.server.terrain.sdf;
 const SdfInstance = sdf.SdfInstance;
 const vec = main.vec;
 const Vec3f = vec.Vec3f;
@@ -20,7 +20,7 @@ const Instance = struct {
 };
 
 pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
-	const self = main.worldArena.create(@This());
+	const self = root.worldArena.create(@This());
 	self.minRadius = zon.get(f32, "minRadius") orelse 16;
 	self.maxRadius = zon.get(f32, "maxRadius") orelse self.minRadius;
 
@@ -37,7 +37,7 @@ pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) Sdf
 	};
 	return .{
 		.data = instance,
-		.generateFn = main.meta.castFunctionSelfToAnyopaque(generate),
+		.generateFn = root.meta.castFunctionSelfToAnyopaque(generate),
 		.minBounds = @splat(@floor(-instance.radius)),
 		.maxBounds = @splat(@ceil(instance.radius)),
 		.centerPosOffset = @splat(@ceil(instance.radius)),

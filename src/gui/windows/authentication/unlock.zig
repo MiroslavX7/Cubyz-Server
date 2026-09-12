@@ -28,14 +28,14 @@ var logoutButton: *Button = undefined;
 var incorrectPasswordLabel: *Label = undefined;
 
 fn apply() void {
-	var failureText: main.ListManaged(u8) = .init(main.stackAllocator);
+	var failureText: main.ListManaged(u8) = .init(root.stackAllocator);
 	defer failureText.deinit();
 	const accountCode = main.settings.storedAccount.decryptFromPassword(textComponent.currentString.items, &failureText) catch |err| {
 		if (err == error.AuthenticationFailed) {
 			incorrectPasswordLabel.updateText("#ff0000Incorrect password.");
 		} else {
-			const formattedError = main.stackAllocator.print("#ff0000Authentication data is corrupted: {s}", .{@errorName(err)});
-			defer main.stackAllocator.free(formattedError);
+			const formattedError = root.stackAllocator.print("#ff0000Authentication data is corrupted: {s}", .{@errorName(err)});
+			defer root.stackAllocator.free(formattedError);
 			incorrectPasswordLabel.updateText(formattedError);
 		}
 		return;
@@ -46,7 +46,7 @@ fn apply() void {
 		std.log.warn("Encountered errors while verifying your Account. This may happen if you created your account in a future version, in which case it's fine to continue.\n{s}", .{failureText.items});
 	}
 
-	main.network.authentication.KeyCollection.init(accountCode);
+	root.network.authentication.KeyCollection.init(accountCode);
 
 	gui.closeWindowFromRef(&window);
 	gui.openWindow("multiplayer");
@@ -57,7 +57,7 @@ fn showTextCallback(showText: bool) void {
 }
 
 fn logout() void {
-	main.settings.storedAccount.deinit(main.globalAllocator);
+	main.settings.storedAccount.deinit(root.globalAllocator);
 	main.settings.storedAccount = .empty;
 	main.settings.save();
 	gui.closeWindowFromRef(&window);

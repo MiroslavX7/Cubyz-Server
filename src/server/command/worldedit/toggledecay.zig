@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 const Vec3i = main.vec.Vec3i;
-const User = main.server.User;
+const User = root.server.User;
 
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const Blueprint = main.blueprint.Blueprint;
 const Pattern = main.blueprint.Pattern;
 
@@ -38,7 +38,7 @@ pub fn execute(args: Args, source: Source) void {
 	var blueprint: Blueprint = switch (args.@"/toggledecay <target> <state>".target) {
 		.selection => blk: {
 			const selection = command.getCurrentSelection(user) catch return;
-			const blueprint = switch (Blueprint.capture(main.globalAllocator, selection)) {
+			const blueprint = switch (Blueprint.capture(root.globalAllocator, selection)) {
 				.success => |bp| bp,
 				.failure => |e| {
 					user.sendMessage("#ff0000Error while capturing block {}: {s}. Nothing was modified.", .{e.pos, e.message});
@@ -50,7 +50,7 @@ pub fn execute(args: Args, source: Source) void {
 			user.worldEditData.undoHistory.push(.init(blueprint, selection.minPos, "toggledecay"));
 			user.worldEditData.redoHistory.clear();
 
-			break :blk blueprint.clone(main.stackAllocator);
+			break :blk blueprint.clone(root.stackAllocator);
 		},
 		.clipboard => user.worldEditData.clipboard orelse {
 			return user.sendMessage("#ff0000Clipboard is empty.", .{});
@@ -67,7 +67,7 @@ pub fn execute(args: Args, source: Source) void {
 			const posStart: Vec3i = @min(pos1, pos2);
 
 			blueprint.paste(posStart, .{.preserveVoid = true});
-			blueprint.deinit(main.stackAllocator);
+			blueprint.deinit(root.stackAllocator);
 
 			return user.sendMessage("#00ff00Selection modified. History entry created.", .{});
 		},

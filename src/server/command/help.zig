@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ListManaged = main.ListManaged;
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Shows info about all the commands.";
@@ -16,7 +16,7 @@ pub const Args = union(enum) {
 };
 
 pub fn execute(args: Args, source: Source) void {
-	var msg: main.ListManaged(u8) = .init(main.stackAllocator);
+	var msg: main.ListManaged(u8) = .init(root.stackAllocator);
 	defer msg.deinit();
 	msg.appendSlice("#ffff00");
 	switch (args) {

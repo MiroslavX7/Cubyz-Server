@@ -16,7 +16,7 @@ pub fn combineModifiers(data1: Data, data2: Data) ?Data {
 	return .{.strength = 1.0 - 1.0/(1.0 + std.math.hypot(1.0/(1.0 - data1.strength) - 1.0, 1.0/(1.0 - data2.strength) - 1.0)), .tag = data1.tag};
 }
 
-pub fn changeBlockDamage(damage: f32, block: main.blocks.Block, data: Data) f32 {
+pub fn changeBlockDamage(damage: f32, block: root.blocks.Block, data: Data) f32 {
 	for (block.tags()) |tag| {
 		if (tag == data.tag) return damage*(1 - data.strength);
 	}

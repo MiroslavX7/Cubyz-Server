@@ -30,7 +30,7 @@ pub fn isDroppedWhenBrokenWithItem(self: @This(), item: Item) bool {
 pub fn drop(self: @This(), pos: Vec3d, dir: Vec3f, velocity: f32) void {
 	if (self.chance == 1 or main.random.nextFloat(&main.seed) < self.chance) {
 		for (self.itemStacks) |itemStack| {
-			main.server.world.?.drop(itemStack.clone(), pos, dir, velocity);
+			root.server.world.?.drop(itemStack.clone(), pos, dir, velocity);
 		}
 	}
 }

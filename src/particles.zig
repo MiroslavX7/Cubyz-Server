@@ -75,9 +75,9 @@ pub const ParticleManager = struct { // MARK: ParticleManager
 			.loopTime = RandomRange(f32).fromZon(zon.getChild("loopTime")),
 		};
 
-		particleTypeHashmap.put(main.worldArena.allocator, id, @intCast(types.items.len)) catch unreachable;
-		types.append(main.worldArena, particleType);
-		typesLocal.append(main.worldArena, particleTypeLocal);
+		particleTypeHashmap.put(root.worldArena.allocator, id, @intCast(types.items.len)) catch unreachable;
+		types.append(root.worldArena, particleType);
+		typesLocal.append(root.worldArena, particleTypeLocal);
 
 		std.log.debug("Registered particle type: {s}", .{id});
 	}
@@ -122,13 +122,13 @@ pub const ParticleManager = struct { // MARK: ParticleManager
 		const mod = splitter.first();
 		const id = splitter.rest();
 
-		const gameAssetsPath = main.stackAllocator.print("assets/{s}/particles/textures/{s}{s}", .{mod, id, suffix});
-		defer main.stackAllocator.free(gameAssetsPath);
+		const gameAssetsPath = root.stackAllocator.print("assets/{s}/particles/textures/{s}{s}", .{mod, id, suffix});
+		defer root.stackAllocator.free(gameAssetsPath);
 
-		const worldAssetsPath = main.stackAllocator.print("{s}/{s}/particles/textures/{s}{s}", .{assetsFolder, mod, id, suffix});
-		defer main.stackAllocator.free(worldAssetsPath);
+		const worldAssetsPath = root.stackAllocator.print("{s}/{s}/particles/textures/{s}{s}", .{assetsFolder, mod, id, suffix});
+		defer root.stackAllocator.free(worldAssetsPath);
 
-		return graphics.Image.readFromFile(main.worldArena, worldAssetsPath, .{.orientation = .openGl}) catch graphics.Image.readFromFile(main.worldArena, gameAssetsPath, .{.orientation = .openGl}) catch {
+		return graphics.Image.readFromFile(root.worldArena, worldAssetsPath, .{.orientation = .openGl}) catch graphics.Image.readFromFile(root.worldArena, gameAssetsPath, .{.orientation = .openGl}) catch {
 			if (status == .isMandatory) std.log.err("Particle texture not found in {s} and {s}.", .{worldAssetsPath, gameAssetsPath});
 			return default;
 		};
@@ -136,7 +136,7 @@ pub const ParticleManager = struct { // MARK: ParticleManager
 
 	fn createAnimationFrames(container: *main.List(Image), frameCount: usize, image: Image, isBroken: bool) void {
 		for (0..frameCount) |i| {
-			container.append(main.worldArena, if (isBroken) image else extractAnimationSlice(image, i));
+			container.append(root.worldArena, if (isBroken) image else extractAnimationSlice(image, i));
 		}
 	}
 
@@ -167,7 +167,7 @@ pub const ParticleSystem = struct { // MARK: ParticleSystem
 	var particlesLocal: [maxCapacity]ParticleLocal = undefined;
 	var previousPlayerPos: Vec3i = undefined;
 
-	var mutex: main.utils.Mutex = .{};
+	var mutex: root.utils.Mutex = .{};
 	var networkCreationQueue: main.List(struct { emitter: Emitter, pos: Vec3d, count: u32 }) = .empty;
 
 	var particlesSSBO: SSBO = undefined;
@@ -366,7 +366,7 @@ pub const ParticleSystem = struct { // MARK: ParticleSystem
 	pub fn addParticlesFromNetwork(emitter: Emitter, pos: Vec3d, count: u32) void {
 		mutex.lock();
 		defer mutex.unlock();
-		networkCreationQueue.append(main.worldArena, .{.emitter = emitter, .pos = pos, .count = count});
+		networkCreationQueue.append(root.worldArena, .{.emitter = emitter, .pos = pos, .count = count});
 	}
 };
 

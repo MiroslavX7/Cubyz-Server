@@ -49,7 +49,7 @@ pub var streamerMode: bool = false;
 
 pub var lastUsedIPAddress: []const u8 = "";
 
-pub var storedAccount: main.network.authentication.PasswordEncodedAccountCode = .empty;
+pub var storedAccount: root.network.authentication.PasswordEncodedAccountCode = .empty;
 
 pub var guiScale: ?f32 = null;
 
@@ -74,13 +74,13 @@ pub var controllerAxisDeadzone: f32 = 0.2;
 const settingsFile = if (builtin.mode == .Debug) "debug_settings.zig.zon" else "settings.zig.zon";
 
 pub fn init() void {
-	const zon: ZonElement = main.files.cubyzDir().readToZon(main.stackAllocator, settingsFile) catch |err| blk: {
+	const zon: ZonElement = root.files.cubyzDir().readToZon(root.stackAllocator, settingsFile) catch |err| blk: {
 		if (err != error.FileNotFound) {
 			std.log.err("Could not read settings file: {s}", .{@errorName(err)});
 		}
 		break :blk .null;
 	};
-	defer zon.deinit(main.stackAllocator);
+	defer zon.deinit(root.stackAllocator);
 
 	inline for (@typeInfo(@This()).@"struct".decls) |decl| runtimeContinueInsideOfComptimeBlock: {
 		const is_const = @typeInfo(@TypeOf(&@field(@This(), decl.name))).pointer.is_const; // Sadly there is no direct way to check if a declaration is const.
@@ -95,7 +95,7 @@ pub fn init() void {
 					@field(@This(), decl.name) = .fromNanoseconds(@trunc((zon.get(f64, decl.name) orelse defaultMilli)*1.0e6));
 					continue;
 				}
-				@field(@This(), decl.name) = DeclType.fromZon(main.globalAllocator, zon.getChild(decl.name)) catch |err| {
+				@field(@This(), decl.name) = DeclType.fromZon(root.globalAllocator, zon.getChild(decl.name)) catch |err| {
 					std.log.err("Got error while loading setting {s}: {s}", .{decl.name, @errorName(err)});
 					break :runtimeContinueInsideOfComptimeBlock;
 				};
@@ -104,7 +104,7 @@ pub fn init() void {
 			@field(@This(), decl.name) = zon.get(DeclType, decl.name) orelse @field(@This(), decl.name);
 			if (@typeInfo(DeclType) == .pointer) {
 				if (@typeInfo(DeclType).pointer.size == .slice) {
-					@field(@This(), decl.name) = main.globalAllocator.dupe(@typeInfo(DeclType).pointer.child, @field(@This(), decl.name));
+					@field(@This(), decl.name) = root.globalAllocator.dupe(@typeInfo(DeclType).pointer.child, @field(@This(), decl.name));
 				} else {
 					@compileError("Not implemented yet.");
 				}
@@ -135,12 +135,12 @@ pub fn deinit() void {
 			const DeclType = @TypeOf(@field(@This(), decl.name));
 			if (@typeInfo(DeclType) == .@"struct") {
 				if (DeclType == std.Io.Duration) continue;
-				@field(@This(), decl.name).deinit(main.globalAllocator);
+				@field(@This(), decl.name).deinit(root.globalAllocator);
 				continue;
 			}
 			if (@typeInfo(DeclType) == .pointer) {
 				if (@typeInfo(DeclType).pointer.size == .slice) {
-					main.globalAllocator.free(@field(@This(), decl.name));
+					root.globalAllocator.free(@field(@This(), decl.name));
 				} else {
 					@compileError("Not implemented yet.");
 				}
@@ -150,8 +150,8 @@ pub fn deinit() void {
 }
 
 pub fn save() void {
-	var zonObject = ZonElement.initObject(main.stackAllocator);
-	defer zonObject.deinit(main.stackAllocator);
+	var zonObject = ZonElement.initObject(root.stackAllocator);
+	defer zonObject.deinit(root.stackAllocator);
 
 	inline for (@typeInfo(@This()).@"struct".decls) |decl| {
 		if (comptime std.mem.eql(u8, decl.name, "lastVersionString")) {
@@ -166,7 +166,7 @@ pub fn save() void {
 					zonObject.put(decl.name, @as(f64, @floatFromInt(@field(@This(), decl.name).toNanoseconds()))/1.0e6);
 					continue;
 				}
-				zonObject.put(decl.name, @field(@This(), decl.name).toZon(main.stackAllocator));
+				zonObject.put(decl.name, @field(@This(), decl.name).toZon(root.stackAllocator));
 				continue;
 			}
 			if (DeclType == []const u8) {
@@ -178,9 +178,9 @@ pub fn save() void {
 	}
 
 	// keyboard settings:
-	const keyboard = ZonElement.initObject(main.stackAllocator);
+	const keyboard = ZonElement.initObject(root.stackAllocator);
 	for (&main.KeyBoard.keys) |key| {
-		const keyZon = ZonElement.initObject(main.stackAllocator);
+		const keyZon = ZonElement.initObject(root.stackAllocator);
 		keyZon.put("key", key.key);
 		keyZon.put("mouseButton", key.mouseButton);
 		keyZon.put("scancode", key.scancode);
@@ -192,19 +192,19 @@ pub fn save() void {
 	zonObject.put("keyboard", keyboard);
 
 	// Merge with the old settings file to preserve unknown settings.
-	var oldZonObject: ZonElement = main.files.cubyzDir().readToZon(main.stackAllocator, settingsFile) catch |err| blk: {
+	var oldZonObject: ZonElement = root.files.cubyzDir().readToZon(root.stackAllocator, settingsFile) catch |err| blk: {
 		if (err != error.FileNotFound) {
 			std.log.err("Could not read settings file: {s}", .{@errorName(err)});
 		}
 		break :blk .null;
 	};
-	defer oldZonObject.deinit(main.stackAllocator);
+	defer oldZonObject.deinit(root.stackAllocator);
 
 	if (oldZonObject == .object) {
 		zonObject.join(.preferLeft, oldZonObject);
 	}
 
-	main.files.cubyzDir().writeZon(settingsFile, zonObject) catch |err| {
+	root.files.cubyzDir().writeZon(settingsFile, zonObject) catch |err| {
 		std.log.err("Couldn't write settings to file: {s}", .{@errorName(err)});
 	};
 }
@@ -213,21 +213,21 @@ pub const launchConfig = struct {
 	pub var cubyzDir: []const u8 = "";
 	pub var autoEnterWorld: []const u8 = "";
 	pub var headlessServer: bool = false;
-	pub var preferredAuthenticationAlgorithm: main.network.authentication.KeyTypeEnum = .ed25519;
+	pub var preferredAuthenticationAlgorithm: root.network.authentication.KeyTypeEnum = .ed25519;
 
 	pub var vulkanTestingMode: bool = false;
 
 	pub fn init() void {
-		const zon: ZonElement = main.files.cwd().readToZon(main.stackAllocator, "launchConfig.zon") catch |err| blk: {
+		const zon: ZonElement = root.files.cwd().readToZon(root.stackAllocator, "launchConfig.zon") catch |err| blk: {
 			std.log.err("Could not read launchConfig.zon: {s}", .{@errorName(err)});
 			break :blk .null;
 		};
-		defer zon.deinit(main.stackAllocator);
+		defer zon.deinit(root.stackAllocator);
 
-		cubyzDir = main.globalArena.dupe(u8, zon.get([]const u8, "cubyzDir") orelse cubyzDir);
+		cubyzDir = root.globalArena.dupe(u8, zon.get([]const u8, "cubyzDir") orelse cubyzDir);
 		headlessServer = zon.get(bool, "headlessServer") orelse headlessServer;
-		autoEnterWorld = main.globalArena.dupe(u8, zon.get([]const u8, "autoEnterWorld") orelse autoEnterWorld);
-		preferredAuthenticationAlgorithm = zon.get(main.network.authentication.KeyTypeEnum, "preferredAuthenticationAlgorithm") orelse preferredAuthenticationAlgorithm;
+		autoEnterWorld = root.globalArena.dupe(u8, zon.get([]const u8, "autoEnterWorld") orelse autoEnterWorld);
+		preferredAuthenticationAlgorithm = zon.get(root.network.authentication.KeyTypeEnum, "preferredAuthenticationAlgorithm") orelse preferredAuthenticationAlgorithm;
 		vulkanTestingMode = zon.get(bool, "vulkanTestingMode") orelse false;
 	}
 };
@@ -239,6 +239,6 @@ pub const environment = struct {
 
 	pub fn init(_env: std.process.Environ) void {
 		env = _env;
-		SDL_GAMECONTROLLERCONFIG = env.getAlloc(main.globalArena.allocator, "SDL_GAMECONTROLLERCONFIG") catch null;
+		SDL_GAMECONTROLLERCONFIG = env.getAlloc(root.globalArena.allocator, "SDL_GAMECONTROLLERCONFIG") catch null;
 	}
 };

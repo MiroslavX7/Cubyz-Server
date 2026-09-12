@@ -31,19 +31,19 @@ var encryptAccountCode: bool = true;
 
 const padding: f32 = 8;
 
-var accountCode: main.network.authentication.AccountCode = undefined;
+var accountCode: root.network.authentication.AccountCode = undefined;
 
-pub fn setAccountCode(accountCode_: main.network.authentication.AccountCode) void {
+pub fn setAccountCode(accountCode_: root.network.authentication.AccountCode) void {
 	accountCode = accountCode_;
 }
 
 fn confirm() void {
 	if (encryptAccountCode) {
-		settings.storedAccount.deinit(main.globalAllocator);
-		settings.storedAccount = .initFromPassword(main.globalAllocator, accountCode, passwordTextField.currentString.items);
+		settings.storedAccount.deinit(root.globalAllocator);
+		settings.storedAccount = .initFromPassword(root.globalAllocator, accountCode, passwordTextField.currentString.items);
 	} else {
-		settings.storedAccount.deinit(main.globalAllocator);
-		settings.storedAccount = .initUnencoded(main.globalAllocator, accountCode);
+		settings.storedAccount.deinit(root.globalAllocator);
+		settings.storedAccount = .initUnencoded(root.globalAllocator, accountCode);
 	}
 	settings.save();
 

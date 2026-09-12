@@ -9,8 +9,8 @@ fn setSeed(x: i32, offsetX: i32, seed: *u64, worldSeed: u64, scale: u31) void {
 pub fn generateFractalTerrain(wx: i32, x0: u31, width: u32, scale: u31, worldSeed: u64, map: []f32) void {
 	const max = scale + 1;
 	const mask: i32 = scale - 1;
-	const bigMap = main.stackAllocator.alloc(f32, max);
-	defer main.stackAllocator.free(bigMap);
+	const bigMap = root.stackAllocator.alloc(f32, max);
+	defer root.stackAllocator.free(bigMap);
 	const offset = wx & ~mask;
 	var seed: u64 = undefined;
 	// Generate the 4 corner points of this map using a coordinate-depending seed:

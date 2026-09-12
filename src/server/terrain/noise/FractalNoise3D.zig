@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array3D = main.utils.Array3D;
-const ChunkPosition = main.chunk.ChunkPosition;
+const Array3D = root.utils.Array3D;
+const ChunkPosition = root.chunk.ChunkPosition;
 const random = main.random;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub fn generateAligned(allocator: NeverFailingAllocator, wx: i32, wy: i32, wz: i32, voxelSize: u31, width: u31, depth: u31, height: u31, worldSeed: u64, scale: u31) Array3D(f32) {
 	std.debug.assert(wx & scale - 1 == 0 and wy & scale - 1 == 0 and wz & scale - 1 == 0); // Alignment;

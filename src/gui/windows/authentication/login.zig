@@ -25,9 +25,9 @@ var loginAnyways: bool = false;
 const padding: f32 = 8;
 
 fn login() void {
-	var failureText: main.ListManaged(u8) = .init(main.stackAllocator);
+	var failureText: main.ListManaged(u8) = .init(root.stackAllocator);
 	defer failureText.deinit();
-	var accountCode = main.network.authentication.AccountCode.initFromUserInput(textComponent.currentString.items, &failureText);
+	var accountCode = root.network.authentication.AccountCode.initFromUserInput(textComponent.currentString.items, &failureText);
 	defer accountCode.deinit();
 
 	if (accountCode.text.len == 0) {
@@ -46,7 +46,7 @@ fn login() void {
 		return;
 	}
 
-	main.network.authentication.KeyCollection.init(accountCode);
+	root.network.authentication.KeyCollection.init(accountCode);
 
 	gui.closeWindowFromRef(&window);
 	gui.windowlist.@"authentication/stay_logged_in".setAccountCode(accountCode);

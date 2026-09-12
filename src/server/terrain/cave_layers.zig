@@ -2,8 +2,8 @@ const std = @import("std");
 
 const root = @import("root");
 const ZonElement = main.ZonElement;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const terrain = main.server.terrain;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const terrain = root.server.terrain;
 const Biome = terrain.biomes.Biome;
 const Assets = main.assets.Assets;
 const Tag = main.Tag;
@@ -15,7 +15,7 @@ pub const CaveLayer = struct {
 	depthHint: i32,
 	caveDensity: f32,
 
-	biomes: main.utils.AliasTable(*const Biome),
+	biomes: root.utils.AliasTable(*const Biome),
 	id: []const u8,
 
 	pub fn init(id: []const u8, zon: ZonElement) ?CaveLayer {
@@ -29,10 +29,10 @@ pub const CaveLayer = struct {
 			return null;
 		};
 		result.caveDensity = zon.get(f32, "caveDensity") orelse 1.0/32.0;
-		result.id = main.worldArena.dupe(u8, id);
+		result.id = root.worldArena.dupe(u8, id);
 
-		const tags = Tag.loadTagsFromZon(main.stackAllocator, zon.getChild("tags"));
-		defer main.stackAllocator.free(tags);
+		const tags = Tag.loadTagsFromZon(root.stackAllocator, zon.getChild("tags"));
+		defer root.stackAllocator.free(tags);
 		if (tags.len == 0) {
 			std.log.err("Cave layer with id {s} is missing tags. Skipping", .{id});
 			return null;
@@ -44,11 +44,11 @@ pub const CaveLayer = struct {
 			}
 		}
 		var biomes: main.List(*const Biome) = .empty;
-		defer biomes.deinit(main.stackAllocator);
+		defer biomes.deinit(root.stackAllocator);
 		outer: for (terrain.biomes.getCaveBiomes()) |*biome| {
 			for (tags) |tag| {
 				if (biome.hasTag(tag)) {
-					biomes.append(main.stackAllocator, biome);
+					biomes.append(root.stackAllocator, biome);
 					continue :outer;
 				}
 			}
@@ -65,7 +65,7 @@ pub const CaveLayer = struct {
 			return null;
 		}
 
-		result.biomes = .init(main.worldArena, main.worldArena.dupe(*const Biome, biomes.items));
+		result.biomes = .init(root.worldArena, root.worldArena.dupe(*const Biome, biomes.items));
 
 		return result;
 	}
@@ -76,7 +76,7 @@ var caveLayers: main.List(CaveLayer) = .empty;
 
 fn register(id: []const u8, zon: ZonElement) void {
 	const caveLayer = CaveLayer.init(id, zon) orelse return;
-	caveLayers.append(main.worldArena, caveLayer);
+	caveLayers.append(root.worldArena, caveLayer);
 }
 
 pub fn registerCaveLayers(caveLayerMap: *Assets.ZonHashMap) !void {

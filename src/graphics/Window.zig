@@ -61,12 +61,12 @@ pub const Gamepad = struct { // MARK: Gamepad
 			const joystickFound = c.glfwJoystickPresent(jid) != 0 and c.glfwJoystickIsGamepad(jid) != 0;
 			if (joystickFound) {
 				if (!gamepadState.contains(jid)) {
-					gamepadState.put(jid, main.globalAllocator.create(c.GLFWgamepadstate)) catch unreachable;
+					gamepadState.put(jid, root.globalAllocator.create(c.GLFWgamepadstate)) catch unreachable;
 				}
 				_ = c.glfwGetGamepadState(jid, gamepadState.get(jid).?);
 			} else {
 				if (gamepadState.contains(jid)) {
-					main.globalAllocator.destroy(gamepadState.get(jid).?);
+					root.globalAllocator.destroy(gamepadState.get(jid).?);
 					_ = gamepadState.remove(jid);
 				}
 			}
@@ -151,11 +151,11 @@ pub const Gamepad = struct { // MARK: Gamepad
 	const ControllerMappingDownloadTask = struct { // MARK: ControllerMappingDownloadTask
 		curTimestamp: i128,
 		var running = std.atomic.Value(bool).init(false);
-		const vtable = main.utils.ThreadPool.VTable{
-			.getPriority = main.meta.castFunctionSelfToAnyopaque(getPriority),
-			.isStillNeeded = main.meta.castFunctionSelfToAnyopaque(isStillNeeded),
-			.run = main.meta.castFunctionSelfToAnyopaque(run),
-			.clean = main.meta.castFunctionSelfToAnyopaque(clean),
+		const vtable = root.utils.ThreadPool.VTable{
+			.getPriority = root.meta.castFunctionSelfToAnyopaque(getPriority),
+			.isStillNeeded = root.meta.castFunctionSelfToAnyopaque(isStillNeeded),
+			.run = root.meta.castFunctionSelfToAnyopaque(run),
+			.clean = root.meta.castFunctionSelfToAnyopaque(clean),
 		};
 
 		pub fn schedule(curTimestamp: i128) void {
@@ -164,7 +164,7 @@ pub const Gamepad = struct { // MARK: Gamepad
 				return; // Controller mappings are already downloading.
 			}
 			controllerMappingsDownloaded.store(false, .monotonic);
-			const task = main.globalAllocator.create(ControllerMappingDownloadTask);
+			const task = root.globalAllocator.create(ControllerMappingDownloadTask);
 			task.* = ControllerMappingDownloadTask{
 				.curTimestamp = curTimestamp,
 			};
@@ -184,9 +184,9 @@ pub const Gamepad = struct { // MARK: Gamepad
 		pub fn run(self: *ControllerMappingDownloadTask) void {
 			std.log.info("Starting controller mapping download...", .{});
 			defer self.clean();
-			var client: std.http.Client = .{.allocator = main.stackAllocator.allocator, .io = main.io};
+			var client: std.http.Client = .{.allocator = root.stackAllocator.allocator, .io = main.io};
 			defer client.deinit();
-			var writer = std.Io.Writer.Allocating.init(main.stackAllocator.allocator);
+			var writer = std.Io.Writer.Allocating.init(root.stackAllocator.allocator);
 			defer writer.deinit();
 			defer controllerMappingsDownloaded.store(true, std.builtin.AtomicOrder.release);
 			const fetchResult = client.fetch(.{
@@ -205,8 +205,8 @@ pub const Gamepad = struct { // MARK: Gamepad
 				std.log.err("Failed to write controller mappings: {s}", .{@errorName(err)});
 				return;
 			};
-			const timeStampStr = main.stackAllocator.print("{x}", .{self.*.curTimestamp});
-			defer main.stackAllocator.free(timeStampStr);
+			const timeStampStr = root.stackAllocator.print("{x}", .{self.*.curTimestamp});
+			defer root.stackAllocator.free(timeStampStr);
 			files.cwd().write("gamecontrollerdb.stamp", timeStampStr) catch |err| {
 				std.log.err("Failed to write controller mappings: {s}", .{@errorName(err)});
 				return;
@@ -215,7 +215,7 @@ pub const Gamepad = struct { // MARK: Gamepad
 		}
 
 		pub fn clean(self: *ControllerMappingDownloadTask) void {
-			main.globalAllocator.destroy(self);
+			root.globalAllocator.destroy(self);
 			updateControllerMappings();
 			running.store(false, .monotonic);
 		}
@@ -225,8 +225,8 @@ pub const Gamepad = struct { // MARK: Gamepad
 		var needsDownload: bool = false;
 		const curTimestamp: i96 = std.Io.Clock.Timestamp.now(main.io, .real).raw.nanoseconds;
 		const timestamp: i96 = blk: {
-			const stamp = files.cwd().read(main.stackAllocator, "./gamecontrollerdb.stamp") catch break :blk 0;
-			defer main.stackAllocator.free(stamp);
+			const stamp = files.cwd().read(root.stackAllocator, "./gamecontrollerdb.stamp") catch break :blk 0;
+			defer root.stackAllocator.free(stamp);
 			break :blk std.fmt.parseInt(i96, stamp, 16) catch 0;
 		};
 		const delta = curTimestamp -% timestamp;
@@ -252,27 +252,27 @@ pub const Gamepad = struct { // MARK: Gamepad
 			_ = c.glfwUpdateGamepadMappings(@ptrCast(controllerConfig));
 			return;
 		}
-		const data = main.files.cwd().read(main.stackAllocator, "./gamecontrollerdb.txt") catch |err| {
+		const data = root.files.cwd().read(root.stackAllocator, "./gamecontrollerdb.txt") catch |err| {
 			if (err == error.FileNotFound) {
 				return; // Ignore not finding mappings.
 			}
 			std.log.err("Error opening gamepad mappings file: {s}", .{@errorName(err)});
 			return;
 		};
-		var newData = main.stackAllocator.realloc(data, data.len + 1);
-		defer main.stackAllocator.free(newData);
+		var newData = root.stackAllocator.realloc(data, data.len + 1);
+		defer root.stackAllocator.free(newData);
 		newData[data.len - 1] = 0;
 		_ = c.glfwUpdateGamepadMappings(newData.ptr);
 		std.log.info("Controller mappings updated!", .{});
 	}
 
 	pub fn init() void {
-		gamepadState = .init(main.globalAllocator.allocator);
+		gamepadState = .init(root.globalAllocator.allocator);
 	}
 	pub fn deinit() void {
 		var iter = gamepadState.valueIterator();
 		while (iter.next()) |value| {
-			main.globalAllocator.destroy(value.*);
+			root.globalAllocator.destroy(value.*);
 		}
 		gamepadState.deinit();
 	}
@@ -710,8 +710,8 @@ pub fn getClipboardString() []const u8 {
 }
 
 pub fn setClipboardString(string: []const u8) void {
-	const nullTerminatedString = main.stackAllocator.dupeZ(u8, string);
-	defer main.stackAllocator.free(nullTerminatedString);
+	const nullTerminatedString = root.stackAllocator.dupeZ(u8, string);
+	defer root.stackAllocator.free(nullTerminatedString);
 	c.glfwSetClipboardString(window, nullTerminatedString.ptr);
 }
 
@@ -754,11 +754,11 @@ pub fn init() void { // MARK: init()
 
 	window = c.glfwCreateWindow(width, height, windowTitle, null, null) orelse @panic("Failed to create GLFW window");
 	iconBlock: {
-		const image = main.graphics.Image.readFromFile(main.stackAllocator, "assets/cubyz/logo.png", .{.orientation = .asIs}) catch |err| {
+		const image = main.graphics.Image.readFromFile(root.stackAllocator, "assets/cubyz/logo.png", .{.orientation = .asIs}) catch |err| {
 			std.log.err("Error loading logo: {s}", .{@errorName(err)});
 			break :iconBlock;
 		};
-		defer image.deinit(main.stackAllocator);
+		defer image.deinit(root.stackAllocator);
 		const glfwImage: c.GLFWimage = .{
 			.pixels = @ptrCast(image.imageData.ptr),
 			.width = image.width,

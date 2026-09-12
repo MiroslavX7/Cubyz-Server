@@ -8,7 +8,7 @@ const Texture = graphics.Texture;
 const random = main.random;
 const vec = main.vec;
 const Vec2f = vec.Vec2f;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -42,10 +42,10 @@ pub fn globalDeinit() void {
 }
 
 pub fn init(pos: Vec2f, width: f32, minValue: f32, maxValue: f32, initialValue: f32, callback: *const fn (f32) void, formatter: *const fn (NeverFailingAllocator, f32) []const u8) *ContinuousSlider {
-	const initialText = formatter(main.globalAllocator, initialValue);
+	const initialText = formatter(root.globalAllocator, initialValue);
 	const label = Label.init(undefined, width - 3*border, initialText, .center);
 	const button = Button.initText(.{0, 0}, undefined, "", .{});
-	const self = main.globalAllocator.create(ContinuousSlider);
+	const self = root.globalAllocator.create(ContinuousSlider);
 	self.* = ContinuousSlider{
 		.pos = pos,
 		.size = undefined,
@@ -68,8 +68,8 @@ pub fn init(pos: Vec2f, width: f32, minValue: f32, maxValue: f32, initialValue: 
 pub fn deinit(self: *const ContinuousSlider) void {
 	self.label.deinit();
 	self.button.deinit();
-	main.globalAllocator.free(self.currentText);
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.free(self.currentText);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn toComponent(self: *ContinuousSlider) GuiComponent {
@@ -85,8 +85,8 @@ fn setButtonPosFromValue(self: *ContinuousSlider) void {
 }
 
 fn updateLabel(self: *ContinuousSlider, newValue: f32, width: f32) void {
-	main.globalAllocator.free(self.currentText);
-	self.currentText = self.formatter(main.globalAllocator, newValue);
+	root.globalAllocator.free(self.currentText);
+	self.currentText = self.formatter(root.globalAllocator, newValue);
 	const label = Label.init(undefined, width - 3*border, self.currentText, .center);
 	self.label.deinit();
 	self.label = label;

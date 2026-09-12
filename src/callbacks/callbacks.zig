@@ -1,14 +1,14 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 
-pub const ClientBlockCallback = Callback(struct { block: Block, chunk: *main.chunk.Chunk, blockPos: Vec3i }, @import("block/client/_list.zig"));
-pub const ServerBlockCallback = Callback(struct { block: Block, chunk: *main.chunk.ServerChunk, blockPos: main.chunk.BlockPos }, @import("block/server/_list.zig"));
+pub const ClientBlockCallback = Callback(struct { block: Block, chunk: *root.chunk.Chunk, blockPos: Vec3i }, @import("block/client/_list.zig"));
+pub const ServerBlockCallback = Callback(struct { block: Block, chunk: *root.chunk.ServerChunk, blockPos: root.chunk.BlockPos }, @import("block/server/_list.zig"));
 
-pub const BlockTouchCallback = Callback(struct { entity: *main.server.Entity, source: Block, blockPos: Vec3i, deltaTime: f64 }, @import("block/touch/_list.zig"));
+pub const BlockTouchCallback = Callback(struct { entity: *root.server.Entity, source: Block, blockPos: Vec3i, deltaTime: f64 }, @import("block/touch/_list.zig"));
 
 pub const Result = enum { handled, ignored };
 
@@ -19,7 +19,7 @@ pub fn init() void {
 }
 
 pub const Creator = union(enum) {
-	block: main.blocks.Block,
+	block: root.blocks.Block,
 };
 
 fn Callback(_Params: type, list: type) type {
@@ -39,9 +39,9 @@ fn Callback(_Params: type, list: type) type {
 		fn globalInit() void {
 			inline for (@typeInfo(list).@"struct".decls) |decl| {
 				const CallbackStruct = @field(list, decl.name);
-				eventCreationMap.put(main.globalArena.allocator, decl.name, .{
-					.init = main.meta.castFunctionReturnToOptionalAnyopaque(CallbackStruct.init),
-					.run = main.meta.castFunctionSelfToAnyopaque(CallbackStruct.run),
+				eventCreationMap.put(root.globalArena.allocator, decl.name, .{
+					.init = root.meta.castFunctionReturnToOptionalAnyopaque(CallbackStruct.init),
+					.run = root.meta.castFunctionSelfToAnyopaque(CallbackStruct.run),
 				}) catch unreachable;
 			}
 		}
@@ -100,7 +100,7 @@ pub const SimpleCallback = struct {
 
 	pub fn initWithPtr(callbackFunction: anytype, data: *anyopaque) SimpleCallback {
 		return .{
-			.inner = main.meta.castFunctionSelfToAnyopaque(callbackFunction),
+			.inner = root.meta.castFunctionSelfToAnyopaque(callbackFunction),
 			.data = data,
 		};
 	}

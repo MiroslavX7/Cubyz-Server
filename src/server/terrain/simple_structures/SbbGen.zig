@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const Vec3i = main.vec.Vec3i;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
 const CaveMapView = terrain.CaveMap.CaveMapView;
@@ -9,9 +9,9 @@ const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const sbb = terrain.sbb;
 const Blueprint = main.blueprint.Blueprint;
 const ZonElement = main.ZonElement;
-const Neighbor = main.chunk.Neighbor;
-const ServerChunk = main.chunk.ServerChunk;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const Neighbor = root.chunk.Neighbor;
+const ServerChunk = root.chunk.ServerChunk;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const id = "cubyz:sbb";
 pub const generationMode = .floor;
@@ -43,7 +43,7 @@ pub fn loadModel(parameters: ZonElement) ?*SbbGen {
 		}
 		break :blk .random;
 	};
-	const self = main.worldArena.create(SbbGen);
+	const self = root.worldArena.create(SbbGen);
 	self.* = .{
 		.structureRef = structureRef,
 		.placeMode = std.meta.stringToEnum(Blueprint.PasteMode, parameters.get([]const u8, "placeMode") orelse "degradable") orelse Blueprint.PasteMode.degradable,

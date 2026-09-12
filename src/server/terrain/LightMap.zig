@@ -2,9 +2,9 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 
 const root = @import("root");
-const Chunk = main.chunk.Chunk;
-const ChunkPosition = main.chunk.ChunkPosition;
-const Cache = main.utils.Cache;
+const Chunk = root.chunk.Chunk;
+const ChunkPosition = root.chunk.ChunkPosition;
+const Cache = root.utils.Cache;
 
 const terrain = @import("terrain.zig");
 const TerrainGenerationProfile = terrain.TerrainGenerationProfile;
@@ -27,11 +27,11 @@ pub const LightMapFragment = struct {
 	}
 
 	fn privateDeinit(self: *const LightMapFragment) void {
-		main.globalAllocator.destroy(self);
+		root.globalAllocator.destroy(self);
 	}
 
 	pub fn deferredDeinit(self: *LightMapFragment) void {
-		main.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = main.meta.castFunctionSelfToAnyopaque(privateDeinit)});
+		root.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = root.meta.castFunctionSelfToAnyopaque(privateDeinit)});
 	}
 
 	pub fn getHeight(self: *LightMapFragment, wx: i32, wy: i32) i32 {
@@ -46,7 +46,7 @@ const associativity = 8; // 64MiB MiB Cache size
 var cache: Cache(LightMapFragment, cacheSize, associativity, LightMapFragment.deferredDeinit) = .{};
 
 fn cacheInit(pos: MapFragmentPosition) *LightMapFragment {
-	const mapFragment = main.globalAllocator.create(LightMapFragment);
+	const mapFragment = root.globalAllocator.create(LightMapFragment);
 	mapFragment.init(pos.wx, pos.wy, pos.voxelSize);
 	const surfaceMap = terrain.SurfaceMap.getOrGenerateFragment(pos.wx, pos.wy, pos.voxelSize);
 	comptime std.debug.assert(LightMapFragment.mapSize == terrain.SurfaceMap.MapFragment.mapSize);

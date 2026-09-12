@@ -14,7 +14,7 @@ const vec = main.vec;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
 
-var memoryPool: main.heap.MemoryPool(ChannelChunk) = .init(main.globalArena);
+var memoryPool: root.heap.MemoryPool(ChannelChunk) = .init(root.globalArena);
 
 const LightValue = packed struct(u32) {
 	r: u8,
@@ -44,8 +44,8 @@ fn extractColor(in: u32) [3]u8 {
 }
 
 pub const ChannelChunk = struct { // MARK: ChannelChunk
-	data: main.utils.PaletteCompressedRegion(LightValue, chunk.chunkVolume),
-	mutex: main.utils.Mutex,
+	data: root.utils.PaletteCompressedRegion(LightValue, chunk.chunkVolume),
+	mutex: root.utils.Mutex,
 	ch: *chunk.Chunk,
 	isSun: bool,
 
@@ -106,11 +106,11 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		}
 	}
 
-	fn propagateDirect(self: *ChannelChunk, lightQueue: *main.utils.CircularBufferQueue(Entry), lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
+	fn propagateDirect(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
 		var neighborLists: [6]main.List(Entry) = @splat(.empty);
 		defer {
 			for (&neighborLists) |*list| {
-				list.deinit(main.stackAllocator);
+				list.deinit(root.stackAllocator);
 			}
 		}
 
@@ -137,7 +137,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 				calculateOutgoingOcclusion(&result.value, self.ch.data.getValue(pos.toIndex()), self.ch.pos.voxelSize, neighbor);
 				if (result.value[0] == 0 and result.value[1] == 0 and result.value[2] == 0) continue;
 				if (chunkLocation == .inNeighborChunk) {
-					neighborLists[neighbor.toInt()].append(main.stackAllocator, result);
+					neighborLists[neighbor.toInt()].append(root.stackAllocator, result);
 					continue;
 				}
 				calculateIncomingOcclusion(&result.value, self.ch.data.getValue(neighborPos.toIndex()), self.ch.pos.voxelSize, neighbor.reverse());
@@ -164,12 +164,12 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		lightRefreshList.append(self.ch.pos);
 	}
 
-	fn propagateDestructive(self: *ChannelChunk, lightQueue: *main.utils.CircularBufferQueue(Entry), constructiveEntries: *main.List(ChunkEntries), isFirstBlock: bool, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) main.List(BlockPos) {
+	fn propagateDestructive(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), constructiveEntries: *main.List(ChunkEntries), isFirstBlock: bool, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) main.List(BlockPos) {
 		var neighborLists: [6]main.List(Entry) = @splat(.empty);
 		var constructiveList: main.List(BlockPos) = .empty;
 		defer {
 			for (&neighborLists) |*list| {
-				list.deinit(main.stackAllocator);
+				list.deinit(root.stackAllocator);
 			}
 		}
 		var isFirstIteration: bool = isFirstBlock;
@@ -197,7 +197,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 				append = true;
 			}
 			if (append) {
-				constructiveList.append(main.stackAllocator, pos);
+				constructiveList.append(root.stackAllocator, pos);
 			}
 			if (entry.value[0] == 0) activeValue[0] = false;
 			if (entry.value[1] == 0) activeValue[1] = false;
@@ -223,7 +223,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 				}
 				calculateOutgoingOcclusion(&result.value, self.ch.data.getValue(pos.toIndex()), self.ch.pos.voxelSize, neighbor);
 				if (chunkLocation == .inNeighborChunk) {
-					neighborLists[neighbor.toInt()].append(main.stackAllocator, result);
+					neighborLists[neighbor.toInt()].append(root.stackAllocator, result);
 					continue;
 				}
 				calculateIncomingOcclusion(&result.value, self.ch.data.getValue(neighborPos.toIndex()), self.ch.pos.voxelSize, neighbor.reverse());
@@ -236,7 +236,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		for (chunk.Neighbor.iterable) |neighbor| {
 			if (neighborLists[neighbor.toInt()].items.len == 0) continue;
 			const neighborMesh = mesh_storage.getNeighbor(self.ch.pos, self.ch.pos.voxelSize, neighbor) orelse continue;
-			constructiveEntries.append(main.stackAllocator, .{
+			constructiveEntries.append(root.stackAllocator, .{
 				.mesh = neighborMesh,
 				.entries = neighborMesh.lightingData[@intFromBool(self.isSun)].propagateDestructiveFromNeighbor(lightQueue, neighborLists[neighbor.toInt()].items, constructiveEntries, lightRefreshList),
 			});
@@ -245,7 +245,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		return constructiveList;
 	}
 
-	fn propagateFromNeighbor(self: *ChannelChunk, lightQueue: *main.utils.CircularBufferQueue(Entry), lights: []const Entry, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
+	fn propagateFromNeighbor(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lights: []const Entry, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
 		std.debug.assert(lightQueue.isEmpty());
 		for (lights) |entry| {
 			var result = entry;
@@ -255,7 +255,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		self.propagateDirect(lightQueue, lightRefreshList);
 	}
 
-	fn propagateDestructiveFromNeighbor(self: *ChannelChunk, lightQueue: *main.utils.CircularBufferQueue(Entry), lights: []const Entry, constructiveEntries: *main.List(ChunkEntries), lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) main.List(BlockPos) {
+	fn propagateDestructiveFromNeighbor(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lights: []const Entry, constructiveEntries: *main.List(ChunkEntries), lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) main.List(BlockPos) {
 		std.debug.assert(lightQueue.isEmpty());
 		for (lights) |entry| {
 			var result = entry;
@@ -266,7 +266,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 	}
 
 	pub fn propagateLights(self: *ChannelChunk, lights: []const BlockPos, comptime checkNeighbors: bool, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
-		var lightQueue = main.utils.CircularBufferQueue(Entry).init(main.stackAllocator, 1 << 12);
+		var lightQueue = root.utils.CircularBufferQueue(Entry).init(root.stackAllocator, 1 << 12);
 		defer lightQueue.deinit();
 		for (lights) |pos| {
 			if (self.isSun) {
@@ -325,7 +325,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		self.data.fillUniform(.fromArray(.{255, 255, 255}));
 		self.mutex.unlock();
 		const val = 255 -| 8*|@as(u8, @intCast(self.ch.pos.voxelSize));
-		var lightQueue = main.utils.CircularBufferQueue(Entry).init(main.stackAllocator, 1 << 12);
+		var lightQueue = root.utils.CircularBufferQueue(Entry).init(root.stackAllocator, 1 << 12);
 		defer lightQueue.deinit();
 		for (chunk.Neighbor.iterable) |neighbor| {
 			if (neighbor == .dirUp) continue;
@@ -370,21 +370,21 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 	}
 
 	pub fn propagateLightsDestructive(self: *ChannelChunk, lights: []const BlockPos, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
-		var lightQueue = main.utils.CircularBufferQueue(Entry).init(main.stackAllocator, 1 << 12);
+		var lightQueue = root.utils.CircularBufferQueue(Entry).init(root.stackAllocator, 1 << 12);
 		defer lightQueue.deinit();
 		for (lights) |pos| {
 			lightQueue.pushBack(.{.pos = pos, .value = self.data.getValue(pos.toIndex()).toArray(), .sourceDir = 6, .activeValue = 0b111});
 		}
 		var constructiveEntries: main.List(ChunkEntries) = .empty;
-		defer constructiveEntries.deinit(main.stackAllocator);
-		constructiveEntries.append(main.stackAllocator, .{
+		defer constructiveEntries.deinit(root.stackAllocator);
+		constructiveEntries.append(root.stackAllocator, .{
 			.mesh = null,
 			.entries = self.propagateDestructive(&lightQueue, &constructiveEntries, true, lightRefreshList),
 		});
 		for (constructiveEntries.items) |entries| {
 			const mesh = entries.mesh;
 			var entryList = entries.entries;
-			defer entryList.deinit(main.stackAllocator);
+			defer entryList.deinit(root.stackAllocator);
 			const channelChunk = if (mesh) |_mesh| _mesh.lightingData[@intFromBool(self.isSun)] else self;
 			channelChunk.mutex.lock();
 			for (entryList.items) |entry| {

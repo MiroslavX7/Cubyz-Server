@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const Block = main.blocks.Block;
+const Block = root.blocks.Block;
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
@@ -12,9 +12,9 @@ const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const SimpleTreeModel = terrain.structures.simple_structures.SimpleTreeModel;
-const Neighbor = main.chunk.Neighbor;
+const Neighbor = root.chunk.Neighbor;
 
 pub const id = "cubyz:fallen_tree";
 
@@ -28,9 +28,9 @@ height0: u32,
 deltaHeight: u31,
 
 pub fn loadModel(parameters: ZonElement) ?*FallenTree {
-	const self = main.worldArena.create(FallenTree);
+	const self = root.worldArena.create(FallenTree);
 	self.* = .{
-		.woodBlock = main.blocks.parseBlock(parameters.get([]const u8, "log") orelse {
+		.woodBlock = root.blocks.parseBlock(parameters.get([]const u8, "log") orelse {
 			std.log.err("Missing required 'log' field for cubyz:simple_tree rotation", .{});
 			return null;
 		}),
@@ -43,7 +43,7 @@ pub fn loadModel(parameters: ZonElement) ?*FallenTree {
 	return self;
 }
 
-pub fn generateStump(self: *FallenTree, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk) void {
+pub fn generateStump(self: *FallenTree, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk) void {
 	if (chunk.liesInChunk(x, y, z)) {
 		var block = SimpleTreeModel.initalOrientation(self.woodBlock, .dirUp, self.woodRotationModeType);
 		block = SimpleTreeModel.addNeighbor(block, .dirUp, self.woodRotationModeType);
@@ -51,7 +51,7 @@ pub fn generateStump(self: *FallenTree, x: i32, y: i32, z: i32, chunk: *main.chu
 	}
 }
 
-pub fn generateFallen(self: *FallenTree, x: i32, y: i32, z: i32, length: u32, chunk: *main.chunk.ServerChunk, caveMap: CaveMapView, seed: *u64) void {
+pub fn generateFallen(self: *FallenTree, x: i32, y: i32, z: i32, length: u32, chunk: *root.chunk.ServerChunk, caveMap: CaveMapView, seed: *u64) void {
 	var d: ?Neighbor = null;
 
 	for (0..4) |_| {
@@ -90,7 +90,7 @@ pub fn generateFallen(self: *FallenTree, x: i32, y: i32, z: i32, length: u32, ch
 	}
 }
 
-pub fn generate(self: *FallenTree, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
+pub fn generate(self: *FallenTree, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
 	const height = self.height0 + random.nextIntBounded(u31, seed, self.deltaHeight);
 
 	generateStump(self, x, y, z, chunk);

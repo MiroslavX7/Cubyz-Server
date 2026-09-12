@@ -51,7 +51,7 @@ pub fn onOpen() void {
 
 pub fn onClose() void {
 	deinitContent();
-	main.globalAllocator.free(searchString);
+	root.globalAllocator.free(searchString);
 }
 
 fn hasMatchingTag(tags: []const main.Tag, target: []const u8) bool {
@@ -80,12 +80,12 @@ fn initContent() void {
 	}
 	{
 		const list = VerticalList.init(.{0, padding}, 144, 0);
-		items = .init(main.globalAllocator);
+		items = .init(root.globalAllocator);
 		var itemIterator = main.items.iterator();
 		if (searchString.len > 1 and searchString[0] == '.') {
 			const tag = searchString[1..];
 			while (itemIterator.next()) |item| {
-				if (hasMatchingTag(item.tags(), tag) or (item.block() != null and hasMatchingTag((main.blocks.Block{.typ = item.block().?, .data = undefined}).tags(), tag))) {
+				if (hasMatchingTag(item.tags(), tag) or (item.block() != null and hasMatchingTag((root.blocks.Block{.typ = item.block().?, .data = undefined}).tags(), tag))) {
 					items.append(Item{.baseItem = item.*});
 				}
 			}
@@ -98,7 +98,7 @@ fn initContent() void {
 
 		std.mem.sort(Item, items.items, {}, lessThan);
 		const slotCount = items.items.len + (slotsPerRow - items.items.len%slotsPerRow);
-		inventory = ClientInventory.init(main.globalAllocator, slotCount, .creative, .other, .{});
+		inventory = ClientInventory.init(root.globalAllocator, slotCount, .creative, .other, .{});
 		for (0..items.items.len) |i| {
 			inventory.super._items[i] = .{.item = items.items[i], .amount = 1};
 		}
@@ -129,7 +129,7 @@ fn deinitContent() void {
 		comp.deinit();
 	}
 	items.deinit();
-	inventory.deinit(main.globalAllocator);
+	inventory.deinit(root.globalAllocator);
 }
 
 pub fn update() void {
@@ -141,8 +141,8 @@ fn filter() void {
 	const selectionStart = searchInput.selectionStart;
 	const cursor = searchInput.cursor;
 
-	main.globalAllocator.free(searchString);
-	searchString = main.globalAllocator.dupe(u8, searchInput.currentString.items);
+	root.globalAllocator.free(searchString);
+	searchString = root.globalAllocator.dupe(u8, searchInput.currentString.items);
 	deinitContent();
 	initContent();
 

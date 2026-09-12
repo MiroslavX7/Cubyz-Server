@@ -23,7 +23,7 @@ pub var window = GuiWindow{
 	.hideIfMouseIsGrabbed = false,
 };
 
-fn renderConnectionData(conn: *main.network.Connection, name: []const u8, y: *f32) void {
+fn renderConnectionData(conn: *root.network.Connection, name: []const u8, y: *f32) void {
 	conn.mutex.lock();
 	defer conn.mutex.unlock();
 	var unconfirmed: [3]usize = @splat(0);
@@ -45,9 +45,9 @@ pub fn render() void {
 		renderConnectionData(main.game.world.?.conn, "Client", &y);
 	}
 	y += 8;
-	if (main.server.world != null) {
-		const userList = main.server.getUserList(main.stackAllocator);
-		defer main.stackAllocator.free(userList);
+	if (root.server.world != null) {
+		const userList = root.server.getUserList(root.stackAllocator);
+		defer root.stackAllocator.free(userList);
 		for (userList) |user| {
 			renderConnectionData(user.conn, user.name, &y);
 		}

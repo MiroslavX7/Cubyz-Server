@@ -3,10 +3,10 @@ const std = @import("std");
 const build_options = @import("build_options");
 
 const root = @import("root");
-const Array2D = main.utils.Array2D;
+const Array2D = root.utils.Array2D;
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const ClimateMapFragment = terrain.ClimateMap.ClimateMapFragment;
 const BiomeSample = terrain.ClimateMap.BiomeSample;
 const Biome = terrain.biomes.Biome;
@@ -15,7 +15,7 @@ const vec = main.vec;
 const Vec2i = vec.Vec2i;
 const Vec2f = vec.Vec2f;
 
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 // Generates the climate map using a fluidynamics simulation, with a circular heat distribution.
 
@@ -28,15 +28,15 @@ pub fn init(parameters: ZonElement) void {
 pub fn generateMapFragment(map: *ClimateMapFragment, worldSeed: u64) void {
 	var seed: u64 = worldSeed;
 
-	const generator = GenerationStructure.init(main.stackAllocator, map.pos.wx, map.pos.wy, ClimateMapFragment.mapSize, ClimateMapFragment.mapSize, terrain.biomes.byTypeBiomes, seed);
-	defer generator.deinit(main.stackAllocator);
+	const generator = GenerationStructure.init(root.stackAllocator, map.pos.wx, map.pos.wy, ClimateMapFragment.mapSize, ClimateMapFragment.mapSize, terrain.biomes.byTypeBiomes, seed);
+	defer generator.deinit(root.stackAllocator);
 
 	generator.toMap(map, worldSeed);
 
 	// TODO: Remove debug image:
 	if (!build_options.isTaggedRelease) {
-		const image = main.graphics.Image.init(main.stackAllocator, @intCast(map.map.len), @intCast(map.map[0].len));
-		defer image.deinit(main.stackAllocator);
+		const image = main.graphics.Image.init(root.stackAllocator, @intCast(map.map.len), @intCast(map.map[0].len));
+		defer image.deinit(root.stackAllocator);
 		var x: u31 = 0;
 		while (x < map.map.len) : (x += 1) {
 			var y: u31 = 0;
@@ -111,7 +111,7 @@ const Chunk = struct {
 	pub fn init(allocator: NeverFailingAllocator, tree: *TreeNode, worldSeed: u64, wx: i32, wy: i32, neighbors: []const *const Chunk) *Chunk {
 		var chunkLocalMaxBiomeRadius: i32 = 0;
 		var seed = random.initSeed2D(worldSeed, .{wx, wy});
-		var selectedBiomes: main.utils.SortedList(BiomePoint) = .{};
+		var selectedBiomes: root.utils.SortedList(BiomePoint) = .{};
 		var rejections: usize = 0;
 		outer: while (rejections < 100) {
 			const x = random.nextIntBounded(u31, &seed, chunkSize) + wx;
@@ -235,8 +235,8 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 		var mountains: f32 = 0;
 		var totalWeight: f32 = 0;
 
-		var candidateList: main.List(struct { point: *const BiomePoint, weight: f32 }) = .initCapacity(main.stackAllocator, prefilteredCandidates.len);
-		defer candidateList.deinit(main.stackAllocator);
+		var candidateList: main.List(struct { point: *const BiomePoint, weight: f32 }) = .initCapacity(root.stackAllocator, prefilteredCandidates.len);
+		defer candidateList.deinit(root.stackAllocator);
 		for (prefilteredCandidates) |candidate| {
 			candidateList.appendAssumeCapacity(.{.point = candidate, .weight = 1});
 		}
@@ -397,8 +397,8 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 	}
 
 	fn addTransitionBiomes(map: *[preMapSize][preMapSize]BiomeSample) void {
-		const neighborData = main.stackAllocator.create([16][preMapSize][preMapSize]u15);
-		defer main.stackAllocator.destroy(neighborData);
+		const neighborData = root.stackAllocator.create([16][preMapSize][preMapSize]u15);
+		defer root.stackAllocator.destroy(neighborData);
 		for (0..preMapSize) |x| {
 			for (0..preMapSize) |y| {
 				neighborData[0][x][y] = @bitCast(map[x][y].biome.properties);
@@ -510,8 +510,8 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 				const wyMin = wy +% newRelY*terrain.SurfaceMap.MapFragment.biomeSize;
 				const wyMax = wyMin +% newHeight*terrain.SurfaceMap.MapFragment.biomeSize +% terrain.SurfaceMap.MapFragment.biomeSize;
 
-				const pruned = pruneInterpolationCandidates(main.stackAllocator, wxMin, wyMin, wxMax, wyMax, biomeCandidates);
-				defer main.stackAllocator.free(pruned);
+				const pruned = pruneInterpolationCandidates(root.stackAllocator, wxMin, wyMin, wxMax, wyMax, biomeCandidates);
+				defer root.stackAllocator.free(pruned);
 				fillRecursively(wx, wy, preMap, pruned, worldSeed, newRelX, newRelY, newWidth, newHeight);
 			}
 		}
@@ -519,18 +519,18 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 
 	pub fn toMap(self: GenerationStructure, map: *ClimateMapFragment, worldSeed: u64) void {
 		var preMap: [preMapSize][preMapSize]BiomeSample = undefined;
-		var allCandidates: main.List(*BiomePoint) = .initCapacity(main.stackAllocator, 1024);
-		defer allCandidates.deinit(main.stackAllocator);
+		var allCandidates: main.List(*BiomePoint) = .initCapacity(root.stackAllocator, 1024);
+		defer allCandidates.deinit(root.stackAllocator);
 		for (self.chunks.mem) |chunk| {
 			for (chunk.biomesSortedByX) |*candidate| {
-				allCandidates.append(main.stackAllocator, candidate);
+				allCandidates.append(root.stackAllocator, candidate);
 			}
 		}
 		fillRecursively(map.pos.wx, map.pos.wy, &preMap, allCandidates.items, worldSeed, -margin, -margin, preMapSize, preMapSize);
 		addTransitionBiomes(&preMap);
 
 		// Add some sub-biomes:
-		var extraBiomes: main.ListManaged(BiomePoint) = .init(main.stackAllocator);
+		var extraBiomes: main.ListManaged(BiomePoint) = .init(root.stackAllocator);
 		defer extraBiomes.deinit();
 		for (self.chunks.mem) |chunk| {
 			for (chunk.biomesSortedByX) |biome| {

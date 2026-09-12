@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const ChunkPosition = main.chunk.ChunkPosition;
-const ServerChunk = main.chunk.ServerChunk;
-const BlockUpdateSystem = main.server.BlockUpdateSystem;
+const ChunkPosition = root.chunk.ChunkPosition;
+const ServerChunk = root.chunk.ServerChunk;
+const BlockUpdateSystem = root.server.BlockUpdateSystem;
 
 const SimulationChunk = @This();
 
@@ -13,7 +13,7 @@ pos: ChunkPosition,
 blockUpdateSystem: BlockUpdateSystem,
 
 pub fn initAndIncreaseRefCount(pos: ChunkPosition) *SimulationChunk {
-	const self = main.globalAllocator.create(SimulationChunk);
+	const self = root.globalAllocator.create(SimulationChunk);
 	self.* = .{
 		.refCount = .init(1),
 		.pos = pos,
@@ -26,7 +26,7 @@ fn deinit(self: *SimulationChunk) void {
 	std.debug.assert(self.refCount.load(.monotonic) == 0);
 	self.blockUpdateSystem.deinit();
 	if (self.chunk.raw) |ch| ch.decreaseRefCount();
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn increaseRefCount(self: *SimulationChunk) void {
@@ -38,7 +38,7 @@ pub fn decreaseRefCount(self: *SimulationChunk) void {
 	const prevVal = self.refCount.fetchSub(1, .monotonic);
 	std.debug.assert(prevVal != 0);
 	if (prevVal == 2) {
-		main.server.world_zig.ChunkManager.tryRemoveSimulationChunk(self);
+		root.server.world_zig.ChunkManager.tryRemoveSimulationChunk(self);
 	}
 	if (prevVal == 1) {
 		self.deinit();
@@ -62,7 +62,7 @@ pub fn update(self: *SimulationChunk, randomTickSpeed: u32) void {
 fn tickBlocksInChunk(_chunk: *ServerChunk, randomTickSpeed: u32) void {
 	for (0..randomTickSpeed) |_| {
 		const blockIndex = main.random.nextInt(u15, &main.seed);
-		const pos = main.chunk.BlockPos.fromIndex(blockIndex);
+		const pos = root.chunk.BlockPos.fromIndex(blockIndex);
 
 		_chunk.mutex.lock();
 		const block = _chunk.getBlock(pos.x, pos.y, pos.z);

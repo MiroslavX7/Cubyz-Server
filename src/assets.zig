@@ -8,10 +8,10 @@ const blueprint = @import("blueprint.zig");
 const Blueprint = blueprint.Blueprint;
 const particles = @import("particles.zig");
 const ZonElement = main.ZonElement;
-const biomes = main.server.terrain.biomes;
-const sbb = main.server.terrain.sbb;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
-const NeverFailingArenaAllocator = main.heap.NeverFailingArenaAllocator;
+const biomes = root.server.terrain.biomes;
+const sbb = root.server.terrain.sbb;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
+const NeverFailingArenaAllocator = root.heap.NeverFailingArenaAllocator;
 const List = main.List;
 const files = main.files;
 
@@ -113,10 +113,10 @@ pub const Assets = struct { // MARK: Assets
 			.entityModelMigrations = self.entityModelMigrations.clone(allocator.allocator) catch unreachable,
 		};
 	}
-	fn read(self: *Assets, allocator: NeverFailingAllocator, assetDir: main.files.Dir, assetPath: []const u8) void {
-		const addons = Addon.discoverAll(main.stackAllocator, assetDir, assetPath);
-		defer main.stackAllocator.free(addons);
-		defer for (addons) |*addon| addon.deinit(main.stackAllocator);
+	fn read(self: *Assets, allocator: NeverFailingAllocator, assetDir: root.files.Dir, assetPath: []const u8) void {
+		const addons = Addon.discoverAll(root.stackAllocator, assetDir, assetPath);
+		defer root.stackAllocator.free(addons);
+		defer for (addons) |*addon| addon.deinit(root.stackAllocator);
 
 		for (addons) |addon| {
 			addon.readAllZon(allocator, "blocks", true, &self.blocks, &self.blockMigrations);
@@ -146,7 +146,7 @@ pub const Assets = struct { // MARK: Assets
 		name: []const u8,
 		dir: files.Dir,
 
-		fn discoverAll(allocator: NeverFailingAllocator, assetDir: main.files.Dir, path: []const u8) []Addon {
+		fn discoverAll(allocator: NeverFailingAllocator, assetDir: root.files.Dir, path: []const u8) []Addon {
 			var addons: main.List(Addon) = .empty;
 
 			var dir = assetDir.openIterableDir(path) catch |err| {
@@ -200,7 +200,7 @@ pub const Assets = struct { // MARK: Assets
 				self.localArena.deinit();
 			}
 
-			fn get(self: *Defaults, dir: main.files.Dir, dirPath: []const u8) ZonElement {
+			fn get(self: *Defaults, dir: root.files.Dir, dirPath: []const u8) ZonElement {
 				const result = self.defaults.getOrPut(self.localAllocator.allocator, dirPath) catch unreachable;
 
 				if (!result.found_existing) {
@@ -216,7 +216,7 @@ pub const Assets = struct { // MARK: Assets
 				return result.value_ptr.*;
 			}
 
-			fn read(self: *Defaults, dir: main.files.Dir) !ZonElement {
+			fn read(self: *Defaults, dir: root.files.Dir) !ZonElement {
 				if (dir.readToZon(self.localAllocator, "_defaults.zig.zon")) |zon| {
 					return zon;
 				} else |err| {
@@ -243,10 +243,10 @@ pub const Assets = struct { // MARK: Assets
 			defer assetsDirectory.close();
 
 			var defaultsStorage: Defaults = .{};
-			defaultsStorage.init(main.stackAllocator);
+			defaultsStorage.init(root.stackAllocator);
 			defer defaultsStorage.deinit();
 
-			var walker = assetsDirectory.walk(main.stackAllocator);
+			var walker = assetsDirectory.walk(root.stackAllocator);
 			defer walker.deinit();
 
 			while (walker.next(main.io) catch |err| blk: {
@@ -266,7 +266,7 @@ pub const Assets = struct { // MARK: Assets
 					continue;
 				};
 				if (hasDefaults) {
-					zon.join(.preferLeft, defaultsStorage.get(main.files.Dir.init(entry.dir), entry.path[0 .. entry.path.len - entry.basename.len]));
+					zon.join(.preferLeft, defaultsStorage.get(root.files.Dir.init(entry.dir), entry.path[0 .. entry.path.len - entry.basename.len]));
 				}
 				output.put(allocator.allocator, id, zon) catch unreachable;
 			}
@@ -288,7 +288,7 @@ pub const Assets = struct { // MARK: Assets
 			};
 			defer assetsDirectory.close();
 
-			var walker = assetsDirectory.walk(main.stackAllocator);
+			var walker = assetsDirectory.walk(root.stackAllocator);
 			defer walker.deinit();
 
 			while (walker.next(main.io) catch |err| blk: {
@@ -318,7 +318,7 @@ pub const Assets = struct { // MARK: Assets
 				return;
 			};
 			defer assetsDirectory.close();
-			var walker = assetsDirectory.walk(main.stackAllocator);
+			var walker = assetsDirectory.walk(root.stackAllocator);
 			defer walker.deinit();
 
 			while (walker.next(main.io) catch |err| blk: {
@@ -390,7 +390,7 @@ fn createAssetStringID(
 
 pub fn init() void {
 	common = .init();
-	common.read(main.globalArena, main.files.cwd(), "assets/");
+	common.read(root.globalArena, root.files.cwd(), "assets/");
 	common.log(.common);
 }
 
@@ -398,20 +398,20 @@ fn registerItem(assetFolder: []const u8, id: []const u8, zon: ZonElement) !void 
 	var split = std.mem.splitScalar(u8, id, ':');
 	const mod = split.first();
 	var texturePath: []const u8 = &.{};
-	defer main.stackAllocator.free(texturePath);
+	defer root.stackAllocator.free(texturePath);
 	var replacementTexturePath: []const u8 = &.{};
-	defer main.stackAllocator.free(replacementTexturePath);
+	defer root.stackAllocator.free(replacementTexturePath);
 	if (zon.get([]const u8, "texture")) |texture| {
-		texturePath = main.stackAllocator.print("{s}/{s}/items/textures/{s}", .{assetFolder, mod, texture});
-		replacementTexturePath = main.stackAllocator.print("assets/{s}/items/textures/{s}", .{mod, texture});
+		texturePath = root.stackAllocator.print("{s}/{s}/items/textures/{s}", .{assetFolder, mod, texture});
+		replacementTexturePath = root.stackAllocator.print("assets/{s}/items/textures/{s}", .{mod, texture});
 	}
 	var colorTexturePath: []const u8 = &.{};
-	defer main.stackAllocator.free(colorTexturePath);
+	defer root.stackAllocator.free(colorTexturePath);
 	var colorReplacementTexturePath: []const u8 = &.{};
-	defer main.stackAllocator.free(colorReplacementTexturePath);
+	defer root.stackAllocator.free(colorReplacementTexturePath);
 	if (zon.get([]const u8, "colorTexture")) |colorTexture| {
-		colorTexturePath = main.stackAllocator.print("{s}/{s}/materials/{s}", .{assetFolder, mod, colorTexture});
-		colorReplacementTexturePath = main.stackAllocator.print("assets/{s}/materials/{s}", .{mod, colorTexture});
+		colorTexturePath = root.stackAllocator.print("{s}/{s}/materials/{s}", .{assetFolder, mod, colorTexture});
+		colorReplacementTexturePath = root.stackAllocator.print("assets/{s}/materials/{s}", .{mod, colorTexture});
 	}
 	_ = items.register(assetFolder, texturePath, replacementTexturePath, colorTexturePath, colorReplacementTexturePath, id, zon);
 }
@@ -484,8 +484,8 @@ pub const Palette = struct { // MARK: Palette
 	fn loadFromZonLegacy(allocator: NeverFailingAllocator, zon: ZonElement) !*Palette {
 		// Using zon.object.count() here has the implication that array can not be sparse.
 		const paletteLength = zon.object.count();
-		const translationPalette = main.stackAllocator.alloc(?[]const u8, paletteLength);
-		defer main.stackAllocator.free(translationPalette);
+		const translationPalette = root.stackAllocator.alloc(?[]const u8, paletteLength);
+		defer root.stackAllocator.free(translationPalette);
 
 		@memset(translationPalette, null);
 
@@ -555,15 +555,15 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 	const prevVal = refCount.fetchAdd(1, .monotonic);
 	if (prevVal != 0) return; // The assets already got loaded by the server.
 
-	worldAssetFolder = main.worldArena.dupe(u8, assetFolder);
+	worldAssetFolder = root.worldArena.dupe(u8, assetFolder);
 
 	main.Tag.initTags();
 
-	const worldArena = main.stackAllocator.createArena();
-	defer main.stackAllocator.destroyArena(worldArena);
+	const worldArena = root.stackAllocator.createArena();
+	defer root.stackAllocator.destroyArena(worldArena);
 
 	var worldAssets = common.clone(worldArena);
-	worldAssets.read(worldArena, main.files.cubyzDir(), assetFolder);
+	worldAssets.read(worldArena, root.files.cubyzDir(), assetFolder);
 
 	errdefer unloadAssets();
 
@@ -717,7 +717,7 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 
 	try sbb.registerBlueprints(&worldAssets.blueprints);
 	try sbb.registerSBB(&worldAssets.structureBuildingBlocks);
-	try main.server.terrain.structures.registerStructureTables(&worldAssets.structureTables);
+	try root.server.terrain.structures.registerStructureTables(&worldAssets.structureTables);
 
 	iterator = worldAssets.particles.iterator();
 	while (iterator.next()) |entry| {
@@ -740,11 +740,11 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 	biomes.finishLoading();
 
 	// Cave layers:
-	try main.server.terrain.cave_layers.registerCaveLayers(&worldAssets.caveLayers);
+	try root.server.terrain.cave_layers.registerCaveLayers(&worldAssets.caveLayers);
 
 	// EntityComponents
 	{
-		var map: std.StringHashMap(u32) = .init(main.stackAllocator.allocator);
+		var map: std.StringHashMap(u32) = .init(root.stackAllocator.allocator);
 		defer map.deinit();
 		var index: u32 = 0;
 
@@ -755,21 +755,21 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 		}
 
 		// now give each component it's id:
-		inline for (@typeInfo(main.entity.components).@"struct".decls) |decl| {
+		inline for (@typeInfo(root.entity.components).@"struct".decls) |decl| {
 			const name = decl.name;
 			if (map.get(name)) |id| {
-				@field(main.entity.components, decl.name).entityComponentID = id;
+				@field(root.entity.components, decl.name).entityComponentID = id;
 			} else {
 				entityComponentPalette.add(name);
-				@field(main.entity.components, decl.name).entityComponentID = index;
+				@field(root.entity.components, decl.name).entityComponentID = index;
 				index += 1;
 			}
 		}
-		main.entity.initComponents();
+		root.entity.initComponents();
 	}
 
 	// Register paths for asset hot reloading:
-	var dir = main.files.cwd().openIterableDir("assets") catch |err| {
+	var dir = root.files.cwd().openIterableDir("assets") catch |err| {
 		std.log.err("Can't open asset path {s}: {s}", .{"assets", @errorName(err)});
 		return;
 	};
@@ -780,11 +780,11 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 		break :blk null;
 	}) |addon| {
 		if (addon.kind == .directory) {
-			const path = main.stackAllocator.printSentinel("assets/{s}/blocks/textures", .{addon.name}, 0);
-			defer main.stackAllocator.free(path);
+			const path = root.stackAllocator.printSentinel("assets/{s}/blocks/textures", .{addon.name}, 0);
+			defer root.stackAllocator.free(path);
 			// Check for access rights
-			if (!main.files.cwd().hasDir(path)) continue;
-			main.utils.file_monitor.listenToPath(path, main.blocks.meshes.reloadTextures, 0);
+			if (!root.files.cwd().hasDir(path)) continue;
+			root.utils.file_monitor.listenToPath(path, root.blocks.meshes.reloadTextures, 0);
 		}
 	}
 
@@ -796,14 +796,14 @@ pub fn unloadAssets() void { // MARK: unloadAssets()
 	std.debug.assert(prevVal != 0);
 	if (prevVal != 1) return;
 
-	main.entity.deinitComponents();
+	root.entity.deinitComponents();
 	sbb.reset();
 	blocks.reset();
 	items.reset();
 	migrations.reset();
 	biomes.reset();
-	main.server.terrain.cave_layers.reset();
-	main.server.terrain.structures.reset();
+	root.server.terrain.cave_layers.reset();
+	root.server.terrain.structures.reset();
 	main.models.reset();
 	main.particles.ParticleManager.reset();
 	main.rotation.reset();
@@ -811,7 +811,7 @@ pub fn unloadAssets() void { // MARK: unloadAssets()
 	main.entityModel.reset();
 
 	// Remove paths from asset hot reloading:
-	var dir = main.files.cwd().openIterableDir("assets") catch |err| {
+	var dir = root.files.cwd().openIterableDir("assets") catch |err| {
 		std.log.err("Can't open asset path {s}: {s}", .{"assets", @errorName(err)});
 		return;
 	};
@@ -822,11 +822,11 @@ pub fn unloadAssets() void { // MARK: unloadAssets()
 		break :blk null;
 	}) |addon| {
 		if (addon.kind == .directory) {
-			const path = main.stackAllocator.printSentinel("assets/{s}/blocks/textures", .{addon.name}, 0);
-			defer main.stackAllocator.free(path);
+			const path = root.stackAllocator.printSentinel("assets/{s}/blocks/textures", .{addon.name}, 0);
+			defer root.stackAllocator.free(path);
 			// Check for access rights
-			if (!main.files.cwd().hasDir(path)) continue;
-			main.utils.file_monitor.removePath(path);
+			if (!root.files.cwd().hasDir(path)) continue;
+			root.utils.file_monitor.removePath(path);
 		}
 	}
 }
@@ -836,14 +836,14 @@ pub fn readAsset(allocator: NeverFailingAllocator, subPath: []const u8, id: []co
 	const mod = split.first();
 	const name = split.next().?;
 
-	var path = main.stackAllocator.print("{s}/{s}/{s}/{s}{s}", .{worldAssetFolder, mod, subPath, name, fileEnding});
-	defer main.stackAllocator.free(path);
-	if (!main.files.cwd().hasFile(path)) {
-		main.stackAllocator.free(path);
-		path = main.stackAllocator.print("assets/{s}/{s}/{s}{s}", .{mod, subPath, name, fileEnding});
+	var path = root.stackAllocator.print("{s}/{s}/{s}/{s}{s}", .{worldAssetFolder, mod, subPath, name, fileEnding});
+	defer root.stackAllocator.free(path);
+	if (!root.files.cwd().hasFile(path)) {
+		root.stackAllocator.free(path);
+		path = root.stackAllocator.print("assets/{s}/{s}/{s}{s}", .{mod, subPath, name, fileEnding});
 	}
 
-	const data = main.files.cwd().read(allocator, path) catch |err| {
+	const data = root.files.cwd().read(allocator, path) catch |err| {
 		std.log.err("Could not open {s}/{s}{s}: {s}", .{subPath, name, fileEnding, @errorName(err)});
 		return err;
 	};

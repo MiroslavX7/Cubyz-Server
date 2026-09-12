@@ -4,7 +4,7 @@ const sign = std.math.sign;
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const biomes = terrain.biomes;
 const noise = terrain.noise;
 const StructureMapFragment = terrain.StructureMap.StructureMapFragment;
@@ -12,7 +12,7 @@ const SurfaceMap = terrain.SurfaceMap;
 const MapFragment = SurfaceMap.MapFragment;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
-const ServerChunk = main.chunk.ServerChunk;
+const ServerChunk = root.chunk.ServerChunk;
 const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
@@ -90,15 +90,15 @@ fn adjustToCaveMap(biomeMap: CaveBiomeMapView, caveMap: CaveMapView, wx: i32, wy
 
 pub fn generate(map: *StructureMapFragment, worldSeed: u64) void {
 	const size = StructureMapFragment.size*map.pos.voxelSize;
-	const biomeMap = CaveBiomeMapView.init(main.stackAllocator, map.pos, size, 32);
+	const biomeMap = CaveBiomeMapView.init(root.stackAllocator, map.pos, size, 32);
 	defer biomeMap.deinit();
-	const caveMap = CaveMapView.init(main.stackAllocator, map.pos, size, 32);
-	defer caveMap.deinit(main.stackAllocator);
+	const caveMap = CaveMapView.init(root.stackAllocator, map.pos, size, 32);
+	defer caveMap.deinit(root.stackAllocator);
 	const margin = 16;
 	const marginZ = 32;
 	if (map.pos.voxelSize <= 4) {
-		const blueNoise = noise.BlueNoise.getRegionData(main.stackAllocator, map.pos.wx -% margin, map.pos.wy -% margin, size + 2*margin, size + 2*margin);
-		defer main.stackAllocator.free(blueNoise);
+		const blueNoise = noise.BlueNoise.getRegionData(root.stackAllocator, map.pos.wx -% margin, map.pos.wy -% margin, size + 2*margin, size + 2*margin);
+		defer root.stackAllocator.free(blueNoise);
 		var z: i32 = -32;
 		while (z < size + 32) : (z += 32) {
 			for (blueNoise) |coordinatePair| {
@@ -130,7 +130,7 @@ pub fn generate(map: *StructureMapFragment, worldSeed: u64) void {
 						map.addStructure(.{
 							.internal = .{
 								.data = @ptrCast(data),
-								.generateFn = main.meta.castFunctionSelfToConstAnyopaque(SimpleStructure.generate),
+								.generateFn = root.meta.castFunctionSelfToConstAnyopaque(SimpleStructure.generate),
 							},
 							.priority = model.priority,
 						}, .{px -% margin, py -% margin, data.wz -% map.pos.wz -% marginZ}, .{px +% margin, py +% margin, data.wz -% map.pos.wz +% marginZ});
@@ -174,7 +174,7 @@ pub fn generate(map: *StructureMapFragment, worldSeed: u64) void {
 						map.addStructure(.{
 							.internal = .{
 								.data = data,
-								.generateFn = main.meta.castFunctionSelfToConstAnyopaque(SimpleStructure.generate),
+								.generateFn = root.meta.castFunctionSelfToConstAnyopaque(SimpleStructure.generate),
 							},
 							.priority = model.priority,
 						}, .{px -% margin, py -% margin, data.wz -% map.pos.wz -% marginZ}, .{px +% margin, py +% margin, data.wz -% map.pos.wz +% marginZ});

@@ -2,14 +2,14 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 
 const root = @import("root");
-const Array2D = main.utils.Array2D;
-const Cache = main.utils.Cache;
+const Array2D = root.utils.Array2D;
+const Cache = root.utils.Cache;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const TerrainGenerationProfile = terrain.TerrainGenerationProfile;
 const Biome = terrain.biomes.Biome;
 const MapFragment = terrain.SurfaceMap.MapFragment;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const climate_generators = @import("climategen/_list.zig");
 
@@ -61,7 +61,7 @@ pub const ClimateMapFragment = struct {
 	}
 
 	pub fn deferredDeinit(self: *ClimateMapFragment) void {
-		main.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = main.meta.castFunctionSelfToAnyopaque(privateDeinit)});
+		root.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = root.meta.castFunctionSelfToAnyopaque(privateDeinit)});
 	}
 
 	pub fn hashCode(wx: i32, wy: i32) u32 {
@@ -100,7 +100,7 @@ const associativity = 8; // ~400 MiB
 var cache: Cache(ClimateMapFragment, cacheSize, associativity, ClimateMapFragment.deferredDeinit) = .{};
 var profile: TerrainGenerationProfile = undefined;
 
-var memoryPool: main.heap.MemoryPool(ClimateMapFragment) = .init(main.globalArena);
+var memoryPool: root.heap.MemoryPool(ClimateMapFragment) = .init(root.globalArena);
 
 fn cacheInit(pos: ClimateMapFragmentPosition) *ClimateMapFragment {
 	const mapFragment = memoryPool.create();

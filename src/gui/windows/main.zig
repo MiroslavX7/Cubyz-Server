@@ -27,7 +27,7 @@ fn singleplayerSelection() void {
 	gui.openWindow("save_selection");
 }
 fn multiplayer() void {
-	if (main.network.authentication.KeyCollection.initialized) {
+	if (root.network.authentication.KeyCollection.initialized) {
 		gui.openWindow("multiplayer");
 		return;
 	}
@@ -37,7 +37,7 @@ fn multiplayer() void {
 				gui.openWindow("authentication/login");
 				return;
 			}
-			var failureText: main.ListManaged(u8) = .init(main.stackAllocator);
+			var failureText: main.ListManaged(u8) = .init(root.stackAllocator);
 			defer failureText.deinit();
 			const accountCode = main.settings.storedAccount.decryptFromPassword(undefined, &failureText) catch |err| {
 				std.log.err("Got error while loading Account Code: {s}", .{@errorName(err)});
@@ -48,7 +48,7 @@ fn multiplayer() void {
 			if (failureText.items.len != 0) {
 				std.log.warn("Encountered errors while verifying your Account. This may happen if you created your account in a future version, in which case it's fine to continue.\n{s}", .{failureText.items});
 			}
-			main.network.authentication.KeyCollection.init(accountCode);
+			root.network.authentication.KeyCollection.init(accountCode);
 			gui.openWindow("multiplayer");
 		},
 		else => {

@@ -2,11 +2,11 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 
 const root = @import("root");
-const ServerChunk = main.chunk.ServerChunk;
-const ChunkPosition = main.chunk.ChunkPosition;
-const Cache = main.utils.Cache;
+const ServerChunk = root.chunk.ServerChunk;
+const ChunkPosition = root.chunk.ChunkPosition;
+const Cache = root.utils.Cache;
 const ZonElement = main.ZonElement;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const vec = main.vec;
 const Vec3i = vec.Vec3i;
 
@@ -37,14 +37,14 @@ pub const Structure = struct {
 pub const StructureMapFragment = struct {
 	pub const size = 1 << 7;
 	pub const sizeMask = size - 1;
-	pub const chunkedSize = size >> main.chunk.chunkShift;
+	pub const chunkedSize = size >> root.chunk.chunkShift;
 
 	data: [chunkedSize*chunkedSize*chunkedSize][]StructureInternal = undefined,
 
 	pos: ChunkPosition,
 	voxelShift: u5,
-	arena: main.heap.NeverFailingArenaAllocator,
-	allocator: main.heap.NeverFailingAllocator,
+	arena: root.heap.NeverFailingArenaAllocator,
+	allocator: root.heap.NeverFailingAllocator,
 
 	tempData: struct {
 		lists: *[chunkedSize*chunkedSize*chunkedSize]main.List(Structure),
@@ -60,7 +60,7 @@ pub const StructureMapFragment = struct {
 				.voxelSize = voxelSize,
 			},
 			.voxelShift = @ctz(voxelSize),
-			.arena = .init(main.globalAllocator),
+			.arena = .init(root.globalAllocator),
 			.allocator = self.arena.allocator(),
 			.tempData = .{
 				.lists = tempAllocator.create([chunkedSize*chunkedSize*chunkedSize]main.List(Structure)),
@@ -76,7 +76,7 @@ pub const StructureMapFragment = struct {
 	}
 
 	pub fn deferredDeinit(self: *StructureMapFragment) void {
-		main.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = main.meta.castFunctionSelfToAnyopaque(privateDeinit)});
+		root.heap.GarbageCollection.deferredFree(.{.ptr = self, .freeFunction = root.meta.castFunctionSelfToAnyopaque(privateDeinit)});
 	}
 
 	fn finishGeneration(self: *StructureMapFragment) void {
@@ -96,7 +96,7 @@ pub const StructureMapFragment = struct {
 
 	fn getIndex(self: *const StructureMapFragment, x: i32, y: i32, z: i32) usize {
 		std.debug.assert(x >= 0 and x < size*self.pos.voxelSize and y >= 0 and y < size*self.pos.voxelSize and z >= 0 and z < size*self.pos.voxelSize); // Coordinates out of range.
-		return @intCast(((x >> main.chunk.chunkShift + self.voxelShift)*chunkedSize + (y >> main.chunk.chunkShift + self.voxelShift))*chunkedSize + (z >> main.chunk.chunkShift + self.voxelShift));
+		return @intCast(((x >> root.chunk.chunkShift + self.voxelShift)*chunkedSize + (y >> root.chunk.chunkShift + self.voxelShift))*chunkedSize + (z >> root.chunk.chunkShift + self.voxelShift));
 	}
 
 	pub fn generateStructuresInChunk(self: *const StructureMapFragment, chunk: *ServerChunk, caveMap: terrain.CaveMap.CaveMapView, biomeMap: terrain.CaveBiomeMap.CaveBiomeMapView) void {
@@ -107,14 +107,14 @@ pub const StructureMapFragment = struct {
 	}
 
 	pub fn addStructure(self: *StructureMapFragment, structure: Structure, min: Vec3i, max: Vec3i) void {
-		var x = min[0] & ~@as(i32, main.chunk.chunkMask << self.voxelShift | self.pos.voxelSize - 1);
-		while (x < max[0]) : (x += main.chunk.chunkSize << self.voxelShift) {
+		var x = min[0] & ~@as(i32, root.chunk.chunkMask << self.voxelShift | self.pos.voxelSize - 1);
+		while (x < max[0]) : (x += root.chunk.chunkSize << self.voxelShift) {
 			if (x < 0 or x >= size*self.pos.voxelSize) continue;
-			var y = min[1] & ~@as(i32, main.chunk.chunkMask << self.voxelShift | self.pos.voxelSize - 1);
-			while (y < max[1]) : (y += main.chunk.chunkSize << self.voxelShift) {
+			var y = min[1] & ~@as(i32, root.chunk.chunkMask << self.voxelShift | self.pos.voxelSize - 1);
+			while (y < max[1]) : (y += root.chunk.chunkSize << self.voxelShift) {
 				if (y < 0 or y >= size*self.pos.voxelSize) continue;
-				var z = min[2] & ~@as(i32, main.chunk.chunkMask << self.voxelShift | self.pos.voxelSize - 1);
-				while (z < max[2]) : (z += main.chunk.chunkSize << self.voxelShift) {
+				var z = min[2] & ~@as(i32, root.chunk.chunkMask << self.voxelShift | self.pos.voxelSize - 1);
+				while (z < max[2]) : (z += root.chunk.chunkSize << self.voxelShift) {
 					if (z < 0 or z >= size*self.pos.voxelSize) continue;
 					self.tempData.lists[self.getIndex(x, y, z)].append(self.tempData.allocator, structure);
 				}
@@ -172,11 +172,11 @@ const associativity = 8;
 var cache: Cache(StructureMapFragment, cacheSize, associativity, StructureMapFragment.deferredDeinit) = .{};
 var profile: TerrainGenerationProfile = undefined;
 
-var memoryPool: main.heap.MemoryPool(StructureMapFragment) = .init(main.globalArena);
+var memoryPool: root.heap.MemoryPool(StructureMapFragment) = .init(root.globalArena);
 
 fn cacheInit(pos: ChunkPosition) *StructureMapFragment {
 	const mapFragment = memoryPool.create();
-	mapFragment.init(main.stackAllocator, pos.wx, pos.wy, pos.wz, pos.voxelSize);
+	mapFragment.init(root.stackAllocator, pos.wx, pos.wy, pos.wz, pos.voxelSize);
 	for (profile.structureMapGenerators) |generator| {
 		generator.generate(mapFragment, profile.seed ^ generator.generatorSeed);
 	}

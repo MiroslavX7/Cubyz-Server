@@ -26,8 +26,8 @@ fn apply() void {
 		return;
 	}
 	const oldName = settings.playerName;
-	main.globalAllocator.free(settings.playerName);
-	settings.playerName = main.globalAllocator.dupe(u8, textComponent.currentString.items);
+	root.globalAllocator.free(settings.playerName);
+	settings.playerName = root.globalAllocator.dupe(u8, textComponent.currentString.items);
 	settings.save();
 
 	gui.closeWindowFromRef(&window);

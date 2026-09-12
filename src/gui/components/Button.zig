@@ -24,11 +24,11 @@ const Textures = struct {
 
 	pub fn init(basePath: []const u8) Textures {
 		var self: Textures = undefined;
-		const buttonPath = main.stackAllocator.print("{s}.png", .{basePath});
-		defer main.stackAllocator.free(buttonPath);
+		const buttonPath = root.stackAllocator.print("{s}.png", .{basePath});
+		defer root.stackAllocator.free(buttonPath);
 		self.texture = Texture.initFromFile(buttonPath);
-		const outlinePath = main.stackAllocator.print("{s}_outline.png", .{basePath});
-		defer main.stackAllocator.free(outlinePath);
+		const outlinePath = root.stackAllocator.print("{s}_outline.png", .{basePath});
+		defer root.stackAllocator.free(outlinePath);
 		self.outlineTexture = Texture.initFromFile(outlinePath);
 		self.outlineTextureSize = @floatFromInt(self.outlineTexture.size());
 		return self;
@@ -103,7 +103,7 @@ const Options = struct {
 
 pub fn initText(pos: Vec2f, width: f32, text: []const u8, options: Options) *Button {
 	const label = Label.init(undefined, width - 3*border, text, .center);
-	const self = main.globalAllocator.create(Button);
+	const self = root.globalAllocator.create(Button);
 	self.* = Button{
 		.pos = pos,
 		.size = Vec2f{width, label.size[1] + 3*border},
@@ -116,7 +116,7 @@ pub fn initText(pos: Vec2f, width: f32, text: []const u8, options: Options) *But
 
 pub fn initIcon(pos: Vec2f, iconSize: Vec2f, iconTexture: Texture, options: Options) *Button {
 	const icon = Icon.init(undefined, iconSize, iconTexture);
-	const self = main.globalAllocator.create(Button);
+	const self = root.globalAllocator.create(Button);
 	self.* = Button{
 		.pos = pos,
 		.size = icon.size + @as(Vec2f, @splat(3*border)),
@@ -129,7 +129,7 @@ pub fn initIcon(pos: Vec2f, iconSize: Vec2f, iconTexture: Texture, options: Opti
 
 pub fn deinit(self: *const Button) void {
 	self.child.deinit();
-	main.globalAllocator.destroy(self);
+	root.globalAllocator.destroy(self);
 }
 
 pub fn toComponent(self: *Button) GuiComponent {

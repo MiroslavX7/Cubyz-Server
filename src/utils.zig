@@ -4,7 +4,7 @@ const Atomic = std.atomic.Value;
 const builtin = @import("builtin");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const list = @import("utils/list.zig");
 pub const file_monitor = @import("utils/file_monitor.zig");
@@ -34,30 +34,30 @@ pub const Compression = struct { // MARK: Compression
 		return try decompressor.reader.readSliceShort(buf);
 	}
 
-	pub fn pack(sourceDir: main.files.Dir, writer: *std.Io.Writer) !void {
+	pub fn pack(sourceDir: root.files.Dir, writer: *std.Io.Writer) !void {
 		var buffer: [65536]u8 = undefined;
 		var comp = try std.compress.flate.Compress.init(writer, &buffer, .raw, .default);
-		var walker = sourceDir.walk(main.stackAllocator);
+		var walker = sourceDir.walk(root.stackAllocator);
 		defer walker.deinit();
 
 		while (try walker.next(main.io)) |entry| {
 			if (entry.kind == .file) {
 				var relPath: []const u8 = entry.path;
 				if (builtin.os.tag == .windows) { // I hate you
-					const copy = main.stackAllocator.dupe(u8, relPath);
+					const copy = root.stackAllocator.dupe(u8, relPath);
 					std.mem.replaceScalar(u8, copy, '\\', '/');
 					relPath = copy;
 				}
 				defer if (builtin.os.tag == .windows) {
-					main.stackAllocator.free(relPath);
+					root.stackAllocator.free(relPath);
 				};
 				var len: [4]u8 = undefined;
 				std.mem.writeInt(u32, &len, @as(u32, @intCast(relPath.len)), endian);
 				_ = try comp.writer.writeAll(&len);
 				_ = try comp.writer.writeAll(relPath);
 
-				const fileData = try sourceDir.read(main.stackAllocator, relPath);
-				defer main.stackAllocator.free(fileData);
+				const fileData = try sourceDir.read(root.stackAllocator, relPath);
+				defer root.stackAllocator.free(fileData);
 
 				std.mem.writeInt(u32, &len, @as(u32, @intCast(fileData.len)), endian);
 				_ = try comp.writer.writeAll(&len);
@@ -69,13 +69,13 @@ pub const Compression = struct { // MARK: Compression
 		try writer.flush();
 	}
 
-	pub fn unpack(outDir: main.files.Dir, input: []const u8) !void {
+	pub fn unpack(outDir: root.files.Dir, input: []const u8) !void {
 		var inputReader = std.Io.Reader.fixed(input);
 		var buffer: [65536]u8 = undefined;
 		var decompressor = std.compress.flate.Decompress.init(&inputReader, .raw, &buffer);
 		const reader = &decompressor.reader;
-		const _data = try reader.allocRemainingAlignedSentinel(main.stackAllocator.allocator, .unlimited, .@"1", null);
-		defer main.stackAllocator.free(_data);
+		const _data = try reader.allocRemainingAlignedSentinel(root.stackAllocator.allocator, .unlimited, .@"1", null);
+		defer root.stackAllocator.free(_data);
 		var data = _data;
 		while (data.len != 0) {
 			var len = std.mem.readInt(u32, data[0..4], endian);
@@ -140,8 +140,8 @@ pub fn AliasTable(comptime T: type) type { // MARK: AliasTable
 			};
 			if (items.len == 0) return self;
 			@memset(self.aliasData, AliasData{.chance = 0, .alias = 0});
-			const currentChances = main.stackAllocator.alloc(f32, items.len);
-			defer main.stackAllocator.free(currentChances);
+			const currentChances = root.stackAllocator.alloc(f32, items.len);
+			defer root.stackAllocator.free(currentChances);
 			var totalChance: f32 = 0;
 			for (items, 0..) |item, i| {
 				totalChance += item.chance;
@@ -165,8 +165,8 @@ pub fn AliasTable(comptime T: type) type { // MARK: AliasTable
 			};
 			if (items.len == 0) return self;
 			@memset(self.aliasData, AliasData{.chance = 0, .alias = 0});
-			const currentChances = main.stackAllocator.alloc(f32, items.len);
-			defer main.stackAllocator.free(currentChances);
+			const currentChances = root.stackAllocator.alloc(f32, items.len);
+			defer root.stackAllocator.free(currentChances);
 			var totalChance: f32 = 0;
 			for (slice, 0..) |context, i| {
 				totalChance += context.chance;
@@ -594,7 +594,7 @@ pub fn ConcurrentQueue(comptime T: type) type { // MARK: ConcurrentQueue
 	return struct {
 		const Self = @This();
 		super: CircularBufferQueue(T),
-		mutex: main.utils.Mutex = .{},
+		mutex: root.utils.Mutex = .{},
 
 		pub fn init(allocator: NeverFailingAllocator, initialCapacity: usize) Self {
 			return .{
@@ -634,7 +634,7 @@ pub fn ConcurrentMaxHeap(comptime T: type) type { // MARK: ConcurrentMaxHeap
 		const initialSize = 16;
 		size: usize,
 		array: []T,
-		mutex: main.utils.Mutex = .{},
+		mutex: root.utils.Mutex = .{},
 		allocator: NeverFailingAllocator,
 
 		pub fn init(allocator: NeverFailingAllocator) @This() {
@@ -782,7 +782,7 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 		taskType: TaskType = .misc,
 	};
 	pub const Performance = struct {
-		mutex: main.utils.Mutex = .{},
+		mutex: root.utils.Mutex = .{},
 		tasks: [taskTypes]u32 = undefined,
 		utime: [taskTypes]i64 = undefined,
 
@@ -814,10 +814,10 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 	threads: []std.Thread,
 	currentTasks: []Atomic(?*const VTable),
 	loadList: ConcurrentMaxHeap(Task),
-	playerJobQueue: ConcurrentQueue(main.server.PlayerIndex),
-	taskCountSemaphore: main.utils.Semaphore = .{},
-	stopSemaphore: main.utils.Semaphore = .{},
-	startSemaphore: main.utils.Semaphore = .{},
+	playerJobQueue: ConcurrentQueue(root.server.PlayerIndex),
+	taskCountSemaphore: root.utils.Semaphore = .{},
+	stopSemaphore: root.utils.Semaphore = .{},
+	startSemaphore: root.utils.Semaphore = .{},
 	allocator: NeverFailingAllocator,
 	running: Atomic(bool) = .init(true),
 	paused: Atomic(bool) = .init(false),
@@ -918,7 +918,7 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 		}
 		blk: {
 			const player = self.playerJobQueue.popFront() orelse break :blk;
-			const user = main.server.getUserByIndex(player) orelse break :blk;
+			const user = root.server.getUserByIndex(player) orelse break :blk;
 			const result, const hasMoreTasks = user.getTaskFromJobQueue() orelse {
 				_ = self.trueQueueSize.fetchSub(1, .monotonic);
 				break :blk;
@@ -942,12 +942,12 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 
 		var lastUpdate = main.timestamp();
 		outer: while (self.running.load(.monotonic)) {
-			main.heap.GarbageCollection.syncPoint();
+			root.heap.GarbageCollection.syncPoint();
 
 			if (self.paused.load(.monotonic)) {
 				self.stopSemaphore.post();
 				while (true) {
-					main.heap.GarbageCollection.syncPoint();
+					root.heap.GarbageCollection.syncPoint();
 					self.startSemaphore.timedWait(.fromMilliseconds(10)) catch continue;
 					break;
 				}
@@ -976,14 +976,14 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 	pub fn updateTaskPriority(self: *ThreadPool) void {
 		const startTime = main.timestamp();
 		var temporaryTaskList: main.List(Task) = .empty;
-		defer temporaryTaskList.deinit(main.stackAllocator);
+		defer temporaryTaskList.deinit(root.stackAllocator);
 		while (self.loadList.extractAny()) |task| {
 			self.taskCountSemaphore.timedWait(.zero) catch {};
 			if (!task.vtable.isStillNeeded(task.self)) {
 				task.vtable.clean(task.self);
 				_ = self.trueQueueSize.fetchSub(1, .monotonic);
 			} else {
-				const taskPtr = temporaryTaskList.addOne(main.stackAllocator);
+				const taskPtr = temporaryTaskList.addOne(root.stackAllocator);
 				taskPtr.* = task;
 				taskPtr.cachedPriority = task.vtable.getPriority(task.self);
 			}
@@ -1006,7 +1006,7 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 		_ = self.trueQueueSize.fetchAdd(1, .monotonic);
 	}
 
-	pub fn addPlayer(self: *ThreadPool, player: *main.server.User) void {
+	pub fn addPlayer(self: *ThreadPool, player: *root.server.User) void {
 		self.playerJobQueue.pushBack(player.playerIndex);
 		self.taskCountSemaphore.post();
 		_ = self.trueQueueSize.fetchAdd(1, .monotonic);
@@ -1017,10 +1017,10 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 	}
 };
 
-var dynamicIntArrayAllocator: main.heap.PowerOfTwoPoolAllocator(main.chunk.chunkVolume/@bitSizeOf(u8), main.chunk.chunkVolume*@sizeOf(u16), 64) = undefined;
+var dynamicIntArrayAllocator: root.heap.PowerOfTwoPoolAllocator(root.chunk.chunkVolume/@bitSizeOf(u8), root.chunk.chunkVolume*@sizeOf(u16), 64) = undefined;
 
 pub fn initDynamicIntArrayStorage() void {
-	dynamicIntArrayAllocator = .init(main.globalAllocator);
+	dynamicIntArrayAllocator = .init(root.globalAllocator);
 }
 
 pub fn deinitDynamicIntArrayStorage() void {
@@ -1130,13 +1130,13 @@ pub fn PaletteCompressedRegion(T: type, size: comptime_int) type { // MARK: Pale
 		const Self = @This();
 
 		pub fn init(self: *Self) void {
-			const impl = main.globalAllocator.create(Impl);
+			const impl = root.globalAllocator.create(Impl);
 			self.* = .{
 				.impl = .init(impl),
 			};
 			impl.* = .{
-				.palette = main.globalAllocator.alloc(Atomic(T), 1),
-				.paletteOccupancy = main.globalAllocator.alloc(u32, 1),
+				.palette = root.globalAllocator.alloc(Atomic(T), 1),
+				.paletteOccupancy = root.globalAllocator.alloc(u32, 1),
 				.paletteLength = 1,
 				.activePaletteEntries = 1,
 			};
@@ -1145,7 +1145,7 @@ pub fn PaletteCompressedRegion(T: type, size: comptime_int) type { // MARK: Pale
 		}
 
 		pub fn initCopy(self: *Self, template: *const Self) void {
-			const impl = main.globalAllocator.create(Impl);
+			const impl = root.globalAllocator.create(Impl);
 			const templateImpl = template.impl.load(.acquire);
 			const dataDupe = DynamicPackedIntArray(size).initCapacity(templateImpl.data.bitSize);
 			@memcpy(dataDupe.data, templateImpl.data.data);
@@ -1154,8 +1154,8 @@ pub fn PaletteCompressedRegion(T: type, size: comptime_int) type { // MARK: Pale
 			};
 			impl.* = .{
 				.data = dataDupe,
-				.palette = main.globalAllocator.dupe(Atomic(T), templateImpl.palette),
-				.paletteOccupancy = main.globalAllocator.dupe(u32, templateImpl.paletteOccupancy),
+				.palette = root.globalAllocator.dupe(Atomic(T), templateImpl.palette),
+				.paletteOccupancy = root.globalAllocator.dupe(u32, templateImpl.paletteOccupancy),
 				.paletteLength = templateImpl.paletteLength,
 				.activePaletteEntries = templateImpl.activePaletteEntries,
 			};
@@ -1165,14 +1165,14 @@ pub fn PaletteCompressedRegion(T: type, size: comptime_int) type { // MARK: Pale
 			std.debug.assert(paletteLength < 0x80000000 and paletteLength > 0);
 			const bitSize: u5 = getTargetBitSize(paletteLength);
 			const bufferLength = @as(u32, 1) << bitSize;
-			const impl = main.globalAllocator.create(Impl);
+			const impl = root.globalAllocator.create(Impl);
 			self.* = .{
 				.impl = .init(impl),
 			};
 			impl.* = .{
 				.data = DynamicPackedIntArray(size).initCapacity(bitSize),
-				.palette = main.globalAllocator.alloc(Atomic(T), bufferLength),
-				.paletteOccupancy = main.globalAllocator.alloc(u32, bufferLength),
+				.palette = root.globalAllocator.alloc(Atomic(T), bufferLength),
+				.paletteOccupancy = root.globalAllocator.alloc(u32, bufferLength),
 				.paletteLength = paletteLength,
 				.activePaletteEntries = 1,
 			};
@@ -1184,13 +1184,13 @@ pub fn PaletteCompressedRegion(T: type, size: comptime_int) type { // MARK: Pale
 
 		fn privateDeinit(impl: *Impl) void {
 			impl.data.deinit();
-			main.globalAllocator.free(impl.palette);
-			main.globalAllocator.free(impl.paletteOccupancy);
-			main.globalAllocator.destroy(impl);
+			root.globalAllocator.free(impl.palette);
+			root.globalAllocator.free(impl.paletteOccupancy);
+			root.globalAllocator.destroy(impl);
 		}
 
 		pub fn deferredDeinit(self: *Self) void {
-			main.heap.GarbageCollection.deferredFree(.{.ptr = self.impl.raw, .freeFunction = main.meta.castFunctionSelfToAnyopaque(privateDeinit)});
+			root.heap.GarbageCollection.deferredFree(.{.ptr = self.impl.raw, .freeFunction = root.meta.castFunctionSelfToAnyopaque(privateDeinit)});
 		}
 
 		fn getTargetBitSize(paletteLength: u32) u5 {
@@ -1319,8 +1319,8 @@ pub fn PaletteCompressedRegion(T: type, size: comptime_int) type { // MARK: Pale
 			var newSelf: Self = undefined;
 			newSelf.initCapacity(impl.activePaletteEntries);
 			const newImpl = newSelf.impl.raw;
-			const paletteMap: []u32 = main.stackAllocator.alloc(u32, impl.paletteLength);
-			defer main.stackAllocator.free(paletteMap);
+			const paletteMap: []u32 = root.stackAllocator.alloc(u32, impl.paletteLength);
+			defer root.stackAllocator.free(paletteMap);
 			{
 				var iNew: u32 = 0;
 				var iOld: u32 = 0;
@@ -1357,7 +1357,7 @@ pub fn Cache(comptime T: type, comptime numberOfBuckets: u32, comptime bucketSiz
 	if (numberOfBuckets & hashMask != 0) @compileError("The number of buckets should be a power of 2!");
 
 	const Bucket = struct {
-		mutex: main.utils.Mutex = .{},
+		mutex: root.utils.Mutex = .{},
 		items: [bucketSize]?*T = @splat(null),
 
 		fn find(self: *@This(), compare: anytype) ?*T {
@@ -1626,7 +1626,7 @@ pub const TimeDifference = struct { // MARK: TimeDifference
 	pub fn addDataPoint(self: *TimeDifference, time: i16) void {
 		const currentTime: i16 = @truncate(main.timestamp().toMilliseconds());
 		const timeDifference = currentTime -% time;
-		if (@abs(self.biasCounter.load(.monotonic)) > main.server.updatesPerSec*5) {
+		if (@abs(self.biasCounter.load(.monotonic)) > root.server.updatesPerSec*5) {
 			self.difference.store(timeDifference, .monotonic);
 			self.biasCounter.store(0, .monotonic);
 		}
@@ -1668,7 +1668,7 @@ pub const Mutex = struct { // MARK: Mutex
 		}
 	}
 
-	pub fn assertLocked(self: *const main.utils.Mutex) void {
+	pub fn assertLocked(self: *const root.utils.Mutex) void {
 		if (builtin.mode == .Debug) {
 			std.debug.assert(!@constCast(self).tryLock());
 		}
@@ -1847,7 +1847,7 @@ pub const BinaryWriter = struct { // MARK: BinaryWriter
 
 const ReadWriteTest = struct {
 	fn getWriter() BinaryWriter {
-		return .init(main.heap.testingAllocator);
+		return .init(root.heap.testingAllocator);
 	}
 	fn getReader(data: []const u8) BinaryReader {
 		return .init(data);
@@ -2156,37 +2156,37 @@ pub fn SparseSet(comptime T: type, comptime IdType: type) type { // MARK: Sparse
 test "SparseSet/set at zero" {
 	const IdType = DenseId(u32);
 	var set: SparseSet(u32, IdType) = .{};
-	defer set.deinit(main.heap.testingAllocator);
+	defer set.deinit(root.heap.testingAllocator);
 
 	const index: IdType = @enumFromInt(0);
 
-	set.set(main.heap.testingAllocator, index, 5);
+	set.set(root.heap.testingAllocator, index, 5);
 	try std.testing.expectEqual(set.get(index).?.*, 5);
 }
 
 test "SparseSet/set at 100" {
 	const IdType = DenseId(u32);
 	var set: SparseSet(u32, IdType) = .{};
-	defer set.deinit(main.heap.testingAllocator);
+	defer set.deinit(root.heap.testingAllocator);
 
 	const index: IdType = @enumFromInt(100);
 
-	set.set(main.heap.testingAllocator, index, 5);
+	set.set(root.heap.testingAllocator, index, 5);
 	try std.testing.expectEqual(set.get(index).?.*, 5);
 }
 
 test "SparseSet/remove first" {
 	const IdType = DenseId(u32);
 	var set: SparseSet(u32, IdType) = .{};
-	defer set.deinit(main.heap.testingAllocator);
+	defer set.deinit(root.heap.testingAllocator);
 
 	const expectSecond: u32 = 100;
 
 	const firstId: IdType = @enumFromInt(0);
 	const secondId: IdType = @enumFromInt(1);
 
-	set.set(main.heap.testingAllocator, firstId, 5);
-	set.set(main.heap.testingAllocator, secondId, expectSecond);
+	set.set(root.heap.testingAllocator, firstId, 5);
+	set.set(root.heap.testingAllocator, secondId, expectSecond);
 
 	try set.remove(firstId);
 
@@ -2196,9 +2196,9 @@ test "SparseSet/remove first" {
 test "SparseSet/remove last" {
 	const IdType = DenseId(u32);
 	var set: SparseSet(u32, IdType) = .{};
-	defer set.deinit(main.heap.testingAllocator);
+	defer set.deinit(root.heap.testingAllocator);
 
-	set.set(main.heap.testingAllocator, @enumFromInt(0), 5);
+	set.set(root.heap.testingAllocator, @enumFromInt(0), 5);
 
 	try set.remove(@enumFromInt(0));
 }
@@ -2206,7 +2206,7 @@ test "SparseSet/remove last" {
 test "SparseSet/remove entry that doesn't exist" {
 	const IdType = DenseId(u32);
 	var set: SparseSet(u32, IdType) = .{};
-	defer set.deinit(main.heap.testingAllocator);
+	defer set.deinit(root.heap.testingAllocator);
 
 	try std.testing.expectError(error.ElementNotFound, set.remove(@enumFromInt(0)));
 }
@@ -2214,9 +2214,9 @@ test "SparseSet/remove entry that doesn't exist" {
 test "SparseSet/remove entry twice" {
 	const IdType = DenseId(u32);
 	var set: SparseSet(u32, IdType) = .{};
-	defer set.deinit(main.heap.testingAllocator);
+	defer set.deinit(root.heap.testingAllocator);
 
-	set.set(main.heap.testingAllocator, @enumFromInt(0), 5);
+	set.set(root.heap.testingAllocator, @enumFromInt(0), 5);
 
 	try set.remove(@enumFromInt(0));
 	try std.testing.expectError(error.ElementNotFound, set.remove(@enumFromInt(0)));
@@ -2225,7 +2225,7 @@ test "SparseSet/remove entry twice" {
 test "SparseSet/reusing" {
 	const IdType = DenseId(u32);
 	var set: SparseSet(u32, IdType) = .{};
-	defer set.deinit(main.heap.testingAllocator);
+	defer set.deinit(root.heap.testingAllocator);
 
 	const expectSecond = 100;
 	const expectNew = 10;
@@ -2233,19 +2233,19 @@ test "SparseSet/reusing" {
 	const firstId: IdType = @enumFromInt(0);
 	const secondId: IdType = @enumFromInt(1);
 
-	set.set(main.heap.testingAllocator, firstId, 5);
-	set.set(main.heap.testingAllocator, secondId, expectSecond);
+	set.set(root.heap.testingAllocator, firstId, 5);
+	set.set(root.heap.testingAllocator, secondId, expectSecond);
 
 	try set.remove(firstId);
 
-	set.set(main.heap.testingAllocator, firstId, expectNew);
+	set.set(root.heap.testingAllocator, firstId, expectNew);
 
 	try std.testing.expectEqual(set.get(secondId).?.*, expectSecond);
 	try std.testing.expectEqual(set.get(firstId).?.*, expectNew);
 }
 
 pub fn panicWithMessage(comptime fmt: []const u8, args: anytype) noreturn {
-	const message = main.stackAllocator.print(fmt, args);
+	const message = root.stackAllocator.print(fmt, args);
 	@panic(message);
 }
 

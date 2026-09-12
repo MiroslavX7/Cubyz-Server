@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
@@ -11,7 +11,7 @@ const vec = main.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const id = "cubyz:simple_vegetation";
 
@@ -19,14 +19,14 @@ pub const generationMode = .floor;
 
 const SimpleVegetation = @This();
 
-block: main.blocks.Block,
+block: root.blocks.Block,
 height0: u31,
 deltaHeight: u31,
 
 pub fn loadModel(parameters: ZonElement) ?*SimpleVegetation {
-	const self = main.worldArena.create(SimpleVegetation);
+	const self = root.worldArena.create(SimpleVegetation);
 	self.* = .{
-		.block = main.blocks.parseBlock(parameters.get([]const u8, "block") orelse ""),
+		.block = root.blocks.parseBlock(parameters.get([]const u8, "block") orelse ""),
 		.height0 = parameters.get(u31, "height") orelse 1,
 		.deltaHeight = parameters.get(u31, "height_variation") orelse 0,
 	};
@@ -37,7 +37,7 @@ pub fn loadModel(parameters: ZonElement) ?*SimpleVegetation {
 	return self;
 }
 
-pub fn generate(self: *SimpleVegetation, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *main.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, isCeiling: bool) void {
+pub fn generate(self: *SimpleVegetation, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, caveMap: CaveMapView, _: CaveBiomeMapView, seed: *u64, isCeiling: bool) void {
 	if (chunk.super.pos.voxelSize > 2 and (x & chunk.super.pos.voxelSize - 1 != 0 or y & chunk.super.pos.voxelSize - 1 != 0)) return;
 	const height = self.height0 + random.nextIntBounded(u31, seed, self.deltaHeight + 1);
 	var pz: i32 = chunk.startIndex(z);

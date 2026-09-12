@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Teleport to location.";
@@ -62,24 +62,24 @@ pub fn execute(args: Args, source: Source) void {
 				return;
 			}
 			const radius = 16384;
-			const mapSize: i32 = main.server.terrain.ClimateMap.ClimateMapFragment.mapSize;
+			const mapSize: i32 = root.server.terrain.ClimateMap.ClimateMapFragment.mapSize;
 			// Explore chunks in a spiral from the center:
 			const spiralLen = 2*radius/mapSize*2*radius/mapSize;
 			var wx = user.lastPos[0] & ~(mapSize - 1);
 			var wy = user.lastPos[1] & ~(mapSize - 1);
 			var dirChanges: usize = 1;
-			var dir: main.chunk.Neighbor = .dirNegX;
+			var dir: root.chunk.Neighbor = .dirNegX;
 			var stepsRemaining: usize = 1;
 			for (0..spiralLen) |_| {
-				const map = main.server.terrain.ClimateMap.getOrGenerateFragment(wx, wy);
+				const map = root.server.terrain.ClimateMap.getOrGenerateFragment(wx, wy);
 				for (0..map.map.len) |_| {
 					const x = main.random.nextIntBounded(u31, &main.seed, map.map.len);
 					const y = main.random.nextIntBounded(u31, &main.seed, map.map.len);
 					const sample = map.map[x][y];
 					if (sample.biome == biome) {
 						const z = sample.height + sample.hills + sample.mountains + sample.roughness;
-						const biomeSize = main.server.terrain.SurfaceMap.MapFragment.biomeSize;
-						main.network.protocols.genericUpdate.sendTPCoordinates(user.conn, .{@floatFromInt(wx + x*biomeSize + biomeSize/2), @floatFromInt(wy + y*biomeSize + biomeSize/2), @floatCast(z + biomeSize/2)});
+						const biomeSize = root.server.terrain.SurfaceMap.MapFragment.biomeSize;
+						root.network.protocols.genericUpdate.sendTPCoordinates(user.conn, .{@floatFromInt(wx + x*biomeSize + biomeSize/2), @floatFromInt(wy + y*biomeSize + biomeSize/2), @floatCast(z + biomeSize/2)});
 						return;
 					}
 				}
@@ -111,7 +111,7 @@ pub fn execute(args: Args, source: Source) void {
 			break :blk command.resolveCoordinates(pos.x, pos.y, pos.z, source) catch return;
 		},
 		.@"/tp <sourcePlayerIndex> <x> <y> <z> <yaw> <pitch>" => |pos| {
-			main.sync.server.sendSyncOperation(.{.rotation = .{.target = target.user, .rotation = command.resolveRotation(pos.yaw, pos.pitch, source) catch return}}, target.user);
+			root.sync.server.sendSyncOperation(.{.rotation = .{.target = target.user, .rotation = command.resolveRotation(pos.yaw, pos.pitch, source) catch return}}, target.user);
 			break :blk command.resolveCoordinates(pos.x, pos.y, pos.z, source) catch return;
 		},
 		inline .@"/tp <destinationPlayerIndex>", .@"/tp <sourcePlayerIndex> <destinationPlayerIndex>" => |index| {
@@ -120,5 +120,5 @@ pub fn execute(args: Args, source: Source) void {
 		},
 	};
 
-	if (!std.meta.eql(target.user.player().pos, pos)) main.network.protocols.genericUpdate.sendTPCoordinates(target.user.conn, pos);
+	if (!std.meta.eql(target.user.player().pos, pos)) root.network.protocols.genericUpdate.sendTPCoordinates(target.user.conn, pos);
 }

@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const NeverFailingAllocator = main.heap.NeverFailingAllocator;
+const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ListManaged = main.ListManaged;
-const permission = main.server.permission;
+const permission = root.server.permission;
 const ListType = permission.Permissions.ListType;
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Performs changes on the permissions of the player or shows the if has permission for a specific permission path";
@@ -37,9 +37,9 @@ pub fn execute(args: Args, source: Source) void {
 			};
 
 			switch (params.action) {
-				.add => main.entity.components.@"cubyz:permissions".server.addPermission(target.user.id, listType, params.permissionPath.path),
+				.add => root.entity.components.@"cubyz:permissions".server.addPermission(target.user.id, listType, params.permissionPath.path),
 				.remove => {
-					if (!main.entity.components.@"cubyz:permissions".server.removePermission(target.user.id, listType, params.permissionPath.path)) {
+					if (!root.entity.components.@"cubyz:permissions".server.removePermission(target.user.id, listType, params.permissionPath.path)) {
 						source.sendMessage("#ff0000Permission path {s} is not present inside users permission {s}list", .{params.permissionPath.path, @tagName(listType)});
 					}
 				},
@@ -48,7 +48,7 @@ pub fn execute(args: Args, source: Source) void {
 		.@"/perm <playerIndex> <permissionPath>" => |params| {
 			const target = command.Target.fromPlayerIndex(params.playerIndex, source) catch return;
 
-			if (main.entity.components.@"cubyz:permissions".server.hasPermission(target.user.id, params.permissionPath.path)) {
+			if (root.entity.components.@"cubyz:permissions".server.hasPermission(target.user.id, params.permissionPath.path)) {
 				source.sendMessage("#00ff00Player {s}§#00ff00 has permission for path: {s}", .{target.user.name, params.permissionPath.path});
 			} else {
 				source.sendMessage("#ff0000Player {s}§#ff0000 has no permission for path: {s}", .{target.user.name, params.permissionPath.path});

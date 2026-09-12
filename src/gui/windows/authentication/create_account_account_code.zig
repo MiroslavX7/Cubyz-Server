@@ -26,7 +26,7 @@ pub var window = GuiWindow{
 const padding: f32 = 8;
 
 var accountCodeLabel: *Label = undefined;
-var accountCode: ?main.network.authentication.AccountCode = null;
+var accountCode: ?root.network.authentication.AccountCode = null;
 var fileNameEntry: *Label = undefined;
 
 pub const StorageMethod = enum(usize) {
@@ -63,20 +63,20 @@ fn copy() void {
 fn selectFile() void {
 	const result: [*:0]const u8 = c.tinyfd_saveFileDialog("Select File to save Account Code", "Cubyz Account.txt", 1, @as([*]const [*:0]const u8, &.{"*.txt"}), "Text Files") orelse return;
 	const fileName = std.mem.span(result);
-	main.files.cwd().write(fileName, accountCode.?.text) catch |err| {
+	root.files.cwd().write(fileName, accountCode.?.text) catch |err| {
 		std.log.err("Failed to write Account Code to file: {s}", .{@errorName(err)});
 		button.disabled = true;
 		fileNameEntry.updateText("Failed to save, please pick a different location.");
 		return;
 	};
 	button.disabled = false;
-	const displayName = main.stackAllocator.dupe(u8, fileName);
-	defer main.stackAllocator.free(displayName);
+	const displayName = root.stackAllocator.dupe(u8, fileName);
+	defer root.stackAllocator.free(displayName);
 	if (builtin.os.tag == .windows) {
 		std.mem.replaceScalar(u8, displayName, '\\', '/');
 	}
-	const labelText = main.stackAllocator.print("Saved to: {s}", .{displayName});
-	defer main.stackAllocator.free(labelText);
+	const labelText = root.stackAllocator.print("Saved to: {s}", .{displayName});
+	defer root.stackAllocator.free(labelText);
 	fileNameEntry.updateText(labelText);
 }
 
@@ -129,8 +129,8 @@ pub fn update() void {
 					button.disabled = false;
 					button.child.label.updateText("Return to login");
 				} else {
-					const newText = main.stackAllocator.print("Return to login ({})", .{remainTimeSeconds});
-					defer main.stackAllocator.free(newText);
+					const newText = root.stackAllocator.print("Return to login ({})", .{remainTimeSeconds});
+					defer root.stackAllocator.free(newText);
 					button.child.label.updateText(newText);
 				}
 			}

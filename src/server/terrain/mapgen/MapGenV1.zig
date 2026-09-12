@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const Array2D = main.utils.Array2D;
+const Array2D = root.utils.Array2D;
 const random = main.random;
 const ZonElement = main.ZonElement;
-const terrain = main.server.terrain;
+const terrain = root.server.terrain;
 const MapFragment = terrain.SurfaceMap.MapFragment;
 const noise = terrain.noise;
 const FractalNoise = noise.FractalNoise;
@@ -105,32 +105,32 @@ pub fn generateMapFragment(map: *MapFragment, worldSeed: u64) void {
 	const biomeSize = MapFragment.biomeSize;
 	const offset = 32;
 	std.debug.assert(offset%2 == 0);
-	const biomePositions = terrain.ClimateMap.getBiomeMap(main.stackAllocator, map.pos.wx -% offset*biomeSize, map.pos.wy -% offset*biomeSize, mapSize + 2*offset*biomeSize, mapSize + 2*offset*biomeSize);
-	defer biomePositions.deinit(main.stackAllocator);
+	const biomePositions = terrain.ClimateMap.getBiomeMap(root.stackAllocator, map.pos.wx -% offset*biomeSize, map.pos.wy -% offset*biomeSize, mapSize + 2*offset*biomeSize, mapSize + 2*offset*biomeSize);
+	defer biomePositions.deinit(root.stackAllocator);
 	var seed = random.initSeed2D(worldSeed, .{map.pos.wx, map.pos.wy});
 	random.scrambleSeed(&seed);
 	seed ^= seed >> 16;
 
 	const offsetScale = biomeSize*16;
-	const xOffsetMap = Array2D(f32).init(main.stackAllocator, scaledSize, scaledSize);
-	defer xOffsetMap.deinit(main.stackAllocator);
-	const yOffsetMap = Array2D(f32).init(main.stackAllocator, scaledSize, scaledSize);
-	defer yOffsetMap.deinit(main.stackAllocator);
+	const xOffsetMap = Array2D(f32).init(root.stackAllocator, scaledSize, scaledSize);
+	defer xOffsetMap.deinit(root.stackAllocator);
+	const yOffsetMap = Array2D(f32).init(root.stackAllocator, scaledSize, scaledSize);
+	defer yOffsetMap.deinit(root.stackAllocator);
 	FractalNoise.generateSparseFractalTerrain(map.pos.wx, map.pos.wy, offsetScale, worldSeed ^ 675396758496549, xOffsetMap, map.pos.voxelSize);
 	FractalNoise.generateSparseFractalTerrain(map.pos.wx, map.pos.wy, offsetScale, worldSeed ^ 543864367373859, yOffsetMap, map.pos.voxelSize);
 
 	// A ridgid noise map to generate interesting mountains.
-	const mountainMap = Array2D(f32).init(main.stackAllocator, scaledSize, scaledSize);
-	defer mountainMap.deinit(main.stackAllocator);
+	const mountainMap = Array2D(f32).init(root.stackAllocator, scaledSize, scaledSize);
+	defer mountainMap.deinit(root.stackAllocator);
 	RandomlyWeightedFractalNoise.generateSparseFractalTerrain(map.pos.wx, map.pos.wy, 256, worldSeed ^ 6758947592930535, mountainMap, map.pos.voxelSize);
 
 	// A smooth map for smaller hills.
-	const hillMap = PerlinNoise.generateSmoothNoise(main.stackAllocator, map.pos.wx, map.pos.wy, mapSize, mapSize, 128, 32, worldSeed ^ 157839765839495820, map.pos.voxelSize, 0.5);
-	defer hillMap.deinit(main.stackAllocator);
+	const hillMap = PerlinNoise.generateSmoothNoise(root.stackAllocator, map.pos.wx, map.pos.wy, mapSize, mapSize, 128, 32, worldSeed ^ 157839765839495820, map.pos.voxelSize, 0.5);
+	defer hillMap.deinit(root.stackAllocator);
 
 	// A fractal map to generate high-detail roughness.
-	const roughMap = Array2D(f32).init(main.stackAllocator, scaledSize, scaledSize);
-	defer roughMap.deinit(main.stackAllocator);
+	const roughMap = Array2D(f32).init(root.stackAllocator, scaledSize, scaledSize);
+	defer roughMap.deinit(root.stackAllocator);
 	FractalNoise.generateSparseFractalTerrain(map.pos.wx, map.pos.wy, 64, worldSeed ^ 954936678493, roughMap, map.pos.voxelSize);
 
 	var x: u31 = 0;

@@ -23,18 +23,18 @@ pub fn init() void {
 }
 
 pub fn deinit() void {
-	main.globalAllocator.free(deleteWorldName);
+	root.globalAllocator.free(deleteWorldName);
 }
 
 pub fn setDeleteWorldName(name: []const u8) void {
-	main.globalAllocator.free(deleteWorldName);
-	deleteWorldName = main.globalAllocator.dupe(u8, name);
+	root.globalAllocator.free(deleteWorldName);
+	deleteWorldName = root.globalAllocator.dupe(u8, name);
 }
 
 fn flawedDeleteWorld(name: []const u8) !void {
-	const path = std.mem.concat(main.stackAllocator.allocator, u8, &.{"saves/", name}) catch unreachable;
-	defer main.stackAllocator.free(path);
-	try main.files.cubyzDir().deleteTree(path);
+	const path = std.mem.concat(root.stackAllocator.allocator, u8, &.{"saves/", name}) catch unreachable;
+	defer root.stackAllocator.free(path);
+	try root.files.cubyzDir().deleteTree(path);
 	gui.windowlist.save_selection.needsUpdate = true;
 }
 
@@ -47,8 +47,8 @@ fn deleteWorld() void {
 
 pub fn onOpen() void {
 	const list = VerticalList.init(.{padding, 16 + padding}, 300, 16);
-	const text = main.stackAllocator.print("Are you sure you want to delete the world **{s}**?", .{deleteWorldName});
-	defer main.stackAllocator.free(text);
+	const text = root.stackAllocator.print("Are you sure you want to delete the world **{s}**?", .{deleteWorldName});
+	defer root.stackAllocator.free(text);
 	list.add(Label.init(.{0, 0}, 128, text, .center));
 	list.add(Button.initText(.{0, 0}, 128, "Yes", .{.onAction = .init(deleteWorld)}));
 	list.finish(.center);

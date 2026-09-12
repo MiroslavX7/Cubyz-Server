@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const command = main.server.command;
+const command = root.server.command;
 const Source = command.Source;
 
 pub const description = "Get the world seed.";
@@ -14,5 +14,5 @@ pub const Args = union(enum) {
 };
 
 pub fn execute(_: Args, source: Source) void {
-	source.sendMessage("#ffff00{}", .{main.server.world.?.settings.seed});
+	source.sendMessage("#ffff00{}", .{root.server.world.?.settings.seed});
 }

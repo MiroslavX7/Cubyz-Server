@@ -36,11 +36,11 @@ pub fn registerAll(comptime typ: MigrationType, migrations: *Assets.AddonNameToZ
 	// apply transitive migrations
 	var iterator = collection.iterator();
 	var entries: main.List([]const u8) = .empty;
-	defer entries.deinit(main.stackAllocator);
+	defer entries.deinit(root.stackAllocator);
 	while (iterator.next()) |migrationEntry| {
 		defer entries.clearRetainingCapacity();
-		entries.append(main.stackAllocator, migrationEntry.key_ptr.*);
-		entries.append(main.stackAllocator, migrationEntry.value_ptr.*);
+		entries.append(root.stackAllocator, migrationEntry.key_ptr.*);
+		entries.append(root.stackAllocator, migrationEntry.value_ptr.*);
 		transitiveChain: while (collection.get(migrationEntry.value_ptr.*)) |transitive| {
 			std.log.info("Collapsing transitive {s} migration: '{s}' -> {s} -> '{s}'", .{@tagName(typ), migrationEntry.key_ptr.*, migrationEntry.value_ptr.*, transitive});
 			for (entries.items) |entry| {
@@ -50,7 +50,7 @@ pub fn registerAll(comptime typ: MigrationType, migrations: *Assets.AddonNameToZ
 				}
 			}
 			migrationEntry.value_ptr.* = transitive;
-			entries.append(main.stackAllocator, transitive);
+			entries.append(root.stackAllocator, transitive);
 		}
 	}
 }
@@ -91,17 +91,17 @@ fn register(
 			continue;
 		}
 
-		const oldAssetId = main.worldArena.print("{s}:{s}", .{addonName, oldZon});
-		const result = collection.getOrPut(main.worldArena.allocator, oldAssetId) catch unreachable;
+		const oldAssetId = root.worldArena.print("{s}:{s}", .{addonName, oldZon});
+		const result = collection.getOrPut(root.worldArena.allocator, oldAssetId) catch unreachable;
 
 		if (result.found_existing) {
 			std.log.err("Skipping name collision in {s} migration: '{s}' -> '{s}:{s}'", .{@tagName(typ), oldAssetId, addonName, newZon});
 			const existingMigration = collection.get(oldAssetId).?;
 			std.log.err("Already mapped to '{s}'", .{existingMigration});
 
-			main.worldArena.free(oldAssetId);
+			root.worldArena.free(oldAssetId);
 		} else {
-			const newAssetId = main.worldArena.print("{s}:{s}", .{addonName, newZon});
+			const newAssetId = root.worldArena.print("{s}:{s}", .{addonName, newZon});
 
 			result.key_ptr.* = oldAssetId;
 			result.value_ptr.* = newAssetId;
