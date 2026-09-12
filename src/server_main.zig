@@ -75,8 +75,8 @@ pub fn main() !void {
     std.log.info("Starting Cubyz dedicated server version {s}", .{settings.version.version});
 
     // Initialize environment
-    settings.environment.init(std.process.argsAlloc(root.globalAllocator));
-    defer std.process.argsFree(root.globalAllocator, settings.environment.env);
+    settings.environment.init(std.process.argsAlloc(globalAllocator));
+    defer std.process.argsFree(globalAllocator, settings.environment.env);
 
     // Initialize launch configuration (creates file if not exists)
     try settings.launchConfig.init();
@@ -154,13 +154,13 @@ pub const ListManaged = utils.ListManaged;
 pub const MultiArray = utils.MultiArray;
 pub const NeverFailingAllocator = heap.NeverFailingAllocator;
 pub const ErrorHandlingAllocator = heap.ErrorHandlingAllocator;
-pub const tag = @import("tag.zig");
-pub const entityComponent = @import("entityComponent/entityComponent.zig");
-pub const fmt = @import("fmt.zig");
+pub const argparse = @import("argparse.zig");
+pub const entity_component = @import("entityComponent/_template.zig");
 pub const physics = @import("physics.zig");
 pub const migrations = @import("migrations.zig");
 pub const callbacks = @import("callbacks/callbacks.zig");
-pub const argparse = @import("argparse.zig");
+pub const tag = @import("tag.zig");
+pub const fmt = @import("fmt.zig");
 pub const audio = struct {};
 pub const graphics = struct {};
 pub const gui = struct {
