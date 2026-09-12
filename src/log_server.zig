@@ -1,4 +1,5 @@
 const std = @import("std");
+const fs = std.fs;
 
 // Server-specific logging - no graphics dependencies
 pub const Level = enum {
@@ -23,8 +24,8 @@ pub const Level = enum {
     }
 };
 
-var logFile: ?std.Io.File = undefined;
-var logFileTs: ?std.Io.File = undefined;
+var logFile: ?fs.File = undefined;
+var logFileTs: ?fs.File = undefined;
 var supportsANSIColors: bool = undefined;
 
 pub fn logFn(
@@ -75,12 +76,12 @@ pub fn init() void {
     logFileTs = null;
     
     // Try to create logs directory and files, but don't fail if it doesn't work
-    std.process.cwd().makePath("logs") catch {
+    fs.cwd().makePath("logs") catch {
         std.log.err("Couldn't create logs folder", .{});
         return;
     };
     
-    logFile = std.process.cwd().createFile("logs/latest.log", .{}) catch |err| {
+    logFile = fs.cwd().createFile("logs/latest.log", .{}) catch |err| {
         std.log.err("Couldn't create logs/latest.log: {s}", .{@errorName(err)});
         return;
     };
@@ -89,12 +90,12 @@ pub fn init() void {
     const _path_str = std.fmt.allocPrint(std.heap.page_allocator, "logs/ts_{}.log", .{_timestamp}) catch return;
     defer std.heap.page_allocator.free(_path_str);
 
-    logFileTs = std.process.cwd().createFile(_path_str, .{}) catch |err| {
+    logFileTs = fs.cwd().createFile(_path_str, .{}) catch |err| {
         std.log.err("Couldn't create {s}: {s}", .{ _path_str, @errorName(err) });
         return;
     };
 
-    supportsANSIColors = std.process.stdout().supportsAnsiEscapeCodes() catch false;
+    supportsANSIColors = std.io.getStdOut().supportsAnsiEscapeCodes() catch false;
 }
 
 pub fn deinit() void {
@@ -124,7 +125,7 @@ fn logToFile(comptime format: []const u8, args: anytype) void {
 }
 
 fn logToStdErr(comptime format: []const u8, args: anytype) void {
-    const writer = std.process.stderr().writer();
+    const writer = std.io.getStdErr().writer();
     writer.print(format, args) catch {};
 }
 
