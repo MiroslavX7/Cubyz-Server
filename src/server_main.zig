@@ -75,12 +75,7 @@ pub fn main() !void {
     std.log.info("Starting Cubyz dedicated server version {s}", .{settings.version.version});
 
     // Initialize environment
-    const args = std.process.argsAlloc(globalAllocator) catch |err| {
-        std.log.err("Failed to get args: {s}", .{@errorName(err)});
-        return err;
-    };
-    defer std.process.argsFree(globalAllocator, args);
-    var args_iter = args.iterator();
+    var args_iter = std.process.args();
     _ = args_iter.next(); // Skip program name
     settings.environment.init(&args_iter);
 
