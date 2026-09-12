@@ -75,8 +75,9 @@ pub fn main() !void {
     std.log.info("Starting Cubyz dedicated server version {s}", .{settings.version.version});
 
     // Initialize environment
-    settings.environment.init(std.process.argsAlloc(globalAllocator));
-    defer std.process.argsFree(globalAllocator, settings.environment.env);
+    var args_iter = std.process.args();
+    _ = args_iter.skip(); // Skip program name
+    settings.environment.init(&args_iter);
 
     // Initialize launch configuration (creates file if not exists)
     try settings.launchConfig.init();
@@ -140,7 +141,7 @@ pub fn main() !void {
     const worldName = settings.launchConfig.autoEnterWorld;
     if (worldName.len == 0) {
         std.log.err("No world specified. Please set 'autoEnterWorld' in launchConfig.zon or provide a world name.", .{});
-        std.process.exit(1);
+        std.posix.exit(1);
     }
 
     server.startFromExistingThread(worldName, null, .multiplayer);

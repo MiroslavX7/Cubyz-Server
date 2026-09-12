@@ -75,36 +75,36 @@ pub fn init() void {
     logFileTs = null;
     
     // Try to create logs directory and files, but don't fail if it doesn't work
-    std.files.cwd().makePath("logs") catch {
+    std.fs.cwd().makePath("logs") catch {
         std.log.err("Couldn't create logs folder", .{});
         return;
     };
     
-    logFile = std.Io.Dir.cwd().createFile(std.io.default_io, "logs/latest.log", .{}) catch |err| {
+    logFile = std.fs.cwd().createFile("logs/latest.log", .{}) catch |err| {
         std.log.err("Couldn't create logs/latest.log: {s}", .{@errorName(err)});
         return;
     };
 
-    const _timestamp = std.Io.Clock.Timestamp.now(std.io.default_io, .real).raw;
-    const _path_str = std.fmt.allocPrint(std.heap.page_allocator, "logs/ts_{}.log", .{_timestamp.nanoseconds}) catch return;
+    const _timestamp = std.time.timestamp();
+    const _path_str = std.fmt.allocPrint(std.heap.page_allocator, "logs/ts_{}.log", .{_timestamp}) catch return;
     defer std.heap.page_allocator.free(_path_str);
 
-    logFileTs = std.Io.Dir.cwd().createFile(std.io.default_io, _path_str, .{}) catch |err| {
+    logFileTs = std.fs.cwd().createFile(_path_str, .{}) catch |err| {
         std.log.err("Couldn't create {s}: {s}", .{ _path_str, @errorName(err) });
         return;
     };
 
-    supportsANSIColors = std.Io.File.stdout().supportsAnsiEscapeCodes(std.io.default_io) catch false;
+    supportsANSIColors = std.io.getStdOut().supportsAnsiEscapeCodes() catch false;
 }
 
 pub fn deinit() void {
     if (logFile) |_logFile| {
-        _logFile.close(std.io.default_io);
+        _logFile.close();
         logFile = null;
     }
 
     if (logFileTs) |_logFileTs| {
-        _logFileTs.close(std.io.default_io);
+        _logFileTs.close();
         logFileTs = null;
     }
 }
@@ -117,16 +117,15 @@ fn logToFile(comptime format: []const u8, args: anytype) void {
     const allocator = fba.allocator();
 
     const string = std.fmt.allocPrint(allocator, format, args) catch format;
-    logFile.?.writeStreamingAll(std.io.default_io, string) catch {};
+    logFile.?.writeAll(string) catch {};
     if (logFileTs) |file| {
-        file.writeStreamingAll(std.io.default_io, string) catch {};
+        file.writeAll(string) catch {};
     }
 }
 
 fn logToStdErr(comptime format: []const u8, args: anytype) void {
-    const writer = std.debug.lockStderr(&.{});
-    defer std.debug.unlockStderr();
-    std.fmt.format(writer.writer(), format, args) catch {};
+    const writer = std.io.getStdErr().writer();
+    writer.print(format, args) catch {};
 }
 
 pub fn server(comptime format: []const u8, args: anytype) void {
