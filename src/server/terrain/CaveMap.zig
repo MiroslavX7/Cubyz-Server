@@ -5,9 +5,9 @@ const root = @import("root");
 const ServerChunk = root.chunk.ServerChunk;
 const ChunkPosition = root.chunk.ChunkPosition;
 const Cache = root.utils.Cache;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const Vec3i = main.vec.Vec3i;
+const Vec3i = root.vec.Vec3i;
 
 const terrain = @import("terrain.zig");
 const GeneratorState = terrain.GeneratorState;
@@ -111,7 +111,7 @@ pub const CaveGenerator = struct { // MARK: CaveGenerator
 	});
 
 	pub fn getAndInitGenerators(allocator: NeverFailingAllocator, settings: ZonElement) []CaveGenerator {
-		var list: main.List(CaveGenerator) = .initCapacity(allocator, generatorRegistry.values().len);
+		var list: root.List(CaveGenerator) = .initCapacity(allocator, generatorRegistry.values().len);
 		for (generatorRegistry.keys(), generatorRegistry.values()) |id, generator| {
 			const generatorSettings = settings.getChild(id);
 			if ((generatorSettings.get(GeneratorState, "state") orelse generator.defaultState) == .disabled) continue;

@@ -17,7 +17,7 @@ pub fn execute(args: Args, source: Source) void {
 	}
 	const user = source.user;
 	switch (args.@"/clear <target>".target) {
-		.inventory => main.items.Inventory.server.clearPlayerInventory(user),
+		.inventory => root.items.Inventory.server.clearPlayerInventory(user),
 		.chat => root.network.protocols.genericUpdate.sendClear(user.conn, .chat),
 	}
 }

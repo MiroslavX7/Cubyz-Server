@@ -4,9 +4,9 @@ const Atomic = std.atomic.Value;
 const IpAddress = std.Io.net.IpAddress;
 
 const root = @import("root");
-const game = main.game;
-const settings = main.settings;
-const utils = main.utils;
+const game = root.game;
+const settings = root.settings;
+const utils = root.utils;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const authentication = @import("network/authentication.zig");
@@ -18,7 +18,7 @@ const c = @import("c");
 
 const ms = 1_000;
 inline fn networkTimestamp() i64 {
-	return @truncate(@divTrunc(main.timestamp().toNanoseconds(), 1000));
+	return @truncate(@divTrunc(root.timestamp().toNanoseconds(), 1000));
 }
 
 const Socket = struct { // MARK: Socket
@@ -153,7 +153,7 @@ const Socket = struct { // MARK: Socket
 			if (length == c.SOCKET_ERROR) {
 				try windowsError(c.WSAGetLastError());
 			} else if (length == 0) {
-				main.io.sleep(.fromMilliseconds(1), .awake) catch {}; // Manually sleep, since WSAPoll is blocking.
+				root.io.sleep(.fromMilliseconds(1), .awake) catch {}; // Manually sleep, since WSAPoll is blocking.
 				return error.Timeout;
 			}
 		} else {
@@ -192,9 +192,9 @@ const Socket = struct { // MARK: Socket
 		var nameBuf: [255]u8 = undefined;
 		var buf: [16]std.Io.net.HostName.LookupResult = undefined;
 		var resultQueue = std.Io.Queue(std.Io.net.HostName.LookupResult).init(&buf);
-		try std.Io.net.HostName.lookup(try .init(name), main.io, &resultQueue, .{.canonical_name_buffer = &nameBuf, .port = port});
+		try std.Io.net.HostName.lookup(try .init(name), root.io, &resultQueue, .{.canonical_name_buffer = &nameBuf, .port = port});
 		while (true) {
-			const entry = resultQueue.getOneUncancelable(main.io) catch break;
+			const entry = resultQueue.getOneUncancelable(root.io) catch break;
 			switch (entry) {
 				.address => |addr| {
 					if (addr != .ip4) continue;
@@ -409,7 +409,7 @@ const stun = struct { // MARK: stun
 	fn requestAddress(connection: *ConnectionManager) SocketAddress {
 		var oldAddress: ?SocketAddress = null;
 		var seed: [std.Random.DefaultCsprng.secret_seed_length]u8 = @splat(0);
-		std.mem.writeInt(i128, seed[0..16], main.timestamp().toMilliseconds(), builtin.cpu.arch.endian()); // Not the best seed, but it's not that important.
+		std.mem.writeInt(i128, seed[0..16], root.timestamp().toMilliseconds(), builtin.cpu.arch.endian()); // Not the best seed, but it's not that important.
 		var random = std.Random.DefaultCsprng.init(seed);
 		for (0..16) |_| {
 			// Choose a somewhat random server, so we faster notice if any one of them stopped working.
@@ -517,8 +517,8 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 	online: Atomic(bool) = .init(false),
 	running: Atomic(bool) = .init(false),
 
-	connections: main.List(*Connection) = .empty,
-	requests: main.List(*Request) = .empty,
+	connections: root.List(*Connection) = .empty,
+	requests: root.List(*Request) = .empty,
 
 	mutex: root.utils.Mutex = .{},
 	waitingToFinishReceive: root.utils.Condition = .{},
@@ -578,7 +578,7 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 		result.packetSendRequests = .initContext({});
 		result.running.store(true, .monotonic);
 		result.thread = try std.Thread.spawn(.{}, run, .{result});
-		result.thread.setName(main.io, "Network Thread") catch |err| std.log.err("Couldn't rename thread: {s}", .{@errorName(err)});
+		result.thread.setName(root.io, "Network Thread") catch |err| std.log.err("Couldn't rename thread: {s}", .{@errorName(err)});
 	}
 	pub fn deinit(self: *ConnectionManager) void {
 		if (self.running.load(.monotonic)) self.pause();
@@ -744,8 +744,8 @@ pub const ConnectionManager = struct { // MARK: ConnectionManager
 
 	pub fn run(self: *ConnectionManager) void {
 		self.threadId = std.Thread.getCurrentId();
-		main.initThreadLocals();
-		defer main.deinitThreadLocals();
+		root.initThreadLocals();
+		defer root.deinitThreadLocals();
 
 		var lastTime: i64 = networkTimestamp();
 		var lastExternalPacketTime = lastTime;
@@ -830,7 +830,7 @@ pub const Connection = struct { // MARK: Connection
 				return self.start +% self.len;
 			}
 		};
-		ranges: main.List(Range),
+		ranges: root.List(Range),
 
 		pub fn init() RangeBuffer {
 			return .{
@@ -919,7 +919,7 @@ pub const Connection = struct { // MARK: Connection
 		decryptedBuffer: root.utils.FixedSizeCircularBuffer(u8, receiveBufferSize),
 		buffer: root.utils.FixedSizeCircularBuffer(u8, receiveBufferSize),
 		header: ?Header = null,
-		protocolBuffer: main.List(u8) = .empty,
+		protocolBuffer: root.List(u8) = .empty,
 		channelId: ChannelId,
 
 		pub fn init(channelId: ChannelId) ReceiveBuffer {
@@ -1065,7 +1065,7 @@ pub const Connection = struct { // MARK: Connection
 			if (self.highestSentIndex == self.fullyConfirmedIndex) {
 				self.lastUnsentTime = time;
 			}
-			var fullData: main.ListManaged(u8) = .init(root.stackAllocator);
+			var fullData: root.ListManaged(u8) = .init(root.stackAllocator);
 			defer fullData.deinit();
 			if (data.len + self.buffer.len > std.math.maxInt(SequenceIndex)) return error.OutOfMemory;
 			fullData.append(protocolIndex);
@@ -1267,7 +1267,7 @@ pub const Connection = struct { // MARK: Connection
 
 		side: root.sync.Side,
 		finishedCollectingClientVerificationData: bool = false,
-		verificationDataForClientSignature: main.List(u8) = .empty,
+		verificationDataForClientSignature: root.List(u8) = .empty,
 
 		pub fn init(self: *SecureChannel, sequenceIndex: SequenceIndex, delay: i64, id: ChannelId, side: root.sync.Side) !void {
 			self.* = .{
@@ -1353,7 +1353,7 @@ pub const Connection = struct { // MARK: Connection
 				self.mutex.unlock();
 				if (result == c.MBEDTLS_ERR_SSL_WANT_READ) {
 					root.heap.GarbageCollection.syncPoint();
-					try main.io.sleep(.fromMilliseconds(10), .awake);
+					try root.io.sleep(.fromMilliseconds(10), .awake);
 					continue;
 				}
 				try checkResult(result, "mbedtls_ssl_handshake");
@@ -1538,9 +1538,9 @@ pub const Connection = struct { // MARK: Connection
 			.nextConfirmationTimestamp = networkTimestamp(),
 			.lastRttSampleTime = networkTimestamp() -% 10_000*ms,
 			.queuedConfirmations = .init(root.globalAllocator, 1024),
-			.lossyChannel = .init(main.random.nextInt(SequenceIndex, &main.seed), 1*ms, .lossy),
+			.lossyChannel = .init(root.random.nextInt(SequenceIndex, &root.seed), 1*ms, .lossy),
 			.secureChannel = undefined,
-			.slowChannel = .init(main.random.nextInt(SequenceIndex, &main.seed), 100*ms, .slow),
+			.slowChannel = .init(root.random.nextInt(SequenceIndex, &root.seed), 100*ms, .slow),
 			.connectionIdentifier = networkTimestamp(),
 			.remoteConnectionIdentifier = 0,
 		};
@@ -1549,7 +1549,7 @@ pub const Connection = struct { // MARK: Connection
 			result.slowChannel.deinit();
 			result.queuedConfirmations.deinit();
 		}
-		try result.secureChannel.init(main.random.nextInt(SequenceIndex, &main.seed), 10*ms, .secure, if (user != null) .server else .client);
+		try result.secureChannel.init(root.random.nextInt(SequenceIndex, &root.seed), 10*ms, .secure, if (user != null) .server else .client);
 		errdefer result.secureChannel.deinit();
 		if (result.connectionIdentifier == 0) result.connectionIdentifier = 1;
 		result.remoteAddress = try SocketAddress.resolve(ipPort, settings.defaultPort);
@@ -1613,10 +1613,10 @@ pub const Connection = struct { // MARK: Connection
 			if (conn.restartCounter < restartCounter) {
 				conn.restartCounter = restartCounter;
 				switch (state) {
-					.awaitingKeyVerification => main.game.world.?.shouldReload = false,
-					.connectedVerified, .awaitingReloadVerified => main.game.world.?.shouldReload = true,
+					.awaitingKeyVerification => root.game.world.?.shouldReload = false,
+					.connectedVerified, .awaitingReloadVerified => root.game.world.?.shouldReload = true,
 				}
-				main.game.world.?.shouldRestart.store(true, .release);
+				root.game.world.?.shouldRestart.store(true, .release);
 				conn.handShakeWaiting.broadcast();
 			}
 		}
@@ -1745,7 +1745,7 @@ pub const Connection = struct { // MARK: Connection
 		self.tryReceive(data) catch |err| {
 			std.log.warn("Got error while processing received network data: {s}", .{@errorName(err)});
 			if (@errorReturnTrace()) |trace| {
-				std.log.info("{f}", .{main.fmt.FormatErrorTrace{.stackTrace = trace.*}});
+				std.log.info("{f}", .{root.fmt.FormatErrorTrace{.stackTrace = trace.*}});
 			}
 			std.log.debug("Packet data: {any}", .{data});
 			self.disconnect();
@@ -1916,7 +1916,7 @@ pub const Connection = struct { // MARK: Connection
 			self.sendConfirmationPacket(timestamp);
 		}
 
-		var permutation: usize = main.random.nextInt(usize, &main.seed);
+		var permutation: usize = root.random.nextInt(usize, &root.seed);
 		while (timestamp -% self.nextPacketTimestamp > 0) {
 			// Only attempt to increase the congestion bandwidth if we actual use the bandwidth, to prevent unbounded growth
 			const considerForCongestionControl = @divFloor(self.relativeSendTime, 2) > self.relativeIdleTime;
@@ -1945,7 +1945,7 @@ pub const Connection = struct { // MARK: Connection
 		self.manager.send(&.{@intFromEnum(ChannelId.disconnect)}, self.remoteAddress, null);
 		self.connectionState.store(.disconnected, .monotonic);
 		if (builtin.os.tag == .windows and !self.isServerSide() and root.server.world != null) {
-			main.io.sleep(.fromMilliseconds(10), .awake) catch {}; // Windows is too eager to close the socket, without waiting here we get a ConnectionResetByPeer on the other side.
+			root.io.sleep(.fromMilliseconds(10), .awake) catch {}; // Windows is too eager to close the socket, without waiting here we get a ConnectionResetByPeer on the other side.
 		}
 		self.manager.removeConnection(self);
 		if (self.user) |user| {
@@ -1953,7 +1953,7 @@ pub const Connection = struct { // MARK: Connection
 		} else {
 			self.handShakeWaiting.broadcast();
 			if (self.handShakeState.load(.monotonic) == .complete) {
-				main.exitToMenu();
+				root.exitToMenu();
 			}
 		}
 		std.log.info("Disconnected", .{});

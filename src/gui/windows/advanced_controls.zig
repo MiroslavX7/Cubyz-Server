@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;

@@ -8,7 +8,7 @@ const SSBO = graphics.SSBO;
 const TextureArray = graphics.TextureArray;
 const Image = graphics.Image;
 const game = @import("game.zig");
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const random = @import("random.zig");
 const RandomRange = random.RandomRange;
 const vec = @import("vec.zig");
@@ -24,10 +24,10 @@ const c = @import("c");
 
 pub const ParticleManager = struct { // MARK: ParticleManager
 	var particleTypesSSBO: SSBO = undefined;
-	var types: main.List(ParticleType) = .empty;
-	var typesLocal: main.List(ParticleTypeLocal) = .empty;
-	var textures: main.List(Image) = .empty;
-	var emissionTextures: main.List(Image) = .empty;
+	var types: root.List(ParticleType) = .empty;
+	var typesLocal: root.List(ParticleTypeLocal) = .empty;
+	var textures: root.List(Image) = .empty;
+	var emissionTextures: root.List(Image) = .empty;
 
 	var textureArray: TextureArray = undefined;
 	var emissionTextureArray: TextureArray = undefined;
@@ -134,7 +134,7 @@ pub const ParticleManager = struct { // MARK: ParticleManager
 		};
 	}
 
-	fn createAnimationFrames(container: *main.List(Image), frameCount: usize, image: Image, isBroken: bool) void {
+	fn createAnimationFrames(container: *root.List(Image), frameCount: usize, image: Image, isBroken: bool) void {
 		for (0..frameCount) |i| {
 			container.append(root.worldArena, if (isBroken) image else extractAnimationSlice(image, i));
 		}
@@ -168,7 +168,7 @@ pub const ParticleSystem = struct { // MARK: ParticleSystem
 	var previousPlayerPos: Vec3i = undefined;
 
 	var mutex: root.utils.Mutex = .{};
-	var networkCreationQueue: main.List(struct { emitter: Emitter, pos: Vec3d, count: u32 }) = .empty;
+	var networkCreationQueue: root.List(struct { emitter: Emitter, pos: Vec3d, count: u32 }) = .empty;
 
 	var particlesSSBO: SSBO = undefined;
 
@@ -290,7 +290,7 @@ pub const ParticleSystem = struct { // MARK: ParticleSystem
 
 			const positionf64 = @as(Vec3d, @floatCast(pos)) + playerPos;
 			const intPos: vec.Vec3i = @floor(positionf64);
-			const light: [6]u8 = main.renderer.mesh_storage.getLight(intPos[0], intPos[1], intPos[2]) orelse @splat(0);
+			const light: [6]u8 = root.renderer.mesh_storage.getLight(intPos[0], intPos[1], intPos[2]) orelse @splat(0);
 			const compressedLight =
 				@as(u32, light[0] >> 3) << 25 |
 				@as(u32, light[1] >> 3) << 20 |
@@ -306,14 +306,14 @@ pub const ParticleSystem = struct { // MARK: ParticleSystem
 	}
 
 	fn addParticle(typ: u32, particleTypeLocal: ParticleTypeLocal, particleType: ParticleType, pos: Vec3d, vel: Vec3f, collides: bool, properties: EmitterProperties) void {
-		const lifeTime = properties.lifeTime.get(&main.seed);
+		const lifeTime = properties.lifeTime.get(&root.seed);
 		if (lifeTime == 0) return;
-		const density = particleTypeLocal.density.get(&main.seed);
-		const rot = if (properties.randomizeRotation) random.nextFloat(&main.seed)*std.math.pi*2 else 0;
-		const rotVel = particleTypeLocal.rotVel.get(&main.seed);
-		const dragCoeff = particleTypeLocal.dragCoefficient.get(&main.seed);
+		const density = particleTypeLocal.density.get(&root.seed);
+		const rot = if (properties.randomizeRotation) random.nextFloat(&root.seed)*std.math.pi*2 else 0;
+		const rotVel = particleTypeLocal.rotVel.get(&root.seed);
+		const dragCoeff = particleTypeLocal.dragCoefficient.get(&root.seed);
 
-		const loopTime = lifeTime/if (particleTypeLocal.loopTime) |l| l.get(&main.seed) else lifeTime;
+		const loopTime = lifeTime/if (particleTypeLocal.loopTime) |l| l.get(&root.seed) else lifeTime;
 		particles[particleCount] = Particle{
 			.pos = @as(Vec3f, @floatCast(pos - @as(Vec3d, @floatFromInt(previousPlayerPos)))),
 			.rot = rot,
@@ -432,10 +432,10 @@ pub const Emitter = struct { // MARK: Emitter
 	pub const SpawnPoint = struct {
 		pub fn spawn(_: SpawnPoint, pos: Vec3d, properties: EmitterProperties, mode: DirectionMode) struct { Vec3d, Vec3f } {
 			const particlePos = pos;
-			const speed: Vec3f = @splat(properties.speed.get(&main.seed));
+			const speed: Vec3f = @splat(properties.speed.get(&root.seed));
 			const dir: Vec3f = switch (mode) {
 				.direction => |dir| vec.normalize(dir),
-				.scatter, .spread => vec.normalize(random.nextFloatVectorSigned(3, &main.seed)),
+				.scatter, .spread => vec.normalize(random.nextFloatVectorSigned(3, &root.seed)),
 			};
 			const particleVel = dir*speed;
 
@@ -454,14 +454,14 @@ pub const Emitter = struct { // MARK: Emitter
 			const spawnPos: Vec3f = @splat(self.radius);
 			var offsetPos: Vec3f = undefined;
 			while (true) {
-				offsetPos = random.nextFloatVectorSigned(3, &main.seed);
+				offsetPos = random.nextFloatVectorSigned(3, &root.seed);
 				if (vec.lengthSquare(offsetPos) <= 1) break;
 			}
 			const particlePos = pos + @as(Vec3d, @floatCast(offsetPos*spawnPos));
-			const speed: Vec3f = @splat(properties.speed.get(&main.seed));
+			const speed: Vec3f = @splat(properties.speed.get(&root.seed));
 			const dir: Vec3f = switch (mode) {
 				.direction => |dir| vec.normalize(dir),
-				.scatter => vec.normalize(random.nextFloatVectorSigned(3, &main.seed)),
+				.scatter => vec.normalize(random.nextFloatVectorSigned(3, &root.seed)),
 				.spread => @floatCast(offsetPos),
 			};
 			const particleVel = dir*speed;
@@ -481,12 +481,12 @@ pub const Emitter = struct { // MARK: Emitter
 
 		pub fn spawn(self: SpawnCube, pos: Vec3d, properties: EmitterProperties, mode: DirectionMode) struct { Vec3d, Vec3f } {
 			const spawnPos: Vec3f = self.size;
-			const offsetPos: Vec3f = random.nextFloatVectorSigned(3, &main.seed);
+			const offsetPos: Vec3f = random.nextFloatVectorSigned(3, &root.seed);
 			const particlePos = pos + @as(Vec3d, @floatCast(offsetPos*spawnPos));
-			const speed: Vec3f = @splat(properties.speed.get(&main.seed));
+			const speed: Vec3f = @splat(properties.speed.get(&root.seed));
 			const dir: Vec3f = switch (mode) {
 				.direction => |dir| vec.normalize(dir),
-				.scatter => vec.normalize(random.nextFloatVectorSigned(3, &main.seed)),
+				.scatter => vec.normalize(random.nextFloatVectorSigned(3, &root.seed)),
 				.spread => vec.normalize(@as(Vec3f, @floatCast(offsetPos))),
 			};
 			const particleVel = dir*speed;

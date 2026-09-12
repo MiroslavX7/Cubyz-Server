@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -29,9 +29,9 @@ fn setNotificationText(comptime formatText: []const u8, args: anytype) void {
 }
 
 pub fn raiseNotification(comptime formatText: []const u8, args: anytype) void {
-	main.gui.closeWindow("notification");
+	root.gui.closeWindow("notification");
 	setNotificationText(formatText, args);
-	main.gui.openWindow("notification");
+	root.gui.openWindow("notification");
 }
 
 fn ack() void {

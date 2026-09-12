@@ -12,7 +12,7 @@ const Vec2i = vec.Vec2i;
 const Vec3f = vec.Vec3f;
 
 const root = @import("root");
-const Window = main.Window;
+const Window = root.Window;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 const c = @import("c");
@@ -196,7 +196,7 @@ pub const draw = struct { // MARK: draw
 		var viewport: [4]c_int = undefined;
 		c.glGetIntegerv(c.GL_VIEWPORT, &viewport);
 
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			vulkan.currentFrame.guiCommands.bindPipeline(rectPipeline, getScissor());
 			vulkan.currentFrame.guiCommands.pushConstants(rectPipeline, &RectUniforms{
 				.start = pos,
@@ -297,7 +297,7 @@ pub const draw = struct { // MARK: draw
 		var viewport: [4]c_int = undefined;
 		c.glGetIntegerv(c.GL_VIEWPORT, &viewport);
 
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			vulkan.currentFrame.guiCommands.bindPipeline(rectBorderPipeline, getScissor());
 			vulkan.currentFrame.guiCommands.pushConstants(rectBorderPipeline, &RectBorderUniforms{
 				.start = pos,
@@ -378,7 +378,7 @@ pub const draw = struct { // MARK: draw
 		var viewport: [4]c_int = undefined;
 		c.glGetIntegerv(c.GL_VIEWPORT, &viewport);
 
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			vulkan.currentFrame.guiCommands.bindPipeline(linePipeline, getScissor());
 			vulkan.currentFrame.guiCommands.pushConstants(linePipeline, &LineUniforms{
 				.start = pos1,
@@ -448,7 +448,7 @@ pub const draw = struct { // MARK: draw
 		var viewport: [4]c_int = undefined;
 		c.glGetIntegerv(c.GL_VIEWPORT, &viewport);
 
-		if (main.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
+		if (root.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
 			vulkan.currentFrame.guiCommands.bindPipeline(imagePipeline, getScissor());
 			vulkan.currentFrame.guiCommands.bindDescriptors(imagePipeline, .graphics, 0, &.{
 				.{.image = .{.binding = 0, .image = texture.vulkanImage.?}},
@@ -473,7 +473,7 @@ pub const draw = struct { // MARK: draw
 		var viewport: [4]c_int = undefined;
 		c.glGetIntegerv(c.GL_VIEWPORT, &viewport);
 
-		if (main.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
+		if (root.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
 			vulkan.currentFrame.guiCommands.bindPipeline(imagePipeline, getScissor());
 			vulkan.currentFrame.guiCommands.bindDescriptors(imagePipeline, .graphics, 0, &.{
 				.{.image = .{.binding = 0, .image = texture.vulkanImage.?}},
@@ -685,8 +685,8 @@ pub const TextBuffer = struct { // MARK: TextBuffer
 	width: f32,
 	buffer: ?*c.hb_buffer_t,
 	glyphs: []GlyphData,
-	lines: main.ListManaged(Line),
-	lineBreaks: main.ListManaged(LineBreak),
+	lines: root.ListManaged(Line),
+	lineBreaks: root.ListManaged(LineBreak),
 
 	fn addLine(self: *TextBuffer, line: Line) void {
 		if (line.start != line.end) {
@@ -722,9 +722,9 @@ pub const TextBuffer = struct { // MARK: TextBuffer
 	pub const Parser = struct { // MARK: Parser
 		unicodeIterator: std.unicode.Utf8Iterator,
 		currentFontEffect: FontEffect,
-		parsedText: main.ListManaged(u32),
-		fontEffects: main.ListManaged(FontEffect),
-		characterIndex: main.ListManaged(u32),
+		parsedText: root.ListManaged(u32),
+		fontEffects: root.ListManaged(FontEffect),
+		characterIndex: root.ListManaged(u32),
 		showControlCharacters: bool,
 		curChar: u21 = undefined,
 		curIndex: u32 = 0,
@@ -1224,8 +1224,8 @@ const TextRendering = struct { // MARK: TextRendering
 	var freetypeFace: c.FT_Face = undefined;
 	var harfbuzzFace: ?*c.hb_face_t = undefined;
 	var harfbuzzFont: ?*c.hb_font_t = undefined;
-	var glyphMapping: main.ListManaged(u31) = undefined;
-	var glyphData: main.ListManaged(Glyph) = undefined;
+	var glyphMapping: root.ListManaged(u31) = undefined;
+	var glyphData: root.ListManaged(Glyph) = undefined;
 	var glyphTexture: [2]c_uint = undefined;
 	var textureWidth: i32 = 1024;
 	const textureHeight: i32 = 16;
@@ -1447,7 +1447,7 @@ pub const VertexArray = struct { // MARK: VertexArray
 		}
 
 		c.glBindVertexArray(0);
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			const indices = indices_ orelse &.{};
 			result.indicesOffset = std.mem.alignForward(usize, data.len*@sizeOf(T), @alignOf(u32));
 			result.buffer = .init(
@@ -1466,7 +1466,7 @@ pub const VertexArray = struct { // MARK: VertexArray
 		if (self.ibo != null) {
 			c.glDeleteBuffers(1, &self.ibo.?);
 		}
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			self.buffer.deferredDeinit();
 		}
 	}
@@ -1507,7 +1507,7 @@ pub const SSBO = struct { // MARK: SSBO
 		c.glBindBuffer(c.GL_SHADER_STORAGE_BUFFER, self.bufferID);
 		c.glBufferData(c.GL_SHADER_STORAGE_BUFFER, @intCast(len*@sizeOf(T)), null, c.GL_DYNAMIC_DRAW);
 		c.glBindBuffer(c.GL_SHADER_STORAGE_BUFFER, 0);
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			self.buffer = .init(len*@sizeOf(T), .{.usage = c.VK_BUFFER_USAGE_TRANSFER_DST_BIT | c.VK_BUFFER_USAGE_STORAGE_BUFFER_BIT});
 		}
 		return self;
@@ -1552,9 +1552,9 @@ pub const SubAllocation = struct {
 pub fn LargeBuffer(comptime Entry: type) type { // MARK: LargerBuffer
 	return struct {
 		ssbo: SSBO,
-		freeBlocks: main.ListManaged(SubAllocation),
+		freeBlocks: root.ListManaged(SubAllocation),
 		fences: [3]c.GLsync,
-		fencedFreeLists: [3]main.ListManaged(SubAllocation),
+		fencedFreeLists: [3]root.ListManaged(SubAllocation),
 		activeFence: u8,
 		capacity: u31,
 		used: u31,
@@ -1602,10 +1602,10 @@ pub fn LargeBuffer(comptime Entry: type) type { // MARK: LargerBuffer
 		pub fn beginRender(self: *Self) void {
 			self.activeFence += 1;
 			if (self.activeFence == self.fences.len) self.activeFence = 0;
-			const endTime = main.timestamp().addDuration(.fromMilliseconds(5));
+			const endTime = root.timestamp().addDuration(.fromMilliseconds(5));
 			while (self.fencedFreeLists[self.activeFence].popOrNull()) |allocation| {
 				self.finalFree(allocation);
-				if (main.timestamp().durationTo(endTime).nanoseconds < 0) break; // TODO: Remove after #1434
+				if (root.timestamp().durationTo(endTime).nanoseconds < 0) break; // TODO: Remove after #1434
 			}
 			_ = c.glClientWaitSync(self.fences[self.activeFence], 0, c.GL_TIMEOUT_IGNORED); // Make sure the render calls that accessed these parts of the buffer have finished.
 		}
@@ -2038,7 +2038,7 @@ pub const Texture = struct { // MARK: Texture
 		c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_REPEAT);
 		c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_REPEAT);
 
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			std.debug.assert(self.vulkanImage == null);
 			self.vulkanImage = vulkan.Image.init(.{image.width, image.height, 1}, .{
 				.usage = c.VK_IMAGE_USAGE_TRANSFER_DST_BIT | c.VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -2347,8 +2347,8 @@ const block_texture = struct { // MARK: block_texture
 		var data: [128*128]f32 = undefined;
 
 		const zMax: f32 = 134;
-		const near = main.renderer.zNear;
-		const far = main.renderer.zFar;
+		const near = root.renderer.zNear;
+		const far = root.renderer.zFar;
 		const depth = ((far + near)/(near - far)*(-zMax) + 2*near*far/(near - far))/zMax*0.5 + 0.5;
 
 		@memset(&data, depth);
@@ -2397,9 +2397,9 @@ pub fn generateBlockTexture(block: root.blocks.Block) Texture {
 		frameBuffer.clear(.{0, 0, 0, 0});
 	}
 
-	const uniforms = if (block.transparent()) &main.renderer.chunk_meshing.transparentUniforms else &main.renderer.chunk_meshing.uniforms;
+	const uniforms = if (block.transparent()) &root.renderer.chunk_meshing.transparentUniforms else &root.renderer.chunk_meshing.uniforms;
 
-	var faceData: main.ListManaged(main.renderer.chunk_meshing.FaceData) = .init(root.stackAllocator);
+	var faceData: root.ListManaged(root.renderer.chunk_meshing.FaceData) = .init(root.stackAllocator);
 	defer faceData.deinit();
 	const model = root.blocks.meshes.model(block).model();
 	const pos: root.chunk.BlockPos = .fromCoords(1, 1, 1);
@@ -2418,15 +2418,15 @@ pub fn generateBlockTexture(block: root.blocks.Block) Texture {
 		face.position.lightIndex = 0;
 	}
 	var allocation: SubAllocation = .{.start = 0, .len = 0};
-	main.renderer.chunk_meshing.faceBuffers[0].uploadData(faceData.items, &allocation);
-	defer main.renderer.chunk_meshing.faceBuffers[0].free(allocation);
+	root.renderer.chunk_meshing.faceBuffers[0].uploadData(faceData.items, &allocation);
+	defer root.renderer.chunk_meshing.faceBuffers[0].free(allocation);
 	var lightAllocation: SubAllocation = .{.start = 0, .len = 0};
-	main.renderer.chunk_meshing.lightBuffers[0].uploadData(&.{0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff}, &lightAllocation);
-	defer main.renderer.chunk_meshing.lightBuffers[0].free(lightAllocation);
+	root.renderer.chunk_meshing.lightBuffers[0].uploadData(&.{0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff}, &lightAllocation);
+	defer root.renderer.chunk_meshing.lightBuffers[0].free(lightAllocation);
 
 	{
 		var chunkAllocation: SubAllocation = .{.start = 0, .len = 0};
-		main.renderer.chunk_meshing.chunkBuffer.uploadData(&.{.{
+		root.renderer.chunk_meshing.chunkBuffer.uploadData(&.{.{
 			.position = .{0, 0, 0},
 			.min = undefined,
 			.max = undefined,
@@ -2439,13 +2439,13 @@ pub fn generateBlockTexture(block: root.blocks.Block) Texture {
 			.visibilityState = 0,
 			.oldVisibilityState = 0,
 		}}, &chunkAllocation);
-		defer main.renderer.chunk_meshing.chunkBuffer.free(chunkAllocation);
+		defer root.renderer.chunk_meshing.chunkBuffer.free(chunkAllocation);
 		if (block.transparent()) {
 			c.glBlendEquation(c.GL_FUNC_ADD);
 			c.glBlendFunc(c.GL_ONE, c.GL_SRC1_COLOR);
-			main.renderer.chunk_meshing.bindTransparentShaderAndUniforms(.{1, 1, 1});
+			root.renderer.chunk_meshing.bindTransparentShaderAndUniforms(.{1, 1, 1});
 		} else {
-			main.renderer.chunk_meshing.bindShaderAndUniforms(.{1, 1, 1});
+			root.renderer.chunk_meshing.bindShaderAndUniforms(.{1, 1, 1});
 		}
 
 		block_texture.ubo.bind();
@@ -2478,7 +2478,7 @@ pub fn generateBlockTexture(block: root.blocks.Block) Texture {
 
 	c.glBindFramebuffer(c.GL_FRAMEBUFFER, 0);
 
-	c.glViewport(0, 0, main.Window.width, main.Window.height);
+	c.glViewport(0, 0, root.Window.width, root.Window.height);
 	c.glBlendFunc(c.GL_SRC_ALPHA, c.GL_ONE_MINUS_SRC_ALPHA);
 	return texture;
 }

@@ -5,10 +5,10 @@ const Array3D = root.utils.Array3D;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const sdf = root.server.terrain.sdf;
 const SdfInstance = sdf.SdfInstance;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 
 pub const id = "cubyz:rotated";
 
@@ -78,7 +78,7 @@ fn rotate(axis: Axis, sin: f32, cos: f32, in: Vec3f) Vec3f {
 }
 
 pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) SdfInstance {
-	const angle = self.minAngle + (self.maxAngle - self.minAngle)*main.random.nextFloat(seed);
+	const angle = self.minAngle + (self.maxAngle - self.minAngle)*root.random.nextFloat(seed);
 	const sin = @sin(angle);
 	const cos = @cos(angle);
 	const child = self.child.instantiate(arena, seed);

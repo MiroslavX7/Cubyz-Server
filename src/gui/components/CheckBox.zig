@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const TextBuffer = graphics.TextBuffer;
 const Texture = graphics.Texture;
-const random = main.random;
-const vec = main.vec;
+const random = root.random;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -74,12 +74,12 @@ pub fn toComponent(self: *CheckBox) GuiComponent {
 	return .{.checkBox = self};
 }
 
-pub fn updateHovered(self: *CheckBox, _: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *CheckBox, _: Vec2f) root.callbacks.Result {
 	self.hovered = true;
 	return .handled;
 }
 
-pub fn mainButtonPressed(self: *CheckBox, _: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *CheckBox, _: Vec2f) root.callbacks.Result {
 	self.pressed = true;
 	return .handled;
 }
@@ -114,7 +114,7 @@ pub fn render(self: *CheckBox, mousePosition: Vec2f) void {
 			}
 		}
 	};
-	if (main.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
+	if (root.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
 		graphics.vulkan.currentFrame.guiCommands.bindPipeline(Button.pipeline, graphics.draw.getScissor());
 		graphics.vulkan.currentFrame.guiCommands.bindDescriptors(Button.pipeline, .graphics, 0, &.{
 			.{.image = .{.binding = 0, .image = texture.vulkanImage.?}},

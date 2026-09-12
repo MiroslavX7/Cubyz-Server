@@ -4,10 +4,10 @@ const build_options = @import("build_options");
 
 const root = @import("root");
 const ConnectionManager = root.network.ConnectionManager;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -40,7 +40,7 @@ var presetButton: *Button = undefined;
 
 fn chooseSeed(seedStr: []const u8) u64 {
 	if (seedStr.len == 0) {
-		return main.random.nextInt(u64, &main.seed);
+		return root.random.nextInt(u64, &root.seed);
 	} else {
 		return std.fmt.parseInt(u64, seedStr, 0) catch {
 			return std.hash.Wyhash.hash(0, seedStr);
@@ -49,7 +49,7 @@ fn chooseSeed(seedStr: []const u8) u64 {
 }
 
 fn gamemodeCallback() void {
-	worldSettings.defaultGamemode = std.enums.fromInt(main.game.Gamemode, @intFromEnum(worldSettings.defaultGamemode) + 1) orelse @enumFromInt(0);
+	worldSettings.defaultGamemode = std.enums.fromInt(root.game.Gamemode, @intFromEnum(worldSettings.defaultGamemode) + 1) orelse @enumFromInt(0);
 	gamemodeInput.child.label.updateText(@tagName(worldSettings.defaultGamemode));
 }
 
@@ -83,8 +83,8 @@ pub fn onOpen() void {
 	const list = VerticalList.init(.{padding, 16 + padding}, 300, 8);
 
 	if (worldPresets.len == 0) {
-		var presetMap = main.assets.worldPresets();
-		var entryList: main.List(ZonMapEntry) = .initCapacity(root.globalArena, presetMap.count());
+		var presetMap = root.assets.worldPresets();
+		var entryList: root.List(ZonMapEntry) = .initCapacity(root.globalArena, presetMap.count());
 		var iterator = presetMap.iterator();
 		while (iterator.next()) |entry| {
 			entryList.appendAssumeCapacity(entry);

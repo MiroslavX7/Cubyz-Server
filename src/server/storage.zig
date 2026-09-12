@@ -2,10 +2,10 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 
 const root = @import("root");
-const chunk = main.chunk;
+const chunk = root.chunk;
 const server = @import("server.zig");
 
-const utils = main.utils;
+const utils = root.utils;
 const BinaryWriter = utils.BinaryWriter;
 const BinaryReader = utils.BinaryReader;
 
@@ -48,7 +48,7 @@ pub const RegionFile = struct { // MARK: RegionFile
 		defer root.stackAllocator.free(data);
 		self.load(path, data) catch {
 			std.log.err("Corrupted region file: {s}", .{path});
-			if (@errorReturnTrace()) |trace| std.log.info("{f}", .{main.fmt.FormatErrorTrace{.stackTrace = trace.*}});
+			if (@errorReturnTrace()) |trace| std.log.info("{f}", .{root.fmt.FormatErrorTrace{.stackTrace = trace.*}});
 		};
 		return self;
 	}

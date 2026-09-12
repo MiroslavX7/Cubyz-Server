@@ -1,15 +1,15 @@
 const std = @import("std");
 
 const root = @import("root");
-const chunk = main.chunk;
-const game = main.game;
-const graphics = main.graphics;
-const ZonElement = main.ZonElement;
-const renderer = main.renderer;
-const settings = main.settings;
-const utils = main.utils;
+const chunk = root.chunk;
+const game = root.game;
+const graphics = root.graphics;
+const ZonElement = root.ZonElement;
+const renderer = root.renderer;
+const settings = root.settings;
+const utils = root.utils;
 const BinaryReader = utils.BinaryReader;
-const vec = main.vec;
+const vec = root.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
@@ -34,7 +34,7 @@ pub const EntityModel = struct { // MARK: EntityModel
 
 	vao: ?graphics.VertexArray = null,
 	indexCount: c_int,
-	defaultTexture: ?main.graphics.Texture,
+	defaultTexture: ?root.graphics.Texture,
 	coordinateSystem: CoordinateSystem,
 
 	pub const Node = struct {
@@ -102,7 +102,7 @@ pub const EntityModel = struct { // MARK: EntityModel
 		self.nodeCount = 0;
 
 		var isPlayerModel = false;
-		const tags = main.Tag.loadTagsFromZon(root.worldArena, zon.getChild("tags"));
+		const tags = root.Tag.loadTagsFromZon(root.worldArena, zon.getChild("tags"));
 		for (tags) |tag| {
 			if (tag == .playerModel) {
 				isPlayerModel = true;
@@ -122,7 +122,7 @@ pub const EntityModel = struct { // MARK: EntityModel
 				const mod = split.first();
 				const textureName = split.next().?;
 				self.texturePath = root.worldArena.print("{s}/{s}/entity_models/textures/{s}{s}", .{assetFolder, mod, textureName, fileEnding});
-				root.files.cubyzDir().dir.access(main.io, self.texturePath, .{}) catch {
+				root.files.cubyzDir().dir.access(root.io, self.texturePath, .{}) catch {
 					root.worldArena.free(self.texturePath);
 					self.texturePath = root.worldArena.print("assets/{s}/entity_models/textures/{s}{s}", .{mod, textureName, fileEnding});
 				};
@@ -162,10 +162,10 @@ pub const EntityModel = struct { // MARK: EntityModel
 	}
 
 	fn loadModelAndTexture(self: *EntityModel) !void {
-		self.defaultTexture = main.graphics.Texture.initFromFile(self.texturePath);
+		self.defaultTexture = root.graphics.Texture.initFromFile(self.texturePath);
 		if (self.modelId == null) return error.NoModelSpecified;
 
-		const file = try main.assets.readAsset(root.stackAllocator, "entity_models/models", self.modelId.?, ".glb");
+		const file = try root.assets.readAsset(root.stackAllocator, "entity_models/models", self.modelId.?, ".glb");
 		defer root.stackAllocator.free(file);
 
 		var options: c.cgltf_options = .{};
@@ -191,9 +191,9 @@ pub const EntityModel = struct { // MARK: EntityModel
 			return getGltfError(result);
 		}
 
-		var vertices: main.List(Vertex) = .empty;
+		var vertices: root.List(Vertex) = .empty;
 		defer vertices.deinit(root.stackAllocator);
-		var indices: main.List(u32) = .empty;
+		var indices: root.List(u32) = .empty;
 		defer indices.deinit(root.stackAllocator);
 		var baseVertex: u32 = 0;
 
@@ -205,7 +205,7 @@ pub const EntityModel = struct { // MARK: EntityModel
 				return lhs.depth < rhs.depth;
 			}
 		};
-		var nodeDepthRemap: main.List(NodeRemap) = .empty;
+		var nodeDepthRemap: root.List(NodeRemap) = .empty;
 		defer nodeDepthRemap.deinit(root.stackAllocator);
 
 		var nodeIdx: u16 = 0;
@@ -351,10 +351,10 @@ pub const EntityModelIndex = struct {
 	}
 };
 
-pub var playerEntityModels: main.List(EntityModelIndex) = .empty;
+pub var playerEntityModels: root.List(EntityModelIndex) = .empty;
 
 pub var reverseIndices: std.StringHashMapUnmanaged(EntityModelIndex) = .{};
-pub var entityModels: main.List(EntityModel) = .empty;
+pub var entityModels: root.List(EntityModel) = .empty;
 
 pub fn register(assetFolder: []const u8, entityModelId: []const u8, zon: ZonElement) EntityModelIndex {
 	const index = EntityModelIndex{.index = @intCast(entityModels.items.len)};

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const random = main.random;
+const random = root.random;
 
 fn getSeedX(x: f32, worldSeed: u64) u64 {
 	return worldSeed ^ @as(u64, 54275629861)*%@as(u32, @bitCast(@as(i32, @trunc(x))));

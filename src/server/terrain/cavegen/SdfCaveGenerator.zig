@@ -3,13 +3,13 @@ const sign = std.math.sign;
 
 const root = @import("root");
 const Array3D = root.utils.Array3D;
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const CaveMapFragment = terrain.CaveMap.CaveMapFragment;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const FractalNoise3D = terrain.noise.FractalNoise3D;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
@@ -52,7 +52,7 @@ fn generateSdf(map: *const CaveMapFragment, biomeMap: *const CaveBiomeMapView, a
 		const distance = mapPos -% biomePoint.worldPos;
 		if (@reduce(.Or, distance +% mapSize < biomePoint.biome.maxSdfExtend.min -% @as(Vec3i, @splat(perimeter)))) continue;
 		if (@reduce(.Or, distance > biomePoint.biome.maxSdfExtend.max +% @as(Vec3i, @splat(perimeter)))) continue;
-		var seed = main.random.initSeed3D(worldSeed, biomePoint.worldPos);
+		var seed = root.random.initSeed3D(worldSeed, biomePoint.worldPos);
 		for (biomePoint.biome.caveSdfModels) |sdfModel| {
 			switch (sdfModel.mode) {
 				.additive => {

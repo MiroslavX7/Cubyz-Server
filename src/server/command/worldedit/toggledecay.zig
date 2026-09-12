@@ -3,12 +3,12 @@ const std = @import("std");
 const root = @import("root");
 const command = root.server.command;
 const Source = command.Source;
-const Vec3i = main.vec.Vec3i;
+const Vec3i = root.vec.Vec3i;
 const User = root.server.User;
 
 const Block = root.blocks.Block;
-const Blueprint = main.blueprint.Blueprint;
-const Pattern = main.blueprint.Pattern;
+const Blueprint = root.blueprint.Blueprint;
+const Pattern = root.blueprint.Pattern;
 
 pub const description = "Enable/disable decay on decayable blocks.";
 pub const usage =
@@ -78,12 +78,12 @@ pub fn execute(args: Args, source: Source) void {
 }
 
 pub fn toggledecay(decayState: State, current: Block) Block {
-	if (current.mode() == main.rotation.getByID("cubyz:branch")) {
-		var branchData = main.rotation.rotations.@"cubyz:branch".BranchData.init(current.data);
+	if (current.mode() == root.rotation.getByID("cubyz:branch")) {
+		var branchData = root.rotation.rotations.@"cubyz:branch".BranchData.init(current.data);
 		branchData.placedByHuman = decayState == .off;
 		return .{.typ = current.typ, .data = @as(u7, @bitCast(branchData))};
 	}
-	if (current.mode() == main.rotation.getByID("cubyz:decayable")) {
+	if (current.mode() == root.rotation.getByID("cubyz:decayable")) {
 		return .{.typ = current.typ, .data = @intFromBool(decayState == .off)};
 	}
 	return current;

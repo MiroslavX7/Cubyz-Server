@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
@@ -40,9 +40,9 @@ pub fn loadModel(parameters: ZonElement) ?*Stalagmite {
 }
 
 pub fn generate(self: *Stalagmite, _: GenerationMode, x: i32, y: i32, z: i32, chunk: *root.chunk.ServerChunk, _: CaveMapView, _: CaveBiomeMapView, seed: *u64, _: bool) void {
-	const relX: f32 = @as(f32, @floatFromInt(x)) + main.random.nextFloat(seed)*0.6 - 0.3;
-	const relY: f32 = @as(f32, @floatFromInt(y)) + main.random.nextFloat(seed)*0.6 - 0.3;
-	const relZ: f32 = @as(f32, @floatFromInt(z)) + main.random.nextFloat(seed)*0.6 - 0.3;
+	const relX: f32 = @as(f32, @floatFromInt(x)) + root.random.nextFloat(seed)*0.6 - 0.3;
+	const relY: f32 = @as(f32, @floatFromInt(y)) + root.random.nextFloat(seed)*0.6 - 0.3;
+	const relZ: f32 = @as(f32, @floatFromInt(z)) + root.random.nextFloat(seed)*0.6 - 0.3;
 
 	const height = self.size + random.nextFloat(seed)*self.sizeVariation;
 

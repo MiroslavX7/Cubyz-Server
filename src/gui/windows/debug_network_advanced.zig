@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
-const network = main.network;
-const Vec2f = main.vec.Vec2f;
+const network = root.network;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -41,8 +41,8 @@ fn renderConnectionData(conn: *root.network.Connection, name: []const u8, y: *f3
 
 pub fn render() void {
 	var y: f32 = 0;
-	if (main.game.world != null) {
-		renderConnectionData(main.game.world.?.conn, "Client", &y);
+	if (root.game.world != null) {
+		renderConnectionData(root.game.world.?.conn, "Client", &y);
 	}
 	y += 8;
 	if (root.server.world != null) {

@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const ProceduralItem = main.items.ProceduralItem;
+const ProceduralItem = root.items.ProceduralItem;
 
 pub const Data = packed struct(u128) { strength: f32, pad: u96 = undefined };
 
 pub const priority = 1;
 
-pub fn loadData(zon: main.ZonElement) Data {
+pub fn loadData(zon: root.ZonElement) Data {
 	return .{.strength = @max(0, zon.get(f32, "strength") orelse 0)};
 }
 
@@ -19,6 +19,6 @@ pub fn changeProceduralItemParameters(proceduralItem: *ProceduralItem, data: Dat
 	proceduralItem.setProperty(.swingSpeed, proceduralItem.getProperty(.swingSpeed)*(1 - data.strength));
 }
 
-pub fn printTooltip(outString: *main.ListManaged(u8), data: Data) void {
+pub fn printTooltip(outString: *root.ListManaged(u8), data: Data) void {
 	outString.print("#ffcc30**Heavy**#808080 *Decreases swing speed by **{d:.0}%", .{data.strength*100});
 }

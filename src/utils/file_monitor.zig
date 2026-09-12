@@ -45,7 +45,7 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 	const DirectoryInfo = struct {
 		callback: CallbackFunction,
 		userData: usize,
-		watchDescriptors: main.List(c_int),
+		watchDescriptors: root.List(c_int),
 		needsUpdate: bool,
 		path: []const u8,
 	};
@@ -87,7 +87,7 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 		};
 		defer iterableDir.close();
 		var iterator = iterableDir.iterate();
-		while (iterator.next(main.io) catch |err| {
+		while (iterator.next(root.io) catch |err| {
 			std.log.err("Error while iterating dir {s}: {s}", .{path, @errorName(err)});
 			return;
 		}) |entry| {
@@ -207,8 +207,8 @@ const LinuxImpl = struct { // MARK: LinuxImpl
 const WindowsImpl = struct { // MARK: WindowsImpl
 	const HANDLE = std.os.windows.HANDLE;
 	var notificationHandlers: std.StringHashMap(*DirectoryInfo) = undefined;
-	var callbacks: main.ListManaged(*DirectoryInfo) = undefined;
-	var justTheHandles: main.ListManaged(HANDLE) = undefined;
+	var callbacks: root.ListManaged(*DirectoryInfo) = undefined;
+	var justTheHandles: root.ListManaged(HANDLE) = undefined;
 	var mutex: root.utils.Mutex = .{};
 
 	const DirectoryInfo = struct {

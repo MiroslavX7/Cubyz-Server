@@ -40,7 +40,7 @@ pub const Compression = struct { // MARK: Compression
 		var walker = sourceDir.walk(root.stackAllocator);
 		defer walker.deinit();
 
-		while (try walker.next(main.io)) |entry| {
+		while (try walker.next(root.io)) |entry| {
 			if (entry.kind == .file) {
 				var relPath: []const u8 = entry.path;
 				if (builtin.os.tag == .windows) { // I hate you
@@ -186,8 +186,8 @@ pub fn AliasTable(comptime T: type) type { // MARK: AliasTable
 		}
 
 		pub fn sample(self: *const @This(), seed: *u64) *T {
-			const initialIndex = main.random.nextIntBounded(u16, seed, @as(u16, @intCast(self.items.len)));
-			if (main.random.nextInt(u16, seed) < self.aliasData[initialIndex].chance) {
+			const initialIndex = root.random.nextIntBounded(u16, seed, @as(u16, @intCast(self.items.len)));
+			if (root.random.nextInt(u16, seed) < self.aliasData[initialIndex].chance) {
 				return &self.items[self.aliasData[initialIndex].alias];
 			}
 			return &self.items[initialIndex];
@@ -843,7 +843,7 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 				@panic("ThreadPool Creation Failed.");
 			};
 			var buf: [std.Thread.max_name_len]u8 = undefined;
-			thread.setName(main.io, std.fmt.bufPrint(&buf, "Worker {}", .{i + 1}) catch "Worker n") catch |err| std.log.err("Couldn't rename thread: {s}", .{@errorName(err)});
+			thread.setName(root.io, std.fmt.bufPrint(&buf, "Worker {}", .{i + 1}) catch "Worker n") catch |err| std.log.err("Couldn't rename thread: {s}", .{@errorName(err)});
 		}
 		return self;
 	}
@@ -900,7 +900,7 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 		// Wait for active tasks:
 		for (self.currentTasks) |*task| {
 			while (task.load(.monotonic) == vtable) {
-				main.io.sleep(.fromMilliseconds(1), .awake) catch {};
+				root.io.sleep(.fromMilliseconds(1), .awake) catch {};
 			}
 		}
 	}
@@ -937,10 +937,10 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 	}
 
 	fn run(self: *ThreadPool, id: usize) void {
-		main.initThreadLocals();
-		defer main.deinitThreadLocals();
+		root.initThreadLocals();
+		defer root.deinitThreadLocals();
 
-		var lastUpdate = main.timestamp();
+		var lastUpdate = root.timestamp();
 		outer: while (self.running.load(.monotonic)) {
 			root.heap.GarbageCollection.syncPoint();
 
@@ -958,24 +958,24 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 			{
 				const task = self.getNextTask() orelse continue :outer;
 				self.currentTasks[id].store(task.vtable, .monotonic);
-				const startTime = main.timestamp();
+				const startTime = root.timestamp();
 				task.vtable.run(task.self);
-				const endTime = main.timestamp();
+				const endTime = root.timestamp();
 				self.performance.add(task.vtable.taskType, @intCast(@divTrunc(startTime.durationTo(endTime).toNanoseconds(), 1000)));
 				self.currentTasks[id].store(null, .monotonic);
 				_ = self.trueQueueSize.fetchSub(1, .monotonic);
 			}
 
-			if (id == 0 and lastUpdate.durationTo(main.timestamp()).nanoseconds > refreshTime.nanoseconds) {
+			if (id == 0 and lastUpdate.durationTo(root.timestamp()).nanoseconds > refreshTime.nanoseconds) {
 				self.updateTaskPriority();
-				lastUpdate = main.timestamp();
+				lastUpdate = root.timestamp();
 			}
 		}
 	}
 
 	pub fn updateTaskPriority(self: *ThreadPool) void {
-		const startTime = main.timestamp();
-		var temporaryTaskList: main.List(Task) = .empty;
+		const startTime = root.timestamp();
+		var temporaryTaskList: root.List(Task) = .empty;
 		defer temporaryTaskList.deinit(root.stackAllocator);
 		while (self.loadList.extractAny()) |task| {
 			self.taskCountSemaphore.timedWait(.zero) catch {};
@@ -992,7 +992,7 @@ pub const ThreadPool = struct { // MARK: ThreadPool
 		for (0..temporaryTaskList.items.len) |_| {
 			self.taskCountSemaphore.post();
 		}
-		const endTime = main.timestamp();
+		const endTime = root.timestamp();
 		self.performance.add(.taskPriorityUpdate, @intCast(@divTrunc(startTime.durationTo(endTime).toNanoseconds(), 1000)));
 	}
 
@@ -1624,7 +1624,7 @@ pub const TimeDifference = struct { // MARK: TimeDifference
 	biasCounter: Atomic(i16) = .init(std.math.maxInt(i16)),
 
 	pub fn addDataPoint(self: *TimeDifference, time: i16) void {
-		const currentTime: i16 = @truncate(main.timestamp().toMilliseconds());
+		const currentTime: i16 = @truncate(root.timestamp().toMilliseconds());
 		const timeDifference = currentTime -% time;
 		if (@abs(self.biasCounter.load(.monotonic)) > root.server.updatesPerSec*5) {
 			self.difference.store(timeDifference, .monotonic);
@@ -1656,7 +1656,7 @@ pub const Mutex = struct { // MARK: Mutex
 		if (builtin.os.tag == .windows) {
 			self.super.lock();
 		} else {
-			self.super.lockUncancelable(main.io);
+			self.super.lockUncancelable(root.io);
 		}
 	}
 
@@ -1664,7 +1664,7 @@ pub const Mutex = struct { // MARK: Mutex
 		if (builtin.os.tag == .windows) {
 			self.super.unlock();
 		} else {
-			self.super.unlock(main.io);
+			self.super.unlock(root.io);
 		}
 	}
 
@@ -1765,7 +1765,7 @@ pub const BinaryReader = struct { // MARK: BinaryReader
 };
 
 pub const BinaryWriter = struct { // MARK: BinaryWriter
-	data: main.ListManaged(u8),
+	data: root.ListManaged(u8),
 
 	pub fn init(allocator: NeverFailingAllocator) BinaryWriter {
 		return .{.data = .init(allocator)};
@@ -2000,21 +2000,21 @@ test "read/write enum" {
 }
 
 test "read/write Vec3i" {
-	try ReadWriteTest.testVec(main.vec.Vec3i, .{0, 0, 0});
-	try ReadWriteTest.testVec(main.vec.Vec3i, .{
-		std.math.maxInt(@typeInfo(main.vec.Vec3i).vector.child),
-		std.math.minInt(@typeInfo(main.vec.Vec3i).vector.child),
-		std.math.minInt(@typeInfo(main.vec.Vec3i).vector.child),
+	try ReadWriteTest.testVec(root.vec.Vec3i, .{0, 0, 0});
+	try ReadWriteTest.testVec(root.vec.Vec3i, .{
+		std.math.maxInt(@typeInfo(root.vec.Vec3i).vector.child),
+		std.math.minInt(@typeInfo(root.vec.Vec3i).vector.child),
+		std.math.minInt(@typeInfo(root.vec.Vec3i).vector.child),
 	});
-	try ReadWriteTest.testVec(main.vec.Vec3i, .{
-		std.math.minInt(@typeInfo(main.vec.Vec3i).vector.child),
-		std.math.maxInt(@typeInfo(main.vec.Vec3i).vector.child),
-		std.math.maxInt(@typeInfo(main.vec.Vec3i).vector.child),
+	try ReadWriteTest.testVec(root.vec.Vec3i, .{
+		std.math.minInt(@typeInfo(root.vec.Vec3i).vector.child),
+		std.math.maxInt(@typeInfo(root.vec.Vec3i).vector.child),
+		std.math.maxInt(@typeInfo(root.vec.Vec3i).vector.child),
 	});
 }
 
 test "read/write Vec3f/Vec3d" {
-	inline for ([_]type{main.vec.Vec3f, main.vec.Vec3d}) |vecT| {
+	inline for ([_]type{root.vec.Vec3f, root.vec.Vec3d}) |vecT| {
 		try ReadWriteTest.testVec(vecT, .{0, 0, 0});
 		try ReadWriteTest.testVec(vecT, .{0.0043, 0.01123, 0.05043});
 		try ReadWriteTest.testVec(vecT, .{5345.0, 42.0, 7854.0});
@@ -2035,7 +2035,7 @@ test "read/write mixed" {
 	const type0 = u4;
 	const expected0 = 5;
 
-	const type1 = main.vec.Vec3i;
+	const type1 = root.vec.Vec3i;
 	const expected1 = type1{3, -10, 44};
 
 	const type2 = enum(u3) { first, second, third };
@@ -2082,9 +2082,9 @@ pub fn SparseSet(comptime T: type, comptime IdType: type) type { // MARK: Sparse
 	return struct {
 		const Self = @This();
 
-		dense: main.List(T) = .empty,
-		denseToSparseIndex: main.List(IdType) = .empty,
-		sparseToDenseIndex: main.List(IdType) = .empty,
+		dense: root.List(T) = .empty,
+		denseToSparseIndex: root.List(IdType) = .empty,
+		sparseToDenseIndex: root.List(IdType) = .empty,
 
 		pub fn clear(self: *Self) void {
 			self.dense.clearRetainingCapacity();

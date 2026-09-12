@@ -2,14 +2,14 @@ const std = @import("std");
 
 const root = @import("root");
 const Block = root.blocks.Block;
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
 const Neighbor = root.chunk.Neighbor;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
@@ -73,12 +73,12 @@ pub fn loadModel(parameters: ZonElement) ?*SimpleTreeModel {
 		.deltaLeafElongation = parameters.get(f32, "deltaLeafElongation") orelse 0,
 		.branched = parameters.get(bool, "branched") orelse true,
 	};
-	if (self.woodBlock.mode() == main.rotation.getByID("cubyz:branch")) self.woodRotationModeType = .branch;
-	if (self.woodBlock.mode() == main.rotation.getByID("cubyz:log")) self.woodRotationModeType = .log;
-	if (self.woodBlock.mode() == main.rotation.getByID("cubyz:direction")) self.woodRotationModeType = .direction;
-	if (self.topWoodBlock.mode() == main.rotation.getByID("cubyz:branch")) self.topRotationModeType = .branch;
-	if (self.topWoodBlock.mode() == main.rotation.getByID("cubyz:log")) self.topRotationModeType = .log;
-	if (self.topWoodBlock.mode() == main.rotation.getByID("cubyz:direction")) self.topRotationModeType = .direction;
+	if (self.woodBlock.mode() == root.rotation.getByID("cubyz:branch")) self.woodRotationModeType = .branch;
+	if (self.woodBlock.mode() == root.rotation.getByID("cubyz:log")) self.woodRotationModeType = .log;
+	if (self.woodBlock.mode() == root.rotation.getByID("cubyz:direction")) self.woodRotationModeType = .direction;
+	if (self.topWoodBlock.mode() == root.rotation.getByID("cubyz:branch")) self.topRotationModeType = .branch;
+	if (self.topWoodBlock.mode() == root.rotation.getByID("cubyz:log")) self.topRotationModeType = .log;
+	if (self.topWoodBlock.mode() == root.rotation.getByID("cubyz:direction")) self.topRotationModeType = .direction;
 	return self;
 }
 
@@ -114,8 +114,8 @@ pub fn generateStem(self: *SimpleTreeModel, x: i32, y: i32, z: i32, height: i32,
 
 			if (self.branched) {
 				const chance = @sqrt(@as(f32, @floatFromInt(pz - z))/@as(f32, @floatFromInt(height*2)));
-				if (main.random.nextFloat(seed) < chance) {
-					const dir: Neighbor = @enumFromInt(main.random.nextIntBounded(u32, seed, 4) + 2);
+				if (root.random.nextFloat(seed) < chance) {
+					const dir: Neighbor = @enumFromInt(root.random.nextIntBounded(u32, seed, 4) + 2);
 					generateBranch(self, x, y, pz, dir, chunk);
 					block = addNeighbor(block, dir, rotationModeType);
 				}

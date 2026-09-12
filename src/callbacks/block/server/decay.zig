@@ -2,21 +2,21 @@ const std = @import("std");
 
 const root = @import("root");
 const Block = root.blocks.Block;
-const blocks = main.blocks;
-const vec = main.vec;
+const blocks = root.blocks;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
-const ZonElement = main.ZonElement;
-const server = main.server;
-const branch = main.rotation.rotations.@"cubyz:branch";
+const ZonElement = root.ZonElement;
+const server = root.server;
+const branch = root.rotation.rotations.@"cubyz:branch";
 const BlockDrop = root.server.BlockDrop;
 
 decayReplacement: blocks.Block,
-prevention: []const main.Tag,
+prevention: []const root.Tag,
 blockDrops: []const BlockDrop,
 
-pub fn init(zon: ZonElement, creator: main.callbacks.Creator) ?*@This() {
+pub fn init(zon: ZonElement, creator: root.callbacks.Creator) ?*@This() {
 	const block = switch (creator) {
 		.block => |b| b,
 		// TODO: Add when a new creator type exists
@@ -38,13 +38,13 @@ pub fn init(zon: ZonElement, creator: main.callbacks.Creator) ?*@This() {
 	result.prevention = &.{};
 	if (zon.getChildOrNull("prevention")) |tagNames| {
 		if (tagNames == .array) {
-			var prevention = main.List(main.Tag).initCapacity(root.worldArena, tagNames.array.items.len);
+			var prevention = root.List(root.Tag).initCapacity(root.worldArena, tagNames.array.items.len);
 			for (tagNames.array.items) |value| {
 				const tagName = value.as([]const u8) orelse {
 					std.log.err("Invalid TagName for decay prevention.", .{});
 					continue;
 				};
-				prevention.appendAssumeCapacity(main.Tag.find(tagName));
+				prevention.appendAssumeCapacity(root.Tag.find(tagName));
 			}
 			result.prevention = prevention.items;
 		}
@@ -82,7 +82,7 @@ fn foundWayToLog(self: *@This(), world: *server.ServerWorld, leaf: Block, wx: i3
 	queue.pushBack(Vec3i{0, 0, 0});
 	checked[getIndexInCheckArray(Vec3i{0, 0, 0}, checkRange)] = true;
 
-	const branchRotation = main.rotation.getByID("cubyz:branch");
+	const branchRotation = root.rotation.getByID("cubyz:branch");
 	const sourceIsBranch = leaf.mode() == branchRotation;
 
 	while (queue.popFront()) |value| {
@@ -114,14 +114,14 @@ fn foundWayToLog(self: *@This(), world: *server.ServerWorld, leaf: Block, wx: i3
 	}
 	return false;
 }
-pub fn run(self: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.callbacks.Result {
+pub fn run(self: *@This(), params: root.callbacks.ServerBlockCallback.Params) root.callbacks.Result {
 	const wx = params.chunk.super.pos.wx + params.blockPos.x;
 	const wy = params.chunk.super.pos.wy + params.blockPos.y;
 	const wz = params.chunk.super.pos.wz + params.blockPos.z;
 
-	if (params.block.mode() == main.rotation.getByID("cubyz:decayable")) {
+	if (params.block.mode() == root.rotation.getByID("cubyz:decayable")) {
 		if (params.block.data != 0) return .ignored;
-	} else if (params.block.mode() == main.rotation.getByID("cubyz:branch")) {
+	} else if (params.block.mode() == root.rotation.getByID("cubyz:branch")) {
 		const bd = branch.BranchData.init(params.block.data);
 		if (bd.placedByHuman) return .ignored;
 	} else {
@@ -136,16 +136,16 @@ pub fn run(self: *@This(), params: main.callbacks.ServerBlockCallback.Params) ma
 			// no, there is no log in proximity
 			if (world.cmpxchgBlock(wx, wy, wz, leaf, self.decayReplacement) == null) {
 				for (self.blockDrops) |drop| {
-					if (drop.chance == 1 or main.random.nextFloat(&main.seed) < drop.chance) {
+					if (drop.chance == 1 or root.random.nextFloat(&root.seed) < drop.chance) {
 						for (drop.itemStacks) |stack| {
-							var dir = main.vec.normalize(main.random.nextFloatVectorSigned(3, &main.seed));
+							var dir = root.vec.normalize(root.random.nextFloatVectorSigned(3, &root.seed));
 							// Bias upwards
-							dir[2] += main.random.nextFloat(&main.seed)*4.0;
+							dir[2] += root.random.nextFloat(&root.seed)*4.0;
 							const model = leaf.mode().model(leaf).model();
 							const pos = Vec3f{
-								@as(f32, @floatFromInt(wx)) + model.min[0] + main.random.nextFloat(&main.seed)*(model.max[0] - model.min[0]),
-								@as(f32, @floatFromInt(wy)) + model.min[1] + main.random.nextFloat(&main.seed)*(model.max[1] - model.min[1]),
-								@as(f32, @floatFromInt(wz)) + model.min[2] + main.random.nextFloat(&main.seed)*(model.max[2] - model.min[2]),
+								@as(f32, @floatFromInt(wx)) + model.min[0] + root.random.nextFloat(&root.seed)*(model.max[0] - model.min[0]),
+								@as(f32, @floatFromInt(wy)) + model.min[1] + root.random.nextFloat(&root.seed)*(model.max[1] - model.min[1]),
+								@as(f32, @floatFromInt(wz)) + model.min[2] + root.random.nextFloat(&root.seed)*(model.max[2] - model.min[2]),
 							};
 							root.server.world.?.drop(stack.clone(), pos, dir, 1);
 						}

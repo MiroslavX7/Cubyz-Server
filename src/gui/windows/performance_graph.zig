@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
 const vulkan = graphics.vulkan;
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const c = @import("c");
 
@@ -74,7 +74,7 @@ pub fn deinit() void {
 }
 
 pub fn render() void {
-	lastFrameTime[index] = @floatCast(main.lastFrameTime.load(.monotonic)*1000.0);
+	lastFrameTime[index] = @floatCast(root.lastFrameTime.load(.monotonic)*1000.0);
 	index = (index + 1)%@as(u31, @intCast(lastFrameTime.len));
 	draw.text("32 ms", 0, 16, 8);
 	draw.text("16 ms", 0, 32, 8);
@@ -97,7 +97,7 @@ pub fn render() void {
 
 	ssbo.bufferData(f32, &lastFrameTime);
 
-	if (main.settings.launchConfig.vulkanTestingMode) {
+	if (root.settings.launchConfig.vulkanTestingMode) {
 		vulkan.currentFrame.guiCommands.bindPipeline(pipeline, null);
 		vulkan.currentFrame.guiCommands.bindDescriptors(pipeline, .graphics, 0, &.{
 			.{.ssbo = .{.binding = 5, .ssbo = ssbo}},
@@ -105,7 +105,7 @@ pub fn render() void {
 		vulkan.currentFrame.guiCommands.pushConstants(pipeline, &Uniforms{
 			.start = pos,
 			.dimension = .{dim[0], draw.setScale(1)},
-			.screen = .{@floatFromInt(main.Window.width), @floatFromInt(main.Window.height)},
+			.screen = .{@floatFromInt(root.Window.width), @floatFromInt(root.Window.height)},
 			.points = lastFrameTime.len,
 			.offset = index,
 			.lineColor = .{1, 1, 1},
@@ -116,7 +116,7 @@ pub fn render() void {
 		c.glUniform1i(uniforms.points, lastFrameTime.len);
 		c.glUniform1i(uniforms.offset, index);
 		c.glUniform3f(uniforms.lineColor, 1, 1, 1);
-		c.glUniform2f(uniforms.screen, @floatFromInt(main.Window.width), @floatFromInt(main.Window.height));
+		c.glUniform2f(uniforms.screen, @floatFromInt(root.Window.width), @floatFromInt(root.Window.height));
 		c.glUniform2f(uniforms.start, pos[0], pos[1]);
 		c.glUniform2f(uniforms.dimension, dim[0], draw.setScale(1));
 		ssbo.bind(5);

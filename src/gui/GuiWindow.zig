@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const utils = main.utils;
-const graphics = main.graphics;
+const utils = root.utils;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
-const settings = main.settings;
-const vec = main.vec;
+const settings = root.settings;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 const Vec2i = vec.Vec2i;
 
@@ -58,7 +58,7 @@ closeable: bool = true,
 isHud: bool = false,
 titleBar: ?*GuiComponent.HorizontalList = null,
 
-shiftClickableInventory: ?main.items.Inventory.ClientInventory = null,
+shiftClickableInventory: ?root.items.Inventory.ClientInventory = null,
 
 /// Called every frame.
 renderFn: *const fn () void = &defaultFunction,
@@ -67,7 +67,7 @@ updateFn: *const fn () void = &defaultFunction,
 /// Called every frame for the currently selected window.
 updateSelectedFn: *const fn () void = &defaultFunction,
 /// Called every frame for the currently hovered window.
-updateHoveredFn: *const fn () main.callbacks.Result = &defaultFunctionWithResult,
+updateHoveredFn: *const fn () root.callbacks.Result = &defaultFunctionWithResult,
 
 onOpenFn: *const fn () void = &defaultFunction,
 
@@ -161,11 +161,11 @@ pub fn globalDeinit() void {
 }
 
 pub fn defaultFunction() void {}
-pub fn defaultFunctionWithResult() main.callbacks.Result {
+pub fn defaultFunctionWithResult() root.callbacks.Result {
 	return .ignored;
 }
 
-pub fn mainButtonPressed(self: *const GuiWindow, mousePosition: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *const GuiWindow, mousePosition: Vec2f) root.callbacks.Result {
 	const scaledMousePos = (mousePosition - self.pos)/@as(Vec2f, @splat(self.scale));
 	const btnPos = self.getButtonPositions();
 	const zoomInPos = btnPos[2]/self.scale;
@@ -302,7 +302,7 @@ fn snapToOtherWindow(self: *GuiWindow) void {
 }
 
 fn positionRelativeToFrame(self: *GuiWindow) void {
-	const windowSize = main.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
+	const windowSize = root.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
 	inline for (&self.relativePosition, 0..) |*relPos, i| {
 		// Snap to the center:
 		if (@abs(self.pos[i] + self.size[i] - windowSize[i]/2) <= snapDistance) {
@@ -381,7 +381,7 @@ pub fn update(self: *GuiWindow) void {
 
 pub fn updateSelected(self: *GuiWindow, mousePosition: Vec2f) void {
 	self.updateSelectedFn();
-	const windowSize = main.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
+	const windowSize = root.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
 	if (self == grabbedWindow and windowMoving and (gui.reorderWindows or self.showTitleBar)) blk: {
 		const _grabPosition = grabPosition orelse break :blk;
 		self.relativePosition[0] = .{.ratio = undefined};
@@ -405,7 +405,7 @@ pub fn updateSelected(self: *GuiWindow, mousePosition: Vec2f) void {
 	}
 }
 
-pub fn updateHovered(self: *GuiWindow, mousePosition: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *GuiWindow, mousePosition: Vec2f) root.callbacks.Result {
 	const scaledMousePos = (mousePosition - self.pos)/@as(Vec2f, @splat(self.scale));
 	if (scaledMousePos[1] < titleBarHeight and (self.showTitleBar or gui.reorderWindows)) {
 		_ = if (self.titleBar) |titleBar| titleBar.updateHovered(scaledMousePos);
@@ -431,7 +431,7 @@ pub fn updateWindowPosition(self: *GuiWindow) void {
 		std.log.debug("Resized width to {d}px unscaled", .{self.contentSize[0]});
 	}
 	self.size = self.contentSize*@as(Vec2f, @splat(self.scale));
-	const windowSize = main.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
+	const windowSize = root.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
 	inline for (self.relativePosition, 0..) |relPos, i| {
 		switch (relPos) {
 			.ratio => |ratio| {
@@ -480,7 +480,7 @@ pub fn updateWindowPosition(self: *GuiWindow) void {
 fn drawOrientationLines(self: *const GuiWindow) void {
 	const oldColor = draw.setColor(0x80000000);
 	defer draw.restoreColor(oldColor);
-	const windowSize = main.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
+	const windowSize = root.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
 	inline for (self.relativePosition, 0..) |relPos, i| _continue: {
 		switch (relPos) {
 			.ratio, .relativeToWindow => {
@@ -535,11 +535,11 @@ pub fn drawIcons(self: *const GuiWindow) void {
 }
 
 pub fn render(self: *const GuiWindow, mousePosition: Vec2f) void {
-	if (self.hideIfMouseIsGrabbed and main.Window.grabbed) return;
+	if (self.hideIfMouseIsGrabbed and root.Window.grabbed) return;
 	const oldTranslation = draw.setTranslation(self.pos);
 	const oldScale = draw.setScale(self.scale);
 	if (self.hasBackground) {
-		if (main.settings.launchConfig.vulkanTestingMode and backgroundTexture.vulkanImage != null) {
+		if (root.settings.launchConfig.vulkanTestingMode and backgroundTexture.vulkanImage != null) {
 			graphics.vulkan.currentFrame.guiCommands.bindPipeline(pipeline, graphics.draw.getScissor());
 			graphics.vulkan.currentFrame.guiCommands.bindDescriptors(pipeline, .graphics, 0, &.{
 				.{.image = .{.binding = 0, .image = backgroundTexture.vulkanImage.?}},
@@ -556,7 +556,7 @@ pub fn render(self: *const GuiWindow, mousePosition: Vec2f) void {
 		component.render((mousePosition - self.pos)/@as(Vec2f, @splat(self.scale)));
 	}
 	if (self.showTitleBar or gui.reorderWindows) {
-		if (main.settings.launchConfig.vulkanTestingMode and titleTexture.vulkanImage != null) {
+		if (root.settings.launchConfig.vulkanTestingMode and titleTexture.vulkanImage != null) {
 			graphics.vulkan.currentFrame.guiCommands.bindPipeline(pipeline, graphics.draw.getScissor());
 			graphics.vulkan.currentFrame.guiCommands.bindDescriptors(pipeline, .graphics, 0, &.{
 				.{.image = .{.binding = 0, .image = titleTexture.vulkanImage.?}},
@@ -569,7 +569,7 @@ pub fn render(self: *const GuiWindow, mousePosition: Vec2f) void {
 		}
 		self.drawIcons();
 	}
-	if (self.hasBackground or (!main.Window.grabbed and gui.reorderWindows)) {
+	if (self.hasBackground or (!root.Window.grabbed and gui.reorderWindows)) {
 		const oldColor = draw.setColor(0xff2d2d2d);
 		defer draw.restoreColor(oldColor);
 		draw.rectBorder(.{-2, -2}, self.size/@as(Vec2f, @splat(self.scale)) + Vec2f{4, 4}, 2.0);

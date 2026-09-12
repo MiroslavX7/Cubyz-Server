@@ -2,9 +2,9 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const root = @import("root");
-const settings = main.settings;
-const files = main.files;
-const vec = main.vec;
+const settings = root.settings;
+const files = root.files;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const vulkan = @import("vulkan.zig");
@@ -96,7 +96,7 @@ pub const Gamepad = struct { // MARK: Gamepad
 				}
 			}
 			const isGrabbed = grabbed;
-			for (&main.KeyBoard.keys) |*key| {
+			for (&root.KeyBoard.keys) |*key| {
 				if (key.gamepadAxis == null) {
 					if (key.gamepadButton >= 0) {
 						const oldPressed = oldState.buttons[@intCast(key.gamepadButton)] != 0;
@@ -128,8 +128,8 @@ pub const Gamepad = struct { // MARK: Gamepad
 			}
 		}
 		if (!grabbed) {
-			const x = main.KeyBoard.key("uiRight").value - main.KeyBoard.key("uiLeft").value;
-			const y = main.KeyBoard.key("uiDown").value - main.KeyBoard.key("uiUp").value;
+			const x = root.KeyBoard.key("uiRight").value - root.KeyBoard.key("uiLeft").value;
+			const y = root.KeyBoard.key("uiDown").value - root.KeyBoard.key("uiUp").value;
 			if (x != 0 or y != 0) {
 				lastUsedMouse = false;
 				GLFWCallbacks.currentPos[0] += @floatCast(x*delta*256);
@@ -138,7 +138,7 @@ pub const Gamepad = struct { // MARK: Gamepad
 				GLFWCallbacks.currentPos[0] = std.math.clamp(GLFWCallbacks.currentPos[0], 0, winSize[0]);
 				GLFWCallbacks.currentPos[1] = std.math.clamp(GLFWCallbacks.currentPos[1], 0, winSize[1]);
 			}
-			GLFWCallbacks.scroll(undefined, 0, @floatCast((main.KeyBoard.key("scrollUp").value - main.KeyBoard.key("scrollDown").value)*delta*4));
+			GLFWCallbacks.scroll(undefined, 0, @floatCast((root.KeyBoard.key("scrollUp").value - root.KeyBoard.key("scrollDown").value)*delta*4));
 		}
 		setCursorVisible(!grabbed and lastUsedMouse);
 	}
@@ -168,9 +168,9 @@ pub const Gamepad = struct { // MARK: Gamepad
 			task.* = ControllerMappingDownloadTask{
 				.curTimestamp = curTimestamp,
 			};
-			main.threadPool.addTask(task, &vtable);
+			root.threadPool.addTask(task, &vtable);
 			// Don't attempt to open the window before the GUI is initialized.
-			main.gui.openWindow("download_controller_mappings");
+			root.gui.openWindow("download_controller_mappings");
 		}
 
 		pub fn getPriority(_: *ControllerMappingDownloadTask) f32 {
@@ -184,7 +184,7 @@ pub const Gamepad = struct { // MARK: Gamepad
 		pub fn run(self: *ControllerMappingDownloadTask) void {
 			std.log.info("Starting controller mapping download...", .{});
 			defer self.clean();
-			var client: std.http.Client = .{.allocator = root.stackAllocator.allocator, .io = main.io};
+			var client: std.http.Client = .{.allocator = root.stackAllocator.allocator, .io = root.io};
 			defer client.deinit();
 			var writer = std.Io.Writer.Allocating.init(root.stackAllocator.allocator);
 			defer writer.deinit();
@@ -223,7 +223,7 @@ pub const Gamepad = struct { // MARK: Gamepad
 	pub fn downloadControllerMappings() void {
 		if (builtin.mode == .Debug) return; // TODO: The http fetch adds ~5 seconds to the compile time, so it's disabled in debug mode, see #24435
 		var needsDownload: bool = false;
-		const curTimestamp: i96 = std.Io.Clock.Timestamp.now(main.io, .real).raw.nanoseconds;
+		const curTimestamp: i96 = std.Io.Clock.Timestamp.now(root.io, .real).raw.nanoseconds;
 		const timestamp: i96 = blk: {
 			const stamp = files.cwd().read(root.stackAllocator, "./gamecontrollerdb.stamp") catch break :blk 0;
 			defer root.stackAllocator.free(stamp);
@@ -248,7 +248,7 @@ pub const Gamepad = struct { // MARK: Gamepad
 	}
 	pub fn updateControllerMappings() void {
 		std.log.info("Updating controller mappings in-memory...", .{});
-		if (main.settings.environment.SDL_GAMECONTROLLERCONFIG) |controllerConfig| {
+		if (root.settings.environment.SDL_GAMECONTROLLERCONFIG) |controllerConfig| {
 			_ = c.glfwUpdateGamepadMappings(@ptrCast(controllerConfig));
 			return;
 		}
@@ -507,7 +507,7 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 	}
 	fn keyCallback(_: ?*c.GLFWwindow, glfw_key: c_int, scancode: c_int, action: c_int, _mods: c_int) callconv(.c) void {
 		const mods: Key.Modifiers = @bitCast(@as(u6, @intCast(_mods)));
-		const textKeyPressedInTextField = main.gui.selectedTextInput != null and c.glfwGetKeyName(glfw_key, scancode) != null;
+		const textKeyPressedInTextField = root.gui.selectedTextInput != null and c.glfwGetKeyName(glfw_key, scancode) != null;
 		const isGrabbed = grabbed;
 		if (action == c.GLFW_PRESS or action == c.GLFW_RELEASE) {
 			if (action == c.GLFW_PRESS) {
@@ -517,7 +517,7 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 					return;
 				}
 			}
-			for (&main.KeyBoard.keys) |*key| {
+			for (&root.KeyBoard.keys) |*key| {
 				if (glfw_key == key.key) {
 					if (glfw_key != c.GLFW_KEY_UNKNOWN or scancode == key.scancode) {
 						key.setPressed(action == c.GLFW_PRESS, isGrabbed, mods, textKeyPressedInTextField);
@@ -525,7 +525,7 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 				}
 			}
 		} else if (action == c.GLFW_REPEAT) {
-			for (&main.KeyBoard.keys) |*key| {
+			for (&root.KeyBoard.keys) |*key| {
 				if (glfw_key == key.key) {
 					if (glfw_key != c.GLFW_KEY_UNKNOWN or scancode == key.scancode) {
 						key.action(.repeat, isGrabbed, mods, textKeyPressedInTextField);
@@ -536,7 +536,7 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 	}
 	fn charCallback(_: ?*c.GLFWwindow, codepoint: c_uint) callconv(.c) void {
 		if (!grabbed) {
-			main.gui.textCallbacks.char(@intCast(codepoint));
+			root.gui.textCallbacks.char(@intCast(codepoint));
 		}
 	}
 
@@ -544,9 +544,9 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 		std.log.info("Framebuffer: {}, {}", .{newWidth, newHeight});
 		width = @intCast(newWidth);
 		height = @intCast(newHeight);
-		main.renderer.updateViewport(width, height);
-		main.gui.updateGuiScale();
-		main.gui.updateWindowPositions();
+		root.renderer.updateViewport(width, height);
+		root.gui.updateGuiScale();
+		root.gui.updateWindowPositions();
 	}
 	// Mouse deltas are averaged over multiple frames using a circular buffer:
 	const deltasLen: u2 = 3;
@@ -560,7 +560,7 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 			@floatCast(y),
 		};
 		if (grabbed and !ignoreDataAfterRecentGrab) {
-			var newDelta = (newPos - currentPos)*@as(Vec2f, @splat(main.settings.mouseSensitivity));
+			var newDelta = (newPos - currentPos)*@as(Vec2f, @splat(root.settings.mouseSensitivity));
 			if (settings.invertMouseY) {
 				newDelta[1] *= -1;
 			}
@@ -576,7 +576,7 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 			averagedDelta += delta;
 		}
 		averagedDelta /= @splat(deltasLen);
-		main.game.camera.moveRotation(averagedDelta[0]*0.0089, averagedDelta[1]*0.0089);
+		root.game.camera.moveRotation(averagedDelta[0]*0.0089, averagedDelta[1]*0.0089);
 		deltaBufferPosition = (deltaBufferPosition + 1)%deltasLen;
 		deltas[deltaBufferPosition] = Vec2f{0, 0};
 	}
@@ -591,7 +591,7 @@ pub const GLFWCallbacks = struct { // MARK: GLFWCallbacks
 					return;
 				}
 			}
-			for (&main.KeyBoard.keys) |*key| {
+			for (&root.KeyBoard.keys) |*key| {
 				if (button == key.mouseButton) {
 					key.setPressed(action == c.GLFW_PRESS, isGrabbed, mods, false);
 				}
@@ -676,7 +676,7 @@ fn updateCursor() void {
 
 fn releaseButtonsOnGrabChange(grab: bool) void {
 	const state: Key.Requirement = if (grab) .inMenu else .inGame;
-	for (&main.KeyBoard.keys) |*key| {
+	for (&root.KeyBoard.keys) |*key| {
 		if (key.notifyRequirement == state and key.pressed) {
 			key.pressed = false;
 			if (key.releaseAction) |rel| rel(key.modsOnPress);
@@ -702,7 +702,7 @@ pub fn getWindowSize() Vec2f {
 }
 
 pub fn reloadSettings() void {
-	c.glfwSwapInterval(@intFromBool(main.settings.vsync));
+	c.glfwSwapInterval(@intFromBool(root.settings.vsync));
 }
 
 pub fn getClipboardString() []const u8 {
@@ -717,7 +717,7 @@ pub fn setClipboardString(string: []const u8) void {
 
 pub fn init() void { // MARK: init()
 	_ = c.glfwSetErrorCallback(GLFWCallbacks.errorCallback);
-	const windowTitle = "Cubyz " ++ main.settings.version.version;
+	const windowTitle = "Cubyz " ++ root.settings.version.version;
 
 	if (builtin.target.os.tag == .macos) {
 		// NOTE(blackedout): Since the Vulkan loader is linked statically for Cubyz on macOS, libvulkan*.dylib is part of the Cubyz executable
@@ -735,7 +735,7 @@ pub fn init() void { // MARK: init()
 		std.log.err("Vulkan is not supported. Please update your drivers if you want to keep playing Cubyz in the future.", .{});
 	} else {
 		c.glfwWindowHint(c.GLFW_CLIENT_API, c.GLFW_NO_API);
-		c.glfwWindowHint(c.GLFW_VISIBLE, @intFromBool(main.settings.launchConfig.vulkanTestingMode));
+		c.glfwWindowHint(c.GLFW_VISIBLE, @intFromBool(root.settings.launchConfig.vulkanTestingMode));
 		vulkanWindow = c.glfwCreateWindow(width, height, windowTitle, null, null) orelse @panic("Failed to create GLFW window");
 		vulkan.init(vulkanWindow) catch |err| {
 			std.log.err("Error while initializing Vulkan: {s}", .{@errorName(err)});
@@ -754,7 +754,7 @@ pub fn init() void { // MARK: init()
 
 	window = c.glfwCreateWindow(width, height, windowTitle, null, null) orelse @panic("Failed to create GLFW window");
 	iconBlock: {
-		const image = main.graphics.Image.readFromFile(root.stackAllocator, "assets/cubyz/logo.png", .{.orientation = .asIs}) catch |err| {
+		const image = root.graphics.Image.readFromFile(root.stackAllocator, "assets/cubyz/logo.png", .{.orientation = .asIs}) catch |err| {
 			std.log.err("Error loading logo: {s}", .{@errorName(err)});
 			break :iconBlock;
 		};

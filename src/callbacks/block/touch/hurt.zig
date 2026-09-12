@@ -3,16 +3,16 @@ const std = @import("std");
 const root = @import("root");
 
 dps: f32,
-damageType: main.game.DamageType,
+damageType: root.game.DamageType,
 
-pub fn init(zon: main.ZonElement, _: main.callbacks.Creator) ?*@This() {
+pub fn init(zon: root.ZonElement, _: root.callbacks.Creator) ?*@This() {
 	const result = root.worldArena.create(@This());
 	result.* = .{
 		.dps = zon.get(f32, "dps") orelse {
 			std.log.err("Missing field \"dps\" for hurt event", .{});
 			return null;
 		},
-		.damageType = std.meta.stringToEnum(main.game.DamageType, zon.get([]const u8, "damageType") orelse {
+		.damageType = std.meta.stringToEnum(root.game.DamageType, zon.get([]const u8, "damageType") orelse {
 			std.log.err("Missing field \"damageType\" for hurt event", .{});
 			return null;
 		}) orelse {
@@ -23,9 +23,9 @@ pub fn init(zon: main.ZonElement, _: main.callbacks.Creator) ?*@This() {
 	return result;
 }
 
-pub fn run(self: *@This(), params: main.callbacks.BlockTouchCallback.Params) main.callbacks.Result {
-	std.debug.assert(params.entity == &main.game.Player.super); // TODO: Implement on the server side
+pub fn run(self: *@This(), params: root.callbacks.BlockTouchCallback.Params) root.callbacks.Result {
+	std.debug.assert(params.entity == &root.game.Player.super); // TODO: Implement on the server side
 	const damage = self.dps*@as(f32, @floatCast(params.deltaTime));
-	root.sync.addHealth(-damage, self.damageType, .client, main.game.Player.id);
+	root.sync.addHealth(-damage, self.damageType, .client, root.game.Player.id);
 	return .handled;
 }

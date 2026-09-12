@@ -7,13 +7,13 @@ const migrations = @import("migrations.zig");
 const blueprint = @import("blueprint.zig");
 const Blueprint = blueprint.Blueprint;
 const particles = @import("particles.zig");
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const biomes = root.server.terrain.biomes;
 const sbb = root.server.terrain.sbb;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const NeverFailingArenaAllocator = root.heap.NeverFailingArenaAllocator;
-const List = main.List;
-const files = main.files;
+const List = root.List;
+const files = root.files;
 
 var common: Assets = undefined;
 
@@ -147,7 +147,7 @@ pub const Assets = struct { // MARK: Assets
 		dir: files.Dir,
 
 		fn discoverAll(allocator: NeverFailingAllocator, assetDir: root.files.Dir, path: []const u8) []Addon {
-			var addons: main.List(Addon) = .empty;
+			var addons: root.List(Addon) = .empty;
 
 			var dir = assetDir.openIterableDir(path) catch |err| {
 				std.log.err("Can't open asset path {s}: {s}", .{path, @errorName(err)});
@@ -156,7 +156,7 @@ pub const Assets = struct { // MARK: Assets
 			defer dir.close();
 
 			var iterator = dir.iterate();
-			outer: while (iterator.next(main.io) catch |err| blk: {
+			outer: while (iterator.next(root.io) catch |err| blk: {
 				std.log.err("Got error while iterating over asset path {s}: {s}", .{path, @errorName(err)});
 				break :blk null;
 			}) |addon| {
@@ -249,7 +249,7 @@ pub const Assets = struct { // MARK: Assets
 			var walker = assetsDirectory.walk(root.stackAllocator);
 			defer walker.deinit();
 
-			while (walker.next(main.io) catch |err| blk: {
+			while (walker.next(root.io) catch |err| blk: {
 				std.log.err("Got error while iterating addon directory {s}: {s}", .{assetType, @errorName(err)});
 				break :blk null;
 			}) |entry| {
@@ -291,7 +291,7 @@ pub const Assets = struct { // MARK: Assets
 			var walker = assetsDirectory.walk(root.stackAllocator);
 			defer walker.deinit();
 
-			while (walker.next(main.io) catch |err| blk: {
+			while (walker.next(root.io) catch |err| blk: {
 				std.log.err("Got error while iterating addon directory {s}: {s}", .{subPath, @errorName(err)});
 				break :blk null;
 			}) |entry| {
@@ -321,7 +321,7 @@ pub const Assets = struct { // MARK: Assets
 			var walker = assetsDirectory.walk(root.stackAllocator);
 			defer walker.deinit();
 
-			while (walker.next(main.io) catch |err| blk: {
+			while (walker.next(root.io) catch |err| blk: {
 				std.log.err("Got error while iterating addon directory {s}: {s}", .{subPath, @errorName(err)});
 				break :blk null;
 			}) |entry| {
@@ -446,7 +446,7 @@ fn registerRecipesFromZon(zon: ZonElement) void {
 
 pub const Palette = struct { // MARK: Palette
 	allocator: NeverFailingAllocator,
-	palette: main.List([]const u8),
+	palette: root.List([]const u8),
 
 	pub fn init(allocator: NeverFailingAllocator, zon: ZonElement, firstElement: ?[]const u8) !*Palette {
 		const self = switch (zon) {
@@ -557,7 +557,7 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 
 	worldAssetFolder = root.worldArena.dupe(u8, assetFolder);
 
-	main.Tag.initTags();
+	root.Tag.initTags();
 
 	const worldArena = root.stackAllocator.createArena();
 	defer root.stackAllocator.destroyArena(worldArena);
@@ -587,7 +587,7 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 		var modelIterator = worldAssets.blockModels.iterator();
 		while (modelIterator.next()) |entry| {
 			const zon = worldAssets.blockModelsZon.get(entry.key_ptr.*);
-			_ = main.models.registerModel(entry.key_ptr.*, entry.value_ptr.*, zon);
+			_ = root.models.registerModel(entry.key_ptr.*, entry.value_ptr.*, zon);
 		}
 	}
 
@@ -596,7 +596,7 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 		// First models from the palette to enforce ID values.
 		for (entityModelPalette.palette.items) |entityModelId| {
 			std.log.debug("Registering entity model {s}", .{entityModelId});
-			_ = main.entityModel.register(assetFolder, entityModelId, worldAssets.entityModelDescriptions.get(entityModelId) orelse .null);
+			_ = root.entityModel.register(assetFolder, entityModelId, worldAssets.entityModelDescriptions.get(entityModelId) orelse .null);
 		}
 		// Then all the models that were missing in palette but are present in the game.
 		var entModelIterator = worldAssets.entityModelDescriptions.iterator();
@@ -604,15 +604,15 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 			const entityModelId = entry.key_ptr.*;
 			const zon = entry.value_ptr.*;
 
-			if (main.entityModel.getById(entityModelId) != null) continue;
+			if (root.entityModel.getById(entityModelId) != null) continue;
 
 			std.log.debug("Registering entity model {s}", .{entry.key_ptr.*});
-			_ = main.entityModel.register(assetFolder, entityModelId, zon);
+			_ = root.entityModel.register(assetFolder, entityModelId, zon);
 			entityModelPalette.add(entityModelId);
 		}
 	}
 
-	if (!main.settings.launchConfig.headlessServer) blocks.meshes.registerBlockBreakingAnimation(assetFolder);
+	if (!root.settings.launchConfig.headlessServer) blocks.meshes.registerBlockBreakingAnimation(assetFolder);
 
 	// Blocks:
 	// First blocks from the palette to enforce ID values.
@@ -775,7 +775,7 @@ pub fn loadWorldAssets(assetFolder: []const u8, blockPalette: *Palette, itemPale
 	};
 	defer dir.close();
 	var dirIterator = dir.iterate();
-	while (dirIterator.next(main.io) catch |err| blk: {
+	while (dirIterator.next(root.io) catch |err| blk: {
 		std.log.err("Got error while iterating over asset path {s}: {s}", .{"assets", @errorName(err)});
 		break :blk null;
 	}) |addon| {
@@ -804,11 +804,11 @@ pub fn unloadAssets() void { // MARK: unloadAssets()
 	biomes.reset();
 	root.server.terrain.cave_layers.reset();
 	root.server.terrain.structures.reset();
-	main.models.reset();
-	main.particles.ParticleManager.reset();
-	main.rotation.reset();
-	main.Tag.resetTags();
-	main.entityModel.reset();
+	root.models.reset();
+	root.particles.ParticleManager.reset();
+	root.rotation.reset();
+	root.Tag.resetTags();
+	root.entityModel.reset();
 
 	// Remove paths from asset hot reloading:
 	var dir = root.files.cwd().openIterableDir("assets") catch |err| {
@@ -817,7 +817,7 @@ pub fn unloadAssets() void { // MARK: unloadAssets()
 	};
 	defer dir.close();
 	var dirIterator = dir.iterate();
-	while (dirIterator.next(main.io) catch |err| blk: {
+	while (dirIterator.next(root.io) catch |err| blk: {
 		std.log.err("Got error while iterating over asset path {s}: {s}", .{"assets", @errorName(err)});
 		break :blk null;
 	}) |addon| {

@@ -5,10 +5,10 @@ const Array3D = root.utils.Array3D;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const sdf = root.server.terrain.sdf;
 const SdfInstance = sdf.SdfInstance;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 
 pub const id = "cubyz:cluster";
 
@@ -27,7 +27,7 @@ const Instance = struct {
 };
 
 pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
-	var list: main.List(Entry) = .empty;
+	var list: root.List(Entry) = .empty;
 	defer list.deinit(root.stackAllocator);
 
 	var maxExtend: vec.Boxi = .{
@@ -61,13 +61,13 @@ pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
 pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) SdfInstance {
 	var minPos: Vec3i = @splat(1e9);
 	var maxPos: Vec3i = @splat(-1e9);
-	var children: main.List(SdfInstance) = .empty;
+	var children: root.List(SdfInstance) = .empty;
 	defer children.deinit(root.stackAllocator);
 	for (self.children) |entry| {
-		const amount: usize = @floor(entry.model.minAmount + main.random.nextFloat(seed)*(entry.model.maxAmount - entry.model.minAmount) + main.random.nextFloat(seed));
+		const amount: usize = @floor(entry.model.minAmount + root.random.nextFloat(seed)*(entry.model.maxAmount - entry.model.minAmount) + root.random.nextFloat(seed));
 		for (0..amount) |_| {
 			var result = entry.model.instantiate(arena, seed);
-			const offset = entry.positionOffset + entry.randomOffset*main.random.nextFloatVectorSigned(3, seed);
+			const offset = entry.positionOffset + entry.randomOffset*root.random.nextFloatVectorSigned(3, seed);
 			result.minBounds +%= @trunc(offset);
 			result.maxBounds +%= @trunc(offset);
 			minPos = @min(minPos, result.minBounds);

@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const CaveBiomeMapFragment = terrain.CaveBiomeMap.CaveBiomeMapFragment;
 const Biome = terrain.biomes.Biome;
-const Vec3i = main.vec.Vec3i;
+const Vec3i = root.vec.Vec3i;
 
 // Generates the climate map using a fluidynamics simulation, with a circular heat distribution.
 
@@ -34,7 +34,7 @@ pub fn generate(map: *CaveBiomeMapFragment, worldSeed: u64) void {
 		while (x < CaveBiomeMapFragment.caveBiomeMapSize) : (x += CaveBiomeMapFragment.caveBiomeSize) {
 			var y: u31 = 0;
 			while (y < CaveBiomeMapFragment.caveBiomeMapSize) : (y += CaveBiomeMapFragment.caveBiomeSize) {
-				const pos: main.vec.Vec3i = .{map.pos.wx + x, map.pos.wy + y, map.pos.wz + z};
+				const pos: root.vec.Vec3i = .{map.pos.wx + x, map.pos.wy + y, map.pos.wz + z};
 				for (0..2) |_map| {
 					const offset: Vec3i = @splat(if (_map == 0) 0 else CaveBiomeMapFragment.caveBiomeSize/2);
 					const biomeWorldPos = CaveBiomeMapFragment.rotateInverse(pos + offset);

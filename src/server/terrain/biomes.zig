@@ -1,16 +1,16 @@
 const std = @import("std");
 
 const root = @import("root");
-const blocks = main.blocks;
+const blocks = root.blocks;
 const ServerChunk = root.chunk.ServerChunk;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const vec = main.vec;
-const Vec3f = main.vec.Vec3f;
-const Vec3d = main.vec.Vec3d;
+const vec = root.vec;
+const Vec3f = root.vec.Vec3f;
+const Vec3d = root.vec.Vec3d;
 
-const Tag = main.Tag;
+const Tag = root.Tag;
 const StructureTable = terrain.structures.StructureTable;
 pub const SimpleStructureModel = terrain.structures.SimpleStructureModel;
 
@@ -27,7 +27,7 @@ const Stripe = struct { // MARK: Stripe
 	pub fn init(parameters: ZonElement) Stripe {
 		var dir: ?Vec3d = parameters.get(Vec3d, "direction");
 		if (dir != null) {
-			dir = main.vec.normalize(dir.?);
+			dir = root.vec.normalize(dir.?);
 		}
 
 		const block: root.blocks.Block = blocks.parseBlock(parameters.get([]const u8, "block") orelse "");
@@ -347,7 +347,7 @@ pub const Biome = struct { // MARK: Biome
 		self.structure = BlockStructure.init(root.worldArena, zon.getChild("ground_structure"));
 
 		const structures = zon.getChild("structures");
-		var vegetation: main.List(SimpleStructureModel) = .empty;
+		var vegetation: root.List(SimpleStructureModel) = .empty;
 		var totalChance: f32 = 0;
 		defer vegetation.deinit(root.stackAllocator);
 		// Add structures from the biome's internal structure table
@@ -375,7 +375,7 @@ pub const Biome = struct { // MARK: Biome
 		self.vegetationModels = root.worldArena.dupe(SimpleStructureModel, vegetation.items);
 
 		const caves = zon.getChild("caveModels");
-		var caveSdfs: main.List(terrain.sdf.SdfModel) = .empty;
+		var caveSdfs: root.List(terrain.sdf.SdfModel) = .empty;
 		defer caveSdfs.deinit(root.stackAllocator);
 		for (caves.toSlice()) |elem| {
 			const model = terrain.sdf.SdfModel.initModel(elem) orelse continue;
@@ -460,7 +460,7 @@ pub const BlockStructure = struct { // MARK: BlockStructure
 		var depth = startingDepth;
 		var remainingSkippedBlocks = @as(i32, @trunc(@as(f32, @floatFromInt(slope))*soilCreep)) - 1;
 		for (self.structure) |blockStack| {
-			const total = blockStack.min + main.random.nextIntBounded(u32, seed, @as(u32, 1) + blockStack.max - blockStack.min);
+			const total = blockStack.min + root.random.nextIntBounded(u32, seed, @as(u32, 1) + blockStack.max - blockStack.min);
 			for (0..total) |_| {
 				if (remainingSkippedBlocks > 0) {
 					remainingSkippedBlocks -= 1;
@@ -530,7 +530,7 @@ pub const TreeNode = union(enum) { // MARK: TreeNode
 		var lowerIndex: usize = undefined;
 		var upperIndex: usize = undefined;
 		{
-			var lists: [3]main.List(Biome) = .{
+			var lists: [3]root.List(Biome) = .{
 				.initCapacity(root.stackAllocator, currentSlice.len),
 				.initCapacity(root.stackAllocator, currentSlice.len),
 				.initCapacity(root.stackAllocator, currentSlice.len),
@@ -561,13 +561,13 @@ pub const TreeNode = union(enum) { // MARK: TreeNode
 	pub fn getBiome(self: *const TreeNode, seed: *u64, x: i32, y: i32, depth: usize) *const Biome {
 		switch (self.*) {
 			.leaf => |leaf| {
-				var biomeSeed = main.random.initSeed2D(seed.*, main.vec.Vec2i{x, y});
+				var biomeSeed = root.random.initSeed2D(seed.*, root.vec.Vec2i{x, y});
 				const result = leaf.aliasTable.sample(&biomeSeed);
 				return result;
 			},
 			.branch => |branch| {
 				const wavelength = root.server.world.?.chunkManager.terrainGenerationProfile.climateWavelengths[depth];
-				const value = terrain.noise.ValueNoise.samplePoint2D(@as(f32, @floatFromInt(x))/wavelength, @as(f32, @floatFromInt(y))/wavelength, main.random.nextInt(u32, seed));
+				const value = terrain.noise.ValueNoise.samplePoint2D(@as(f32, @floatFromInt(x))/wavelength, @as(f32, @floatFromInt(y))/wavelength, root.random.nextInt(u32, seed));
 				var index: u2 = 0;
 				if (value >= branch.lowerBorder) {
 					if (value >= branch.upperBorder) {
@@ -584,10 +584,10 @@ pub const TreeNode = union(enum) { // MARK: TreeNode
 
 // MARK: init/register
 var finishedLoading: bool = false;
-var biomes: main.List(Biome) = .empty;
-var caveBiomes: main.List(Biome) = .empty;
+var biomes: root.List(Biome) = .empty;
+var caveBiomes: root.List(Biome) = .empty;
 var biomesById: std.StringHashMapUnmanaged(*Biome) = .{};
-var biomesByIndex: main.List(*Biome) = .empty;
+var biomesByIndex: root.List(*Biome) = .empty;
 pub var byTypeBiomes: *TreeNode = undefined;
 
 const SubBiomeData = struct {
@@ -603,7 +603,7 @@ const UnfinishedSubBiomeData = struct {
 		return .{.biome = getById(self.biomeId), .parentEdgeDistance = self.parentEdgeDistance};
 	}
 };
-var unfinishedSubBiomes: std.StringHashMapUnmanaged(main.List(UnfinishedSubBiomeData)) = .{};
+var unfinishedSubBiomes: std.StringHashMapUnmanaged(root.List(UnfinishedSubBiomeData)) = .{};
 
 const UnfinishedTransitionBiomeData = struct {
 	biomeId: []const u8,

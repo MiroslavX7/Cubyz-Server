@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const Block = root.blocks.Block;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 
 pub const ClientBlockCallback = Callback(struct { block: Block, chunk: *root.chunk.Chunk, blockPos: Vec3i }, @import("block/client/_list.zig"));
@@ -30,7 +30,7 @@ fn Callback(_Params: type, list: type) type {
 		pub const Params = _Params;
 
 		const VTable = struct {
-			init: *const fn (zon: main.ZonElement, creator: Creator) ?*anyopaque,
+			init: *const fn (zon: root.ZonElement, creator: Creator) ?*anyopaque,
 			run: *const fn (self: *anyopaque, params: Params) Result,
 		};
 
@@ -46,7 +46,7 @@ fn Callback(_Params: type, list: type) type {
 			}
 		}
 
-		pub fn init(zon: main.ZonElement, creator: Creator) ?@This() {
+		pub fn init(zon: root.ZonElement, creator: Creator) ?@This() {
 			const typ = zon.get([]const u8, "type") orelse {
 				std.log.err("Missing field \"type\"", .{});
 				return null;

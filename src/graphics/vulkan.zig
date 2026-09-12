@@ -243,7 +243,7 @@ pub fn createInstance() void {
 	}
 
 	var createFlags: u32 = 0;
-	var extensions: main.ListManaged([*c]const u8) = .init(root.stackAllocator);
+	var extensions: root.ListManaged([*c]const u8) = .init(root.stackAllocator);
 	defer extensions.deinit();
 	extensions.appendSlice(glfwExtensions[0..glfwExtensionCount]);
 
@@ -452,7 +452,7 @@ fn createLogicalDevice() void {
 	_ = uniqueFamilies.getOrPut(root.stackAllocator.allocator, indices.graphicsFamily.?) catch unreachable;
 	_ = uniqueFamilies.getOrPut(root.stackAllocator.allocator, indices.presentFamily.?) catch unreachable;
 
-	var queueCreateInfos: main.ListManaged(c.VkDeviceQueueCreateInfo) = .init(root.stackAllocator);
+	var queueCreateInfos: root.ListManaged(c.VkDeviceQueueCreateInfo) = .init(root.stackAllocator);
 	defer queueCreateInfos.deinit();
 	var iterator = uniqueFamilies.keyIterator();
 	while (iterator.next()) |queueFamily| {
@@ -529,8 +529,8 @@ const FrameData = struct {
 	uploadFinished: Semaphore,
 	renderFinished: Semaphore,
 
-	uploadCommands: main.graphics.CommandBuffer,
-	guiCommands: main.graphics.CommandBuffer,
+	uploadCommands: root.graphics.CommandBuffer,
+	guiCommands: root.graphics.CommandBuffer,
 
 	fn init() FrameData {
 		return .{
@@ -605,7 +605,7 @@ pub const SwapChain = struct { // MARK: SwapChain
 			}
 			var width: i32 = undefined;
 			var height: i32 = undefined;
-			c.glfwGetFramebufferSize(main.Window.vulkanWindow, &width, &height);
+			c.glfwGetFramebufferSize(root.Window.vulkanWindow, &width, &height);
 			return .{
 				.width = @min(self.capabilities.maxImageExtent.width, @max(self.capabilities.minImageExtent.width, @max(0, width))),
 				.height = @min(self.capabilities.maxImageExtent.height, @max(self.capabilities.minImageExtent.height, @max(0, height))),
@@ -849,7 +849,7 @@ pub const Image = struct { // MARK: Image
 	handle: c.VkImage = undefined,
 	allocation: c.VmaAllocation = undefined,
 	mipLevels: u32,
-	size: main.vec.Vec3i,
+	size: root.vec.Vec3i,
 	view: c.VkImageView = undefined,
 	sampler: c.VkSampler = undefined,
 
@@ -883,7 +883,7 @@ pub const Image = struct { // MARK: Image
 			mirrorClampToEdge = c.VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE,
 		};
 	};
-	pub fn init(size: main.vec.Vec3i, options: ImageOptions) Image {
+	pub fn init(size: root.vec.Vec3i, options: ImageOptions) Image {
 		var self: Image = .{
 			.mipLevels = options.mipLevels,
 			.size = size,
@@ -1044,7 +1044,7 @@ pub const gpu_garbage_collection = struct {
 		image: Image,
 	};
 	var currentList: usize = 0;
-	var lists: [frames.len + 1]main.List(Entry) = @splat(.empty);
+	var lists: [frames.len + 1]root.List(Entry) = @splat(.empty);
 
 	fn deinit() void {
 		for (lists) |list| {

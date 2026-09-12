@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 const TaskType = root.utils.ThreadPool.TaskType;
 
 const gui = @import("../gui.zig");
@@ -26,11 +26,11 @@ pub var window = GuiWindow{
 var time: std.Io.Timestamp = undefined;
 
 pub fn onOpen() void {
-	time = main.timestamp();
+	time = root.timestamp();
 }
 
 pub fn render() void {
-	const duration = time.durationTo(main.timestamp());
+	const duration = time.durationTo(root.timestamp());
 	if (duration.toSeconds() > 2) {
 		gui.closeWindowFromRef(&window);
 		return;

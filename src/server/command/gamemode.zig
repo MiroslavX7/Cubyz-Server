@@ -13,7 +13,7 @@ pub const usage =
 ;
 
 pub const Args = union(enum) {
-	@"/gamemode <playerIndex> <mode>": struct { playerIndex: ?command.PlayerIndex, mode: ?main.game.Gamemode },
+	@"/gamemode <playerIndex> <mode>": struct { playerIndex: ?command.PlayerIndex, mode: ?root.game.Gamemode },
 };
 
 pub fn execute(args: Args, source: Source) void {

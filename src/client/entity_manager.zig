@@ -1,15 +1,15 @@
 const std = @import("std");
 
 const root = @import("root");
-const chunk = main.chunk;
-const game = main.game;
-const graphics = main.graphics;
-const ZonElement = main.ZonElement;
-const renderer = main.renderer;
-const settings = main.settings;
-const utils = main.utils;
+const chunk = root.chunk;
+const game = root.game;
+const graphics = root.graphics;
+const ZonElement = root.ZonElement;
+const renderer = root.renderer;
+const settings = root.settings;
+const utils = root.utils;
 const BinaryReader = utils.BinaryReader;
-const vec = main.vec;
+const vec = root.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
@@ -22,7 +22,7 @@ var lastTime: i16 = 0;
 var timeDifference: utils.TimeDifference = utils.TimeDifference{};
 
 pub var entities: root.utils.VirtualList(root.client.Entity, 1 << 20) = undefined;
-pub var idMapping: main.ListManaged(?u32) = undefined;
+pub var idMapping: root.ListManaged(?u32) = undefined;
 pub var mutex: root.utils.Mutex = .{};
 
 pub fn init() void {
@@ -51,7 +51,7 @@ pub fn update() void {
 	mutex.lock();
 	defer mutex.unlock();
 
-	var time: i16 = @truncate(main.timestamp().toMilliseconds() -% settings.entityLookback);
+	var time: i16 = @truncate(root.timestamp().toMilliseconds() -% settings.entityLookback);
 	time -%= timeDifference.difference.load(.monotonic);
 	for (entities.items()) |*ent| {
 		ent.update(time, lastTime);

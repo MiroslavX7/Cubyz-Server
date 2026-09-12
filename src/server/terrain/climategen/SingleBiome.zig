@@ -4,14 +4,14 @@ const build_options = @import("build_options");
 
 const root = @import("root");
 const Array2D = root.utils.Array2D;
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const ClimateMapFragment = terrain.ClimateMap.ClimateMapFragment;
 const BiomeSample = terrain.ClimateMap.BiomeSample;
 const Biome = terrain.biomes.Biome;
 const TreeNode = terrain.biomes.TreeNode;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2i = vec.Vec2i;
 const Vec2f = vec.Vec2f;
 

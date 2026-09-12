@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const gui = main.gui;
+const gui = root.gui;
 const GuiComponent = gui.GuiComponent;
 const GuiWindow = gui.GuiWindow;
 const Button = GuiComponent.Button;
 const VerticalList = GuiComponent.VerticalList;
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 pub var window = GuiWindow{
 	.contentSize = Vec2f{128, 256},

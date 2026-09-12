@@ -2,8 +2,8 @@ const std = @import("std");
 
 const root = @import("root");
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const ListManaged = main.ListManaged;
-const utils = main.utils;
+const ListManaged = root.ListManaged;
+const utils = root.utils;
 
 pub const Options = struct {
 	commandName: []const u8,

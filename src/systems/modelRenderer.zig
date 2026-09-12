@@ -1,30 +1,30 @@
 const std = @import("std");
 
 const root = @import("root");
-const chunk = main.chunk;
+const chunk = root.chunk;
 const ServerChunk = chunk.ServerChunk;
-const game = main.game;
-const graphics = main.graphics;
-const ZonElement = main.ZonElement;
-const renderer = main.renderer;
-const settings = main.settings;
-const utils = main.utils;
+const game = root.game;
+const graphics = root.graphics;
+const ZonElement = root.ZonElement;
+const renderer = root.renderer;
+const settings = root.settings;
+const utils = root.utils;
 const BinaryReader = utils.BinaryReader;
 const BinaryWriter = utils.BinaryWriter;
-const vec = main.vec;
+const vec = root.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec4f = vec.Vec4f;
 const Vec3i = vec.Vec3i;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const blocks = main.blocks;
+const blocks = root.blocks;
 const World = game.World;
 const ServerWorld = root.server.ServerWorld;
-const items = main.items;
+const items = root.items;
 const ItemStack = items.ItemStack;
-const random = main.random;
-const entity = main.entity;
+const random = root.random;
+const entity = root.entity;
 
 const c = @import("c");
 
@@ -47,7 +47,7 @@ pub const client = struct { // MARK: client
 			"assets/cubyz/shaders/entity_fragment.frag",
 			"",
 			&uniforms,
-			main.entityModel.EntityModel.Vertex,
+			root.entityModel.EntityModel.Vertex,
 			.{
 				.rasterState = .{},
 				.depthStencilState = .{.depthTest = true},
@@ -67,7 +67,7 @@ pub const client = struct { // MARK: client
 		root.client.entity_manager.mutex.lock();
 		defer root.client.entity_manager.mutex.unlock();
 
-		const screenUnits = @as(f32, @floatFromInt(main.Window.height))/1024;
+		const screenUnits = @as(f32, @floatFromInt(root.Window.height))/1024;
 		const fontBaseSize = 128.0;
 		const fontMinScreenSize = 16.0;
 		const fontScreenSize = fontBaseSize*screenUnits;
@@ -91,10 +91,10 @@ pub const client = struct { // MARK: client
 			};
 
 			const rotatedPos = game.camera.viewMatrix.mulVec(pos4f);
-			const projectedPos = Mat4f.fromGl(main.graphics.frame_uniforms.frameData().projectionMatrix).mulVec(rotatedPos);
+			const projectedPos = Mat4f.fromGl(root.graphics.frame_uniforms.frameData().projectionMatrix).mulVec(rotatedPos);
 			if (projectedPos[2] < 0) continue;
-			const xCenter = (1 + projectedPos[0]/projectedPos[3])*@as(f32, @floatFromInt(main.Window.width/2));
-			const yCenter = (1 - projectedPos[1]/projectedPos[3])*@as(f32, @floatFromInt(main.Window.height/2));
+			const xCenter = (1 + projectedPos[0]/projectedPos[3])*@as(f32, @floatFromInt(root.Window.width/2));
+			const yCenter = (1 - projectedPos[1]/projectedPos[3])*@as(f32, @floatFromInt(root.Window.height/2));
 
 			const transparency = 38.0*std.math.log10(vec.lengthSquare(pos3d) + 1) - 80.0;
 			const alpha: u32 = @trunc(std.math.clamp(0xff - transparency, 0, 0xff));
@@ -107,7 +107,7 @@ pub const client = struct { // MARK: client
 			var buf = graphics.TextBuffer.init(root.stackAllocator, renderedName, .{.color = 0xffffff}, false, .center);
 			defer buf.deinit();
 			const fontSize = std.mem.max(f32, &.{fontMinScreenSize, fontScreenSize/projectedPos[3]});
-			const size = buf.calculateLineBreaks(fontSize, @floatFromInt(main.Window.width*8));
+			const size = buf.calculateLineBreaks(fontSize, @floatFromInt(root.Window.width*8));
 			buf.render(xCenter - size[0]/2, yCenter - size[1], fontSize);
 		}
 	}
@@ -139,7 +139,7 @@ pub const client = struct { // MARK: client
 
 				component.matrices[i] = parentMat.mul(node.recalc(entModel.nodePivots[i])).transpose();
 			}
-			main.systems.systems.modelRenderer.client.nodeBuffer.uploadData(component.matrices, &component.bufferAllocation);
+			root.systems.systems.modelRenderer.client.nodeBuffer.uploadData(component.matrices, &component.bufferAllocation);
 		}
 
 		pipeline.bind(null);
@@ -147,7 +147,7 @@ pub const client = struct { // MARK: client
 		c.glUniform3fv(uniforms.ambientLight, 1, @ptrCast(&ambientLight));
 		c.glUniform1f(uniforms.contrast, 0.12);
 
-		main.systems.systems.modelRenderer.client.nodeBuffer.beginRender();
+		root.systems.systems.modelRenderer.client.nodeBuffer.beginRender();
 
 		for (entity.components.@"cubyz:model".client.components.dense.items, entity.components.@"cubyz:model".client.components.denseToSparseIndex.items) |component, id| {
 			if (id == game.Player.id) continue; // don't render local player
@@ -160,7 +160,7 @@ pub const client = struct { // MARK: client
 
 			entTexture.?.bindTo(0);
 			const blockPos: vec.Vec3i = @floor(ent.pos);
-			const lightVals: [6]u8 = main.renderer.mesh_storage.getLight(blockPos[0], blockPos[1], blockPos[2]) orelse @splat(0);
+			const lightVals: [6]u8 = root.renderer.mesh_storage.getLight(blockPos[0], blockPos[1], blockPos[2]) orelse @splat(0);
 			const light = (@as(u32, lightVals[0] >> 3) << 25 |
 				@as(u32, lightVals[1] >> 3) << 20 |
 				@as(u32, lightVals[2] >> 3) << 15 |
@@ -184,7 +184,7 @@ pub const client = struct { // MARK: client
 			c.glDrawElements(c.GL_TRIANGLES, entModel.indexCount, c.GL_UNSIGNED_INT, null);
 		}
 
-		main.systems.systems.modelRenderer.client.nodeBuffer.endRender();
+		root.systems.systems.modelRenderer.client.nodeBuffer.endRender();
 	}
 };
 // ############################# Server only stuff ################################

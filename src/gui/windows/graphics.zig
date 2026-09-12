@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -111,13 +111,13 @@ fn bloomCallback(newValue: bool) void {
 fn vsyncCallback(newValue: bool) void {
 	settings.vsync = newValue;
 	settings.save();
-	main.Window.reloadSettings();
+	root.Window.reloadSettings();
 }
 
 fn anisotropicFilteringCallback(newValue: u16) void {
 	settings.anisotropicFiltering = anisotropy[newValue];
 	settings.save();
-	if (main.game.world != null) {
+	if (root.game.world != null) {
 		root.blocks.meshes.reloadTextures(undefined);
 	}
 }
@@ -125,14 +125,14 @@ fn anisotropicFilteringCallback(newValue: u16) void {
 fn resolutionScaleCallback(newValue: u16) void {
 	settings.resolutionScale = std.math.pow(f32, 2.0, @as(f32, @floatFromInt(newValue)) - 2.0);
 	settings.save();
-	main.Window.GLFWCallbacks.framebufferSize(null, main.Window.width, main.Window.height);
+	root.Window.GLFWCallbacks.framebufferSize(null, root.Window.width, root.Window.height);
 }
 
 pub fn onOpen() void {
 	const list = VerticalList.init(.{padding, 16 + padding}, 300, 16);
 	list.add(DiscreteSlider.init(.{0, 0}, 128, "#ffffffFPS Limit:\n", "{s}", &fpsPresetsText, fpsCapGetIndex(settings.fpsCap), &fpsCapCallback));
 	list.add(DiscreteSlider.init(.{0, 0}, 128, "#ffffffLOD1 Distance: ", "{} chunks", &renderDistances, @min(@max(settings.renderDistance, renderDistances[0]) - renderDistances[0], renderDistances.len - 1), &renderDistanceCallback));
-	if (main.game.world == null) {
+	if (root.game.world == null) {
 		list.add(DiscreteSlider.init(.{0, 0}, 128, "#ffffffHighest LOD: ", "{s}", &lodValues, @min(settings.highestLod, settings.highestSupportedLod), &highestLodCallback));
 	}
 	list.add(DiscreteSlider.init(.{0, 0}, 128, "#ffffffLeaves Quality (TODO: requires reload): ", "{}", &leavesQualities, settings.leavesQuality - leavesQualities[0], &leavesQualityCallback));

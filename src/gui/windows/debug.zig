@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 const TaskType = root.utils.ThreadPool.TaskType;
 
 const gui = @import("../gui.zig");
@@ -12,7 +12,7 @@ const GuiWindow = gui.GuiWindow;
 const GuiComponent = gui.GuiComponent;
 
 pub fn onOpen() void {
-	main.threadPool.performance.clear();
+	root.threadPool.performance.clear();
 }
 
 pub var window = GuiWindow{
@@ -29,21 +29,21 @@ pub var window = GuiWindow{
 
 pub fn render() void {
 	var y: f32 = 0;
-	const fpsCapText = if (main.settings.fpsCap) |fpsCap| root.stackAllocator.print(" (limit: {d:.0} Hz)", .{fpsCap}) else "";
+	const fpsCapText = if (root.settings.fpsCap) |fpsCap| root.stackAllocator.print(" (limit: {d:.0} Hz)", .{fpsCap}) else "";
 	defer root.stackAllocator.allocator.free(fpsCapText);
 	const fpsLimit = root.stackAllocator.print("{s}{s}", .{
 		fpsCapText,
-		if (main.settings.vsync) " (vsync)" else "",
+		if (root.settings.vsync) " (vsync)" else "",
 	});
 	defer root.stackAllocator.allocator.free(fpsLimit);
-	draw.print("fps: {d:.0} Hz{s}", .{1.0/main.lastDeltaTime.load(.monotonic), fpsLimit}, 0, y, 8);
+	draw.print("fps: {d:.0} Hz{s}", .{1.0/root.lastDeltaTime.load(.monotonic), fpsLimit}, 0, y, 8);
 	y += 8;
-	draw.print("frameTime: {d:.1} ms", .{main.lastFrameTime.load(.monotonic)*1000.0}, 0, y, 8);
+	draw.print("frameTime: {d:.1} ms", .{root.lastFrameTime.load(.monotonic)*1000.0}, 0, y, 8);
 	y += 8;
-	draw.print("window size: {}×{}", .{main.Window.width, main.Window.height}, 0, y, 8);
+	draw.print("window size: {}×{}", .{root.Window.width, root.Window.height}, 0, y, 8);
 	y += 8;
-	if (main.game.world != null) {
-		const player = main.game.Player;
+	if (root.game.world != null) {
+		const player = root.game.Player;
 		draw.print("Pos: {d:.1}", .{player.getPosBlocking()}, 0, y, 8);
 		y += 8;
 		draw.print("Gamemode: {} IsFlying: {} IsGhost: {} HyperSpeed: {}", .{
@@ -63,11 +63,11 @@ pub fn render() void {
 		y += 8;
 		draw.print("EyePos: {d:.1} EyeVelocity: {d:.1} EyeCoyote: {d:.3}", .{player.getEyePosBlocking(), player.getEyeVelBlocking(), @max(0, player.getEyeCoyoteBlocking())}, 0, y, 8);
 		y += 8;
-		draw.print("Game Time: {} Day Phase: {}", .{main.game.world.?.gameTime.load(.monotonic), main.game.world.?.dayTime.dayPhase}, 0, y, 8);
+		draw.print("Game Time: {} Day Phase: {}", .{root.game.world.?.gameTime.load(.monotonic), root.game.world.?.dayTime.dayPhase}, 0, y, 8);
 		y += 8;
-		draw.print("Queue size: {}", .{main.threadPool.queueSize()}, 0, y, 8);
+		draw.print("Queue size: {}", .{root.threadPool.queueSize()}, 0, y, 8);
 		y += 8;
-		const perf = main.threadPool.performance.read();
+		const perf = root.threadPool.performance.read();
 		const values = comptime std.enums.values(TaskType);
 		var totalUtime: i64 = 0;
 		for (values) |task| {
@@ -81,25 +81,25 @@ pub fn render() void {
 			draw.print("    {s}: {} µs/task ({d:.1}%)", .{name, taskTime, relativeTime}, 0, y, 8);
 			y += 8;
 		}
-		draw.print("Mesh Queue size: {}", .{main.renderer.mesh_storage.updatableList.items.len}, 0, y, 8);
+		draw.print("Mesh Queue size: {}", .{root.renderer.mesh_storage.updatableList.items.len}, 0, y, 8);
 		y += 8;
-		for (0..main.settings.highestLod + 1) |lod| {
-			const faceDataSize: usize = @sizeOf(main.renderer.chunk_meshing.FaceData);
-			const size: usize = main.renderer.chunk_meshing.faceBuffers[lod].capacity*faceDataSize;
-			const used: usize = main.renderer.chunk_meshing.faceBuffers[lod].used*faceDataSize;
+		for (0..root.settings.highestLod + 1) |lod| {
+			const faceDataSize: usize = @sizeOf(root.renderer.chunk_meshing.FaceData);
+			const size: usize = root.renderer.chunk_meshing.faceBuffers[lod].capacity*faceDataSize;
+			const used: usize = root.renderer.chunk_meshing.faceBuffers[lod].used*faceDataSize;
 			draw.print("ChunkMesh memory LOD{}: {} MiB / {} MiB", .{lod, used >> 20, size >> 20}, 0, y, 8);
 			y += 8;
 		}
-		for (0..main.settings.highestLod + 1) |lod| {
+		for (0..root.settings.highestLod + 1) |lod| {
 			const lightDataSize: usize = @sizeOf(u32);
-			const size: usize = main.renderer.chunk_meshing.lightBuffers[lod].capacity*lightDataSize;
-			const used: usize = main.renderer.chunk_meshing.lightBuffers[lod].used*lightDataSize;
+			const size: usize = root.renderer.chunk_meshing.lightBuffers[lod].capacity*lightDataSize;
+			const used: usize = root.renderer.chunk_meshing.lightBuffers[lod].used*lightDataSize;
 			draw.print("Light memory LOD{}: {} MiB / {} MiB", .{lod, used >> 20, size >> 20}, 0, y, 8);
 			y += 8;
 		}
 		{
-			const biome = main.game.world.?.playerBiome.load(.monotonic);
-			var tags = main.ListManaged(u8).init(root.stackAllocator);
+			const biome = root.game.world.?.playerBiome.load(.monotonic);
+			var tags = root.ListManaged(u8).init(root.stackAllocator);
 			defer tags.deinit();
 			inline for (comptime std.meta.fieldNames(root.server.terrain.biomes.Biome.GenerationProperties)) |name| {
 				if (@field(biome.properties, name)) {
@@ -112,11 +112,11 @@ pub fn render() void {
 			draw.print("Biome Properties: {s}", .{tags.items}, 0, y, 8);
 			y += 8;
 		}
-		draw.print("Opaque faces: {}, Transparent faces: {}", .{main.renderer.chunk_meshing.quadsDrawn, main.renderer.chunk_meshing.transparentQuadsDrawn}, 0, y, 8);
+		draw.print("Opaque faces: {}, Transparent faces: {}", .{root.renderer.chunk_meshing.quadsDrawn, root.renderer.chunk_meshing.transparentQuadsDrawn}, 0, y, 8);
 		y += 8;
-		draw.print("Particle count: {}/{}", .{main.particles.ParticleSystem.getParticleCount(), main.particles.ParticleSystem.maxCapacity}, 0, y, 8);
+		draw.print("Particle count: {}/{}", .{root.particles.ParticleSystem.getParticleCount(), root.particles.ParticleSystem.maxCapacity}, 0, y, 8);
 		y += 8;
-		draw.print("items: {} entities: {}", .{main.game.world.?.itemDrops.super.size, root.client.entity_manager.entities.len}, 0, y, 8);
+		draw.print("items: {} entities: {}", .{root.game.world.?.itemDrops.super.size, root.client.entity_manager.entities.len}, 0, y, 8);
 		y += 8;
 	}
 }

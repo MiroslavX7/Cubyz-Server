@@ -1,10 +1,10 @@
 const std = @import("std");
 const root = @import("root");
-const items = main.items;
-const ZonElement = main.ZonElement;
+const items = root.items;
+const ZonElement = root.ZonElement;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const NeverFailingArenaAllocator = root.heap.NeverFailingArenaAllocator;
-const Tag = main.Tag;
+const Tag = root.Tag;
 const Recipe = items.Recipe;
 const BaseItemIndex = items.BaseItemIndex;
 const Block = root.blocks.Block;
@@ -12,7 +12,7 @@ const Block = root.blocks.Block;
 const Segment = union(enum) { literal: []const u8, symbol: []const u8 };
 
 fn parsePattern(allocator: NeverFailingAllocator, pattern: []const u8) ![]const Segment {
-	var segments: main.ListManaged(Segment) = .init(allocator);
+	var segments: root.ListManaged(Segment) = .init(allocator);
 	defer segments.deinit();
 	var idx: usize = 0;
 	while (idx < pattern.len) {
@@ -68,7 +68,7 @@ fn matchWithKeys(allocator: NeverFailingAllocator, target: []const u8, pattern: 
 				idx += literal.len;
 			},
 			.symbol => |symbol| {
-				var endIndices: main.ListManaged(usize) = .init(allocator);
+				var endIndices: root.ListManaged(usize) = .init(allocator);
 				defer endIndices.deinit();
 				if (newKeys.get(symbol)) |value| {
 					if (!std.mem.startsWith(u8, target[idx..], value)) {
@@ -94,7 +94,7 @@ fn matchWithKeys(allocator: NeverFailingAllocator, target: []const u8, pattern: 
 						idx = endIndices.items[0];
 					} else {
 						defer newKeys.deinit();
-						var newKeyPairs: main.ListManaged(std.StringHashMap([]const u8)) = .init(allocator);
+						var newKeyPairs: root.ListManaged(std.StringHashMap([]const u8)) = .init(allocator);
 						defer newKeyPairs.deinit();
 						for (endIndices.items) |endIndex| {
 							newKeys.put(symbol, target[idx..endIndex]) catch unreachable;
@@ -140,7 +140,7 @@ fn findRecipeItemOptions(allocator: NeverFailingAllocator, itemStackPattern: Ite
 			.keys = keys.clone() catch unreachable,
 		}});
 	}
-	var itemPairs: main.ListManaged(ItemKeyPair) = .initCapacity(allocator, 1);
+	var itemPairs: root.ListManaged(ItemKeyPair) = .initCapacity(allocator, 1);
 	defer itemPairs.deinit();
 	var iter = items.iterator();
 	while (iter.next()) |item| {
@@ -162,14 +162,14 @@ fn generateItemCombos(allocator: NeverFailingAllocator, recipe: []const ZonEleme
 	const arena = root.stackAllocator.createArena();
 	defer root.stackAllocator.destroyArena(arena);
 
-	var inputCombos: main.ListManaged([]const ItemWithAmount) = .initCapacity(arena, 1);
+	var inputCombos: root.ListManaged([]const ItemWithAmount) = .initCapacity(arena, 1);
 	inputCombos.append(arena.alloc(ItemWithAmount, recipe.len));
-	var keyList: main.ListManaged(std.StringHashMap([]const u8)) = .initCapacity(arena, 1);
+	var keyList: root.ListManaged(std.StringHashMap([]const u8)) = .initCapacity(arena, 1);
 	keyList.append(.init(arena.allocator));
 	for (0.., recipe[0..]) |i, itemZon| {
 		const pattern = try parseItemZon(arena, itemZon);
-		var newKeyList: main.ListManaged(std.StringHashMap([]const u8)) = .init(arena);
-		var newInputCombos: main.ListManaged([]const ItemWithAmount) = .init(arena);
+		var newKeyList: root.ListManaged(std.StringHashMap([]const u8)) = .init(arena);
+		var newInputCombos: root.ListManaged([]const ItemWithAmount) = .init(arena);
 
 		for (keyList.items, inputCombos.items) |*keys, inputs| {
 			const parsedItems = try findRecipeItemOptions(arena, pattern, keys);
@@ -190,7 +190,7 @@ fn generateItemCombos(allocator: NeverFailingAllocator, recipe: []const ZonEleme
 	return newInputCombos;
 }
 
-pub fn addRecipe(itemCombo: []const ItemWithAmount, list: *main.ListManaged(Recipe)) void {
+pub fn addRecipe(itemCombo: []const ItemWithAmount, list: *root.ListManaged(Recipe)) void {
 	const inputs = itemCombo[0 .. itemCombo.len - 1];
 	const output = itemCombo[itemCombo.len - 1];
 	const recipe = Recipe{
@@ -206,7 +206,7 @@ pub fn addRecipe(itemCombo: []const ItemWithAmount, list: *main.ListManaged(Reci
 	list.append(recipe);
 }
 
-pub fn parseRecipe(zon: ZonElement, list: *main.ListManaged(Recipe)) !void {
+pub fn parseRecipe(zon: ZonElement, list: *root.ListManaged(Recipe)) !void {
 	const arena = root.stackAllocator.createArena();
 	defer root.stackAllocator.destroyArena(arena);
 

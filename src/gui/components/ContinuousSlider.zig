@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const TextBuffer = graphics.TextBuffer;
 const Texture = graphics.Texture;
-const random = main.random;
-const vec = main.vec;
+const random = root.random;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
@@ -103,7 +103,7 @@ fn updateValueFromButtonPos(self: *ContinuousSlider) void {
 	}
 }
 
-pub fn updateHovered(self: *ContinuousSlider, mousePosition: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *ContinuousSlider, mousePosition: Vec2f) root.callbacks.Result {
 	if (GuiComponent.contains(self.button.pos, self.button.size, mousePosition - self.pos)) {
 		if (self.button.updateHovered(mousePosition - self.pos) == .handled) return .handled;
 	}
@@ -119,7 +119,7 @@ inline fn getBarSize(self: *ContinuousSlider) Vec2f {
 	return .{range, 2*border};
 }
 
-pub fn mainButtonPressed(self: *ContinuousSlider, mousePosition: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *ContinuousSlider, mousePosition: Vec2f) root.callbacks.Result {
 	const mousePositionRelativeToSelf = mousePosition - self.pos;
 
 	if (GuiComponent.contains(self.button.pos, self.button.size, mousePositionRelativeToSelf)) {
@@ -140,7 +140,7 @@ pub fn mainButtonReleased(self: *ContinuousSlider, _: Vec2f) void {
 }
 
 pub fn render(self: *ContinuousSlider, mousePosition: Vec2f) void {
-	if (main.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
+	if (root.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
 		graphics.vulkan.currentFrame.guiCommands.bindPipeline(Button.pipeline, graphics.draw.getScissor());
 		graphics.vulkan.currentFrame.guiCommands.bindDescriptors(Button.pipeline, .graphics, 0, &.{
 			.{.image = .{.binding = 0, .image = texture.vulkanImage.?}},

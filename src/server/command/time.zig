@@ -26,10 +26,10 @@ pub fn execute(args: Args, source: Source) void {
 		},
 		.@"/time <number>" => |params| params.number,
 		.@"/time <phase>" => |params| switch (params.phase) {
-			.day => main.game.World.DayTime.dayStart,
-			.dusk => main.game.World.DayTime.duskStart,
-			.night => main.game.World.DayTime.nightStart,
-			.dawn => main.game.World.DayTime.dawnStart,
+			.day => root.game.World.DayTime.dayStart,
+			.dusk => root.game.World.DayTime.duskStart,
+			.night => root.game.World.DayTime.nightStart,
+			.dawn => root.game.World.DayTime.dawnStart,
 		},
 		.@"/time <subcommand>" => |params| {
 			switch (params.subcommand) {

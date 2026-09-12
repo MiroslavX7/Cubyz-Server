@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -43,13 +43,13 @@ pub fn deinit() void {
 }
 
 pub fn render() void {
-	if (main.game.Player.isCreative()) return;
+	if (root.game.Player.isCreative()) return;
 
-	const displayHealth = @max(0, main.game.Player.super.health);
+	const displayHealth = @max(0, root.game.Player.super.health);
 	const halfHeartUnits: usize = @ceil(displayHealth*2);
 	const wholeHearts = halfHeartUnits/2;
 	const halfHeart = halfHeartUnits%2;
-	const totalHearts: usize = @ceil(main.game.Player.super.maxHealth);
+	const totalHearts: usize = @ceil(root.game.Player.super.maxHealth);
 
 	var x: f32 = 0;
 	var y: f32 = 0;

@@ -2,15 +2,15 @@ const std = @import("std");
 
 const root = @import("root");
 const Array2D = root.utils.Array2D;
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const MapFragment = terrain.SurfaceMap.MapFragment;
 const noise = terrain.noise;
 const FractalNoise = noise.FractalNoise;
 const RandomlyWeightedFractalNoise = noise.RandomlyWeightedFractalNoise;
 const PerlinNoise = noise.PerlinNoise;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 const Vec2i = vec.Vec2i;
 

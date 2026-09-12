@@ -4,13 +4,13 @@ const root = @import("root");
 const command = root.server.command;
 const Source = command.Source;
 const User = root.server.User;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 
 const Dir = root.files.Dir;
-const ListManaged = main.ListManaged;
+const ListManaged = root.ListManaged;
 const Block = root.blocks.Block;
-const Blueprint = main.blueprint.Blueprint;
+const Blueprint = root.blueprint.Blueprint;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const description = "Input-output operations on blueprints.";
@@ -128,7 +128,7 @@ fn blueprintList(user: *User) void {
 	var directoryWalker = blueprintsDir.walk(root.stackAllocator);
 	defer directoryWalker.deinit();
 
-	while (directoryWalker.next(main.io) catch |err| {
+	while (directoryWalker.next(root.io) catch |err| {
 		return sendWarningAndLog("Failed to read blueprint directory ({s})", .{@errorName(err)}, user);
 	}) |entry| {
 		if (entry.kind != .file) continue;

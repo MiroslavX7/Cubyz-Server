@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const Blueprint = main.blueprint.Blueprint;
-const Mask = main.blueprint.Mask;
-const Pattern = main.blueprint.Pattern;
+const Blueprint = root.blueprint.Blueprint;
+const Mask = root.blueprint.Mask;
+const Pattern = root.blueprint.Pattern;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const ListManaged = main.ListManaged;
+const ListManaged = root.ListManaged;
 const User = root.server.User;
 pub const commandList = @import("command/_list.zig");
 
@@ -16,7 +16,7 @@ pub const Source = union(enum) {
 	pub fn sendMessage(self: Source, comptime fmt: []const u8, args: anytype) void {
 		switch (self) {
 			.user => |user| user.sendMessage(fmt, args),
-			.server => main.log.server(fmt, args),
+			.server => root.log.server(fmt, args),
 		}
 	}
 
@@ -39,12 +39,12 @@ pub const Command = struct {
 pub var commands: std.StringHashMap(Command) = undefined;
 
 fn initExecutionFn(comptime name: []const u8) *const fn (args: []const u8, source: Source) void {
-	const ArgPaser = main.argparse.Parser(@field(commandList, name).Args, .{.commandName = name});
+	const ArgPaser = root.argparse.Parser(@field(commandList, name).Args, .{.commandName = name});
 	return struct {
 		fn exec(msg: []const u8, source: Source) void {
 			const arena: root.heap.NeverFailingAllocator = .createArena(root.stackAllocator);
 			defer root.stackAllocator.destroyArena(arena);
-			var errorMessage: main.ListManaged(u8) = .init(arena);
+			var errorMessage: root.ListManaged(u8) = .init(arena);
 			const result = ArgPaser.parse(arena, msg, &errorMessage) catch {
 				source.sendMessage("#ff0000{s}", .{errorMessage.items});
 				return;
@@ -129,7 +129,7 @@ pub const Rotation = union(enum) {
 	}
 };
 
-pub fn resolveCoordinates(x: Coordinate, y: Coordinate, z: Coordinate, source: Source) error{InvalidArg}!main.vec.Vec3d {
+pub fn resolveCoordinates(x: Coordinate, y: Coordinate, z: Coordinate, source: Source) error{InvalidArg}!root.vec.Vec3d {
 	if (source != .user and (x == .relative or y == .relative or z == .relative)) {
 		source.sendMessage("Command was run without a user; unable to interpret relative coordinates.", .{});
 		return error.InvalidArg;
@@ -142,7 +142,7 @@ pub fn resolveCoordinates(x: Coordinate, y: Coordinate, z: Coordinate, source: S
 	};
 }
 
-pub fn resolveRotation(yaw: Rotation, pitch: Rotation, source: Source) error{InvalidArg}!main.vec.Vec3f {
+pub fn resolveRotation(yaw: Rotation, pitch: Rotation, source: Source) error{InvalidArg}!root.vec.Vec3f {
 	if (source != .user and (yaw == .relative or pitch == .relative)) {
 		source.sendMessage("Command was run without a user; unable to interpret relative rotation.", .{});
 		return error.InvalidArg;
@@ -247,10 +247,10 @@ pub const BlockId = struct {
 };
 
 pub const EntityModel = struct {
-	index: main.entityModel.EntityModelIndex,
+	index: root.entityModel.EntityModelIndex,
 
 	pub fn parse(_: NeverFailingAllocator, name: []const u8, args: []const u8, errorMessage: *ListManaged(u8)) error{ParseError}!EntityModel {
-		if (main.entityModel.getById(args)) |entityModel| {
+		if (root.entityModel.getById(args)) |entityModel| {
 			return .{.index = entityModel};
 		} else {
 			errorMessage.print("Couldn't find EntityModel for <{s}> with id \"{s}\"", .{name, args});

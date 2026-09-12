@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 
 fn setSeed(x: i32, offsetX: i32, seed: *u64, worldSeed: u64, scale: u31) void {
-	seed.* = main.random.initSeed2D(worldSeed, .{offsetX +% x, scale});
+	seed.* = root.random.initSeed2D(worldSeed, .{offsetX +% x, scale});
 }
 
 pub fn generateFractalTerrain(wx: i32, x0: u31, width: u32, scale: u31, worldSeed: u64, map: []f32) void {
@@ -15,9 +15,9 @@ pub fn generateFractalTerrain(wx: i32, x0: u31, width: u32, scale: u31, worldSee
 	var seed: u64 = undefined;
 	// Generate the 4 corner points of this map using a coordinate-depending seed:
 	setSeed(0, offset, &seed, worldSeed, scale);
-	bigMap[0] = main.random.nextFloat(&seed);
+	bigMap[0] = root.random.nextFloat(&seed);
 	setSeed(scale, offset, &seed, worldSeed, scale);
-	bigMap[scale] = main.random.nextFloat(&seed);
+	bigMap[scale] = root.random.nextFloat(&seed);
 	generateInitializedFractalTerrain(offset, scale, scale, worldSeed, bigMap, 0, 0.9999);
 	@memcpy(map[x0..][0..width], bigMap[@intCast((wx & mask))..][0..width]);
 }
@@ -32,7 +32,7 @@ pub fn generateInitializedFractalTerrain(offset: i32, scale: u31, startingScale:
 		var x = res;
 		while (x + res < max) : (x += 2*res) {
 			setSeed(x, offset, &seed, worldSeed, res);
-			bigMap[x] = (bigMap[x - res] + bigMap[x + res])/2 + main.random.nextFloatSigned(&seed)*randomnessScale;
+			bigMap[x] = (bigMap[x - res] + bigMap[x + res])/2 + root.random.nextFloatSigned(&seed)*randomnessScale;
 			bigMap[x] = @min(upperLimit, @max(lowerLimit, bigMap[x]));
 		}
 	}

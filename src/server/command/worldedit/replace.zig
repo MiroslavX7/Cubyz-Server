@@ -3,12 +3,12 @@ const std = @import("std");
 const root = @import("root");
 const command = root.server.command;
 const Source = command.Source;
-const Vec3i = main.vec.Vec3i;
+const Vec3i = root.vec.Vec3i;
 
 const Block = root.blocks.Block;
-const Blueprint = main.blueprint.Blueprint;
-const Pattern = main.blueprint.Pattern;
-const Mask = main.blueprint.Mask;
+const Blueprint = root.blueprint.Blueprint;
+const Pattern = root.blueprint.Pattern;
+const Mask = root.blueprint.Mask;
 
 pub const description = "Replace blocks in the world edit selection.";
 pub const usage = "/replace <old mask> <new pattern>";

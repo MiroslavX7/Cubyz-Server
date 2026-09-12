@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const CaveMap = terrain.CaveMap;
 const CaveBiomeMap = terrain.CaveBiomeMap;
 const Biome = terrain.biomes.Biome;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
@@ -117,18 +117,18 @@ pub fn generate(worldSeed: u64, chunk: *root.chunk.ServerChunk, caveMap: CaveMap
 										if (stripe.direction) |direction| {
 											d = vec.dot(direction, pos);
 										} else {
-											const dx = main.random.nextDoubleSigned(&seed);
-											const dy = main.random.nextDoubleSigned(&seed);
-											const dz = main.random.nextDoubleSigned(&seed);
+											const dx = root.random.nextDoubleSigned(&seed);
+											const dy = root.random.nextDoubleSigned(&seed);
+											const dz = root.random.nextDoubleSigned(&seed);
 											const dir: Vec3d = .{dx, dy, dz};
 											d = vec.dot(vec.normalize(dir), pos);
 										}
 
-										const distance = (stripe.maxDistance - stripe.minDistance)*main.random.nextDouble(&seed) + stripe.minDistance;
+										const distance = (stripe.maxDistance - stripe.minDistance)*root.random.nextDouble(&seed) + stripe.minDistance;
 
-										const offset = (stripe.maxOffset - stripe.minOffset)*main.random.nextDouble(&seed) + stripe.minOffset;
+										const offset = (stripe.maxOffset - stripe.minOffset)*root.random.nextDouble(&seed) + stripe.minOffset;
 
-										const width = (stripe.maxWidth - stripe.minWidth)*main.random.nextDouble(&seed) + stripe.minWidth;
+										const width = (stripe.maxWidth - stripe.minWidth)*root.random.nextDouble(&seed) + stripe.minWidth;
 
 										if (@mod(d + offset, distance) < width) {
 											block = stripe.block;

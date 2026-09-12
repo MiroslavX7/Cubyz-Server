@@ -43,8 +43,8 @@ pub fn deinit(self: CachedFractalNoise) void {
 }
 
 pub fn getRandomValue(self: CachedFractalNoise, wx: i32, wy: i32) f32 {
-	var seed: u64 = main.random.initSeed2D(self.worldSeed, .{wx, wy});
-	return main.random.nextFloat(&seed) - 0.5;
+	var seed: u64 = root.random.initSeed2D(self.worldSeed, .{wx, wy});
+	return root.random.nextFloat(&seed) - 0.5;
 }
 
 fn getGridValue(self: CachedFractalNoise, relX: u31, relY: u31) f32 {

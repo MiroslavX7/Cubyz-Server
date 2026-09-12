@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const c = @import("c");
 
@@ -19,7 +19,7 @@ pub var window = GuiWindow{
 const padding: f32 = 8;
 
 fn exitGame() void {
-	c.glfwSetWindowShouldClose(main.Window.window, c.GLFW_TRUE);
+	c.glfwSetWindowShouldClose(root.Window.window, c.GLFW_TRUE);
 }
 fn singleplayerSelection() void {
 	gui.windowlist.save_selection.mode = .singleplayer;
@@ -31,15 +31,15 @@ fn multiplayer() void {
 		gui.openWindow("multiplayer");
 		return;
 	}
-	switch (main.settings.storedAccount.typ) {
+	switch (root.settings.storedAccount.typ) {
 		.none => {
-			if (main.settings.storedAccount.data.len == 0) {
+			if (root.settings.storedAccount.data.len == 0) {
 				gui.openWindow("authentication/login");
 				return;
 			}
-			var failureText: main.ListManaged(u8) = .init(root.stackAllocator);
+			var failureText: root.ListManaged(u8) = .init(root.stackAllocator);
 			defer failureText.deinit();
-			const accountCode = main.settings.storedAccount.decryptFromPassword(undefined, &failureText) catch |err| {
+			const accountCode = root.settings.storedAccount.decryptFromPassword(undefined, &failureText) catch |err| {
 				std.log.err("Got error while loading Account Code: {s}", .{@errorName(err)});
 				gui.openWindow("authentication/login");
 				return;

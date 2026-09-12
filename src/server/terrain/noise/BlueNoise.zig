@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const random = main.random;
+const random = root.random;
 const Array2D = root.utils.Array2D;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
@@ -66,7 +66,7 @@ pub fn getRegionData(allocator: NeverFailingAllocator, x: i32, y: i32, width: u3
 	const yMin = ((y & ~@as(i32, featureMask)) -% featureSize);
 	const xMax = ((x +% width & ~@as(i32, featureMask)));
 	const yMax = ((y +% height & ~@as(i32, featureMask)));
-	var result: main.List(u32) = .initCapacity(allocator, @intCast((((xMax -% xMin) >> featureShift) + 1)*(((yMax -% yMin) >> featureShift) + 1)));
+	var result: root.List(u32) = .initCapacity(allocator, @intCast((((xMax -% xMin) >> featureShift) + 1)*(((yMax -% yMin) >> featureShift) + 1)));
 	var xMap: i32 = xMin;
 	while (xMap -% xMax <= 0) : (xMap +%= featureSize) {
 		var yMap: i32 = yMin;

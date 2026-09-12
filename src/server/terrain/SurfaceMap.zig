@@ -5,8 +5,8 @@ const root = @import("root");
 const Chunk = root.chunk.Chunk;
 const ChunkPosition = root.chunk.ChunkPosition;
 const Cache = root.utils.Cache;
-const ZonElement = main.ZonElement;
-const Vec3d = main.vec.Vec3d;
+const ZonElement = root.ZonElement;
+const Vec3d = root.vec.Vec3d;
 const BinaryWriter = root.utils.BinaryWriter;
 const BinaryReader = root.utils.BinaryReader;
 
@@ -133,7 +133,7 @@ pub const MapFragment = struct { // MARK: MapFragment
 		@"++": bool = false,
 	};
 
-	pub fn load(self: *MapFragment, biomePalette: *main.assets.Palette, originalHeightMap: ?*[mapSize][mapSize]i32) !NeighborInfo {
+	pub fn load(self: *MapFragment, biomePalette: *root.assets.Palette, originalHeightMap: ?*[mapSize][mapSize]i32) !NeighborInfo {
 		const saveFolder: []const u8 = root.stackAllocator.print("saves/{s}/maps", .{root.server.world.?.path});
 		defer root.stackAllocator.free(saveFolder);
 
@@ -353,7 +353,7 @@ pub fn regenerateLOD(worldName: []const u8) !void { // MARK: regenerateLOD()
 	var noise: TiledNoise = .init(root.stackAllocator, 8*MapFragment.mapSize);
 	defer noise.deinit(root.stackAllocator);
 	// Delete old LODs:
-	for (1..main.settings.highestSupportedLod + 1) |i| {
+	for (1..root.settings.highestSupportedLod + 1) |i| {
 		const lod = @as(u32, 1) << @intCast(i);
 		const path = root.stackAllocator.print("saves/{s}/maps/{}", .{worldName, lod});
 		defer root.stackAllocator.free(path);
@@ -364,7 +364,7 @@ pub fn regenerateLOD(worldName: []const u8) !void { // MARK: regenerateLOD()
 		};
 	}
 	// Find all the stored maps:
-	var mapPositions: main.List(MapFragmentPosition) = .empty;
+	var mapPositions: root.List(MapFragmentPosition) = .empty;
 	defer mapPositions.deinit(root.stackAllocator);
 	const path = root.stackAllocator.print("saves/{s}/maps/1", .{worldName});
 	defer root.stackAllocator.free(path);
@@ -372,13 +372,13 @@ pub fn regenerateLOD(worldName: []const u8) !void { // MARK: regenerateLOD()
 		var dirX = try root.files.cubyzDir().openIterableDir(path);
 		defer dirX.close();
 		var iterX = dirX.iterate();
-		while (try iterX.next(main.io)) |entryX| {
+		while (try iterX.next(root.io)) |entryX| {
 			if (entryX.kind != .directory) continue;
 			const wx = std.fmt.parseInt(i32, entryX.name, 0) catch continue;
 			var dirY = try dirX.openIterableDir(entryX.name);
 			defer dirY.close();
 			var iterY = dirY.iterate();
-			while (try iterY.next(main.io)) |entryY| {
+			while (try iterY.next(root.io)) |entryY| {
 				if (entryY.kind != .file) continue;
 				const nameY = entryY.name[0 .. std.mem.indexOfScalar(u8, entryY.name, '.') orelse entryY.name.len];
 				const wy = std.fmt.parseInt(i32, nameY, 0) catch continue;
@@ -616,7 +616,7 @@ pub fn regenerateLOD(worldName: []const u8) !void { // MARK: regenerateLOD()
 		mapFragment.save(&originalHeightMap, neighborInfo); // Store the interpolated map
 		// Generate LODs
 		var cur = mapFragment;
-		while (cur.pos.voxelSizeShift < main.settings.highestSupportedLod) {
+		while (cur.pos.voxelSizeShift < root.settings.highestSupportedLod) {
 			var nextPos = cur.pos;
 			nextPos.voxelSize *= 2;
 			nextPos.voxelSizeShift += 1;

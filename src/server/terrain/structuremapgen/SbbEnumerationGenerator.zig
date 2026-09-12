@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const biomes = terrain.biomes;
 const noise = terrain.noise;
@@ -16,7 +16,7 @@ const ServerChunk = root.chunk.ServerChunk;
 const SimpleStructureGen = @import("SimpleStructureGen.zig");
 const SimpleStructure = SimpleStructureGen.SimpleStructure;
 const StructureBuildingBlock = terrain.sbb.StructureBuildingBlock;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
@@ -36,7 +36,7 @@ pub fn init(parameters: ZonElement) void {
 	_ = parameters;
 
 	const Entry = struct { sbb: *const StructureBuildingBlock, hasParent: bool, reachable: bool };
-	var localSbbList: main.List(Entry) = .empty;
+	var localSbbList: root.List(Entry) = .empty;
 	defer localSbbList.deinit(root.stackAllocator);
 	for (terrain.sbb.list()) |*entry| {
 		localSbbList.append(root.stackAllocator, .{.sbb = entry, .hasParent = false, .reachable = false});
@@ -55,10 +55,10 @@ pub fn init(parameters: ZonElement) void {
 			}
 		}
 	}
-	var rootSbbList: main.List(*const StructureBuildingBlock) = .initCapacity(root.stackAllocator, localSbbList.items.len);
+	var rootSbbList: root.List(*const StructureBuildingBlock) = .initCapacity(root.stackAllocator, localSbbList.items.len);
 	defer rootSbbList.deinit(root.stackAllocator);
 	{ // Ensure that every structure was reachable (in case of recursion)
-		var unreachables: main.List(*Entry) = .initCapacity(root.stackAllocator, localSbbList.items.len);
+		var unreachables: root.List(*Entry) = .initCapacity(root.stackAllocator, localSbbList.items.len);
 		defer unreachables.deinit(root.stackAllocator);
 
 		for (localSbbList.items) |*candidate| {

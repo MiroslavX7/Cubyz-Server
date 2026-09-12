@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const utils = main.utils;
+const utils = root.utils;
 
 const c = @import("c");
 
@@ -134,7 +134,7 @@ const AudioData = struct {
 	}
 };
 
-var activeTasks: main.List([]const u8) = .empty; // MARK: Music
+var activeTasks: root.List([]const u8) = .empty; // MARK: Music
 var taskMutex: root.utils.Mutex = .{};
 
 var musicCache: utils.Cache(AudioData, 4, 4, AudioData.deinit) = .{};
@@ -172,7 +172,7 @@ const MusicLoadTask = struct {
 		task.* = MusicLoadTask{
 			.musicId = root.globalAllocator.dupe(u8, musicId),
 		};
-		main.threadPool.addTask(task, &vtable);
+		root.threadPool.addTask(task, &vtable);
 		taskMutex.lock();
 		defer taskMutex.unlock();
 		activeTasks.append(root.globalAllocator, task.musicId);
@@ -234,7 +234,7 @@ pub fn deinit() void {
 	c.ma_device_uninit(&device);
 	mutex.lock();
 	defer mutex.unlock();
-	main.threadPool.closeAllTasksOfType(&MusicLoadTask.vtable);
+	root.threadPool.closeAllTasksOfType(&MusicLoadTask.vtable);
 	musicCache.clear();
 	activeTasks.deinit(root.globalAllocator);
 	root.globalAllocator.free(preferredMusic);
@@ -313,7 +313,7 @@ fn mixMusic(buffer: []f32) void {
 	var i: usize = 0;
 	while (i < buffer.len) : (i += 2) {
 		currentMusic.animationProgress += 1.0/(animationLengthInSeconds*sampleRate);
-		var amplitude: f32 = main.settings.musicVolume;
+		var amplitude: f32 = root.settings.musicVolume;
 		if (currentMusic.animationProgress > 1) {
 			if (currentMusic.animationDecaying) {
 				root.globalAllocator.free(activeMusicId);

@@ -2,8 +2,8 @@ const std = @import("std");
 
 const root = @import("root");
 const ConnectionManager = root.network.ConnectionManager;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -25,15 +25,15 @@ const State = enum(u8) { connecting, connected, failed, cancelled };
 var connectionManager: ?*ConnectionManager = null;
 var ip: []const u8 = "";
 var connectFuture: ?std.Io.Future(void) = null;
-var handshakeZon: main.ZonElement = undefined;
+var handshakeZon: root.ZonElement = undefined;
 var state: std.atomic.Value(State) = .init(.connecting);
 var errorMessage: []const u8 = "";
 
 fn connectFromNewThread() void {
-	main.initThreadLocals();
-	defer main.deinitThreadLocals();
+	root.initThreadLocals();
+	defer root.deinitThreadLocals();
 
-	handshakeZon = main.game.testWorld.init(ip, connectionManager.?) catch |err| {
+	handshakeZon = root.game.testWorld.init(ip, connectionManager.?) catch |err| {
 		if (err == error.Canceled) {
 			state.store(.cancelled, .release);
 		} else {
@@ -50,7 +50,7 @@ pub fn start(_ip: []const u8, manager: *ConnectionManager) void {
 	connectionManager = manager;
 	state = .init(.connecting);
 	gui.openModalWindowFromRef(&window);
-	connectFuture = main.io.concurrent(connectFromNewThread, .{}) catch |err| blk: {
+	connectFuture = root.io.concurrent(connectFromNewThread, .{}) catch |err| blk: {
 		std.log.err("Error spawning connect task: {s}. Doing it in the current thread instead.", .{@errorName(err)});
 		connectFromNewThread();
 		break :blk null;
@@ -59,7 +59,7 @@ pub fn start(_ip: []const u8, manager: *ConnectionManager) void {
 
 fn cancel() void {
 	if (connectFuture) |*future| {
-		_ = future.cancel(main.io);
+		_ = future.cancel(root.io);
 		connectFuture = null;
 	}
 }
@@ -90,10 +90,10 @@ pub fn update() void {
 		.connecting => {},
 		.connected => {
 			if (connectFuture) |*future| {
-				_ = future.await(main.io);
+				_ = future.await(root.io);
 				connectFuture = null;
 			}
-			main.game.testWorld.finishHandshake(handshakeZon) catch |err| {
+			root.game.testWorld.finishHandshake(handshakeZon) catch |err| {
 				errorMessage = @errorName(err);
 				state.store(.failed, .release);
 				continue :stateSwitch .failed;
@@ -109,12 +109,12 @@ pub fn update() void {
 		},
 		.failed => {
 			if (connectFuture) |*future| {
-				_ = future.await(main.io);
+				_ = future.await(root.io);
 				connectFuture = null;
 			}
 			gui.closeWindowFromRef(&window);
 			gui.windowlist.multiplayer_join.restoreConnection(connectionManager.?);
-			main.gui.windowlist.notification.raiseNotification("Encountered error while opening world: {s}", .{errorMessage});
+			root.gui.windowlist.notification.raiseNotification("Encountered error while opening world: {s}", .{errorMessage});
 			errorMessage = "";
 		},
 		.cancelled => {

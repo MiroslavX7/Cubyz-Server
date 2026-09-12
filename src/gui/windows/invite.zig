@@ -2,8 +2,8 @@ const std = @import("std");
 
 const root = @import("root");
 const ConnectionManager = root.network.ConnectionManager;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -35,8 +35,8 @@ fn discoverIpAddress() void {
 }
 
 fn discoverIpAddressFromNewThread() void {
-	main.initThreadLocals();
-	defer main.deinitThreadLocals();
+	root.initThreadLocals();
+	defer root.deinitThreadLocals();
 
 	discoverIpAddress();
 }
@@ -55,7 +55,7 @@ fn invite() void {
 }
 
 fn copyIp() void {
-	main.Window.setClipboardString(ipAddress);
+	root.Window.setClipboardString(ipAddress);
 }
 
 pub fn onOpen() void {
@@ -66,7 +66,7 @@ pub fn onOpen() void {
 	list.add(ipAddressLabel);
 	list.add(Button.initText(.{0, 0}, 100, "Copy IP", .{.onAction = .init(copyIp)}));
 	ipAddressEntry = TextInput.init(.{0, 0}, width, 32, settings.lastUsedIPAddress, .{.onNewline = .init(invite)});
-	ipAddressEntry.obfuscated = main.settings.streamerMode;
+	ipAddressEntry.obfuscated = root.settings.streamerMode;
 	list.add(ipAddressEntry);
 	list.add(Button.initText(.{0, 0}, 100, "Invite", .{.onAction = .init(invite)}));
 	list.finish(.center);
@@ -100,7 +100,7 @@ pub fn update() void {
 	if (gotIpAddress.load(.acquire)) {
 		gotIpAddress.store(false, .monotonic);
 
-		if (main.settings.streamerMode) {
+		if (root.settings.streamerMode) {
 			const obfuscatedIp = root.utils.obfuscateString(root.stackAllocator, ipAddress);
 			defer root.stackAllocator.free(obfuscatedIp);
 			ipAddressLabel.updateText(obfuscatedIp);

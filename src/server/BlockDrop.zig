@@ -1,12 +1,12 @@
 const root = @import("root");
-const Tag = main.Tag;
-const items = main.items;
+const Tag = root.Tag;
+const items = root.items;
 const Item = items.Item;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const blocks = main.blocks;
+const blocks = root.blocks;
 const Block = blocks.Block;
 
 itemStacks: []const items.ItemStack,
@@ -28,7 +28,7 @@ pub fn isDroppedWhenBrokenWithItem(self: @This(), item: Item) bool {
 }
 
 pub fn drop(self: @This(), pos: Vec3d, dir: Vec3f, velocity: f32) void {
-	if (self.chance == 1 or main.random.nextFloat(&main.seed) < self.chance) {
+	if (self.chance == 1 or root.random.nextFloat(&root.seed) < self.chance) {
 		for (self.itemStacks) |itemStack| {
 			root.server.world.?.drop(itemStack.clone(), pos, dir, velocity);
 		}
@@ -41,7 +41,7 @@ pub const Location = struct {
 	max: Vec3f,
 
 	const half = @as(Vec3f, @splat(0.5));
-	const itemHitBoxMargin: f32 = @floatCast(main.itemdrop.ItemDropManager.radius);
+	const itemHitBoxMargin: f32 = @floatCast(root.itemdrop.ItemDropManager.radius);
 	const itemHitBoxMarginVec: Vec3f = @splat(itemHitBoxMargin);
 
 	fn insidePos(self: Location, _pos: Vec3i) Vec3d {
@@ -53,7 +53,7 @@ pub const Location = struct {
 		const min = @min(max, @max(itemHitBoxMarginVec, self.min + itemHitBoxMarginVec));
 		const center = (max + min)*half;
 		const width = (max - min)*half;
-		return center + width*main.random.nextFloatVectorSigned(3, &main.seed)*half;
+		return center + width*root.random.nextFloatVectorSigned(3, &root.seed)*half;
 	}
 	fn outsidePos(self: Location, _pos: Vec3i) Vec3d {
 		const pos: Vec3d = @floatFromInt(_pos);
@@ -78,7 +78,7 @@ pub const Location = struct {
 		return .{minor1, minor2};
 	}
 	fn dropDir(self: Location) Vec3f {
-		const randomnessVec: Vec3f = main.random.nextFloatVectorSigned(3, &main.seed)*@as(Vec3f, @splat(0.25));
+		const randomnessVec: Vec3f = root.random.nextFloatVectorSigned(3, &root.seed)*@as(Vec3f, @splat(0.25));
 		const directionVec: Vec3f = @as(Vec3f, @floatCast(self.direction())) + randomnessVec;
 		const z: f32 = directionVec[2];
 		return vec.normalize(Vec3f{
@@ -88,7 +88,7 @@ pub const Location = struct {
 		});
 	}
 	fn dropVelocity(self: Location) f32 {
-		const velocity = 3.5 + main.random.nextFloatSigned(&main.seed)*0.5;
+		const velocity = 3.5 + root.random.nextFloatSigned(&root.seed)*0.5;
 		if (self.direction()[2] < -0.5) return velocity*0.333;
 		return velocity;
 	}

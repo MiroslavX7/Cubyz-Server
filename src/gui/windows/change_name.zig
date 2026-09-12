@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -21,8 +21,8 @@ var textComponent: *TextInput = undefined;
 const padding: f32 = 8;
 
 fn apply() void {
-	if (textComponent.currentString.items.len > 500 or main.graphics.TextBuffer.Parser.countVisibleCharacters(textComponent.currentString.items) > 50) {
-		std.log.err("Name is too long with {}/{} characters. Limits are 50/500", .{main.graphics.TextBuffer.Parser.countVisibleCharacters(textComponent.currentString.items), textComponent.currentString.items.len});
+	if (textComponent.currentString.items.len > 500 or root.graphics.TextBuffer.Parser.countVisibleCharacters(textComponent.currentString.items) > 50) {
+		std.log.err("Name is too long with {}/{} characters. Limits are 50/500", .{root.graphics.TextBuffer.Parser.countVisibleCharacters(textComponent.currentString.items), textComponent.currentString.items.len});
 		return;
 	}
 	const oldName = settings.playerName;

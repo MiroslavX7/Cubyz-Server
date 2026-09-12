@@ -2,12 +2,12 @@ const std = @import("std");
 
 const root = @import("root");
 const BlockPos = root.chunk.BlockPos;
-const ZonElement = main.ZonElement;
-const vec = main.vec;
+const ZonElement = root.ZonElement;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
-list: main.List(BlockPos) = .empty,
+list: root.List(BlockPos) = .empty,
 mutex: root.utils.Mutex = .{},
 
 pub fn init() @This() {

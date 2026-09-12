@@ -4,14 +4,14 @@ const build_options = @import("build_options");
 
 const root = @import("root");
 const Array2D = root.utils.Array2D;
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const ClimateMapFragment = terrain.ClimateMap.ClimateMapFragment;
 const BiomeSample = terrain.ClimateMap.BiomeSample;
 const Biome = terrain.biomes.Biome;
 const TreeNode = terrain.biomes.TreeNode;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2i = vec.Vec2i;
 const Vec2f = vec.Vec2f;
 
@@ -35,7 +35,7 @@ pub fn generateMapFragment(map: *ClimateMapFragment, worldSeed: u64) void {
 
 	// TODO: Remove debug image:
 	if (!build_options.isTaggedRelease) {
-		const image = main.graphics.Image.init(root.stackAllocator, @intCast(map.map.len), @intCast(map.map[0].len));
+		const image = root.graphics.Image.init(root.stackAllocator, @intCast(map.map.len), @intCast(map.map[0].len));
 		defer image.deinit(root.stackAllocator);
 		var x: u31 = 0;
 		while (x < map.map.len) : (x += 1) {
@@ -43,7 +43,7 @@ pub fn generateMapFragment(map: *ClimateMapFragment, worldSeed: u64) void {
 			while (y < map.map[0].len) : (y += 1) {
 				const bp = map.map[x][y];
 				seed = std.hash.Adler32.hash(bp.biome.id) ^ 4371741;
-				image.setRGB(x, y, @bitCast(0xff000000 | main.random.nextInt(u32, &seed)));
+				image.setRGB(x, y, @bitCast(0xff000000 | root.random.nextInt(u32, &seed)));
 			}
 		}
 		image.exportToFile("test.png") catch {};
@@ -235,7 +235,7 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 		var mountains: f32 = 0;
 		var totalWeight: f32 = 0;
 
-		var candidateList: main.List(struct { point: *const BiomePoint, weight: f32 }) = .initCapacity(root.stackAllocator, prefilteredCandidates.len);
+		var candidateList: root.List(struct { point: *const BiomePoint, weight: f32 }) = .initCapacity(root.stackAllocator, prefilteredCandidates.len);
 		defer candidateList.deinit(root.stackAllocator);
 		for (prefilteredCandidates) |candidate| {
 			candidateList.appendAssumeCapacity(.{.point = candidate, .weight = 1});
@@ -345,7 +345,7 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 		}
 	}
 
-	fn addSubBiomesOf(biome: BiomePoint, preMap: *[preMapSize][preMapSize]BiomeSample, extraBiomes: *main.ListManaged(BiomePoint), wx: i32, wy: i32, width: u31, height: u31, worldSeed: u64, comptime radius: enum { known, unknown }) void {
+	fn addSubBiomesOf(biome: BiomePoint, preMap: *[preMapSize][preMapSize]BiomeSample, extraBiomes: *root.ListManaged(BiomePoint), wx: i32, wy: i32, width: u31, height: u31, worldSeed: u64, comptime radius: enum { known, unknown }) void {
 		const maxSubbiomeMargin: i32 = @ceil(biome.radius + if (radius == .unknown) biome.radius/2 else 0);
 		if (biome.pos[0] +% maxSubbiomeMargin -% wx < 0) return;
 		if (biome.pos[1] +% maxSubbiomeMargin -% wy < 0) return;
@@ -448,7 +448,7 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 	}
 
 	fn pruneInterpolationCandidates(allocator: NeverFailingAllocator, wx: i32, wy: i32, wxMax: i32, wyMax: i32, candidates: []const *const BiomePoint) []const *const BiomePoint {
-		var result: main.List(*const BiomePoint) = .empty;
+		var result: root.List(*const BiomePoint) = .empty;
 
 		// Check interpolation between all pairs of biomes.
 		outer: for (candidates) |candidate| {
@@ -519,7 +519,7 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 
 	pub fn toMap(self: GenerationStructure, map: *ClimateMapFragment, worldSeed: u64) void {
 		var preMap: [preMapSize][preMapSize]BiomeSample = undefined;
-		var allCandidates: main.List(*BiomePoint) = .initCapacity(root.stackAllocator, 1024);
+		var allCandidates: root.List(*BiomePoint) = .initCapacity(root.stackAllocator, 1024);
 		defer allCandidates.deinit(root.stackAllocator);
 		for (self.chunks.mem) |chunk| {
 			for (chunk.biomesSortedByX) |*candidate| {
@@ -530,7 +530,7 @@ const GenerationStructure = struct { // MARK: GenerationStructure
 		addTransitionBiomes(&preMap);
 
 		// Add some sub-biomes:
-		var extraBiomes: main.ListManaged(BiomePoint) = .init(root.stackAllocator);
+		var extraBiomes: root.ListManaged(BiomePoint) = .init(root.stackAllocator);
 		defer extraBiomes.deinit();
 		for (self.chunks.mem) |chunk| {
 			for (chunk.biomesSortedByX) |biome| {

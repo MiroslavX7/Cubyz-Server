@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const files = main.files;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const files = root.files;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -26,7 +26,7 @@ pub var window = GuiWindow{
 
 const padding: f32 = 8;
 pub fn update() void {
-	if (main.Window.Gamepad.wereControllerMappingsDownloaded()) {
+	if (root.Window.Gamepad.wereControllerMappingsDownloaded()) {
 		gui.closeWindowFromRef(&window);
 	}
 }

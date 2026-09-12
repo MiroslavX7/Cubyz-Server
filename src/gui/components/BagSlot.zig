@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const BagInventory = main.items.Inventory.BagInventory;
-const graphics = main.graphics;
+const BagInventory = root.items.Inventory.BagInventory;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
 const TextBuffer = graphics.TextBuffer;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -51,13 +51,13 @@ pub fn toComponent(self: *BagSlot) GuiComponent {
 	return .{.bagSlot = self};
 }
 
-pub fn updateHovered(self: *BagSlot, _: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *BagSlot, _: Vec2f) root.callbacks.Result {
 	self.hovered = true;
 	gui.hoveredItemSlot = null;
 	return .handled;
 }
 
-pub fn mainButtonPressed(self: *BagSlot, _: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *BagSlot, _: Vec2f) root.callbacks.Result {
 	self.pressed = true;
 	return .handled;
 }
@@ -67,8 +67,8 @@ pub fn mainButtonReleased(self: *BagSlot, mousePosition: Vec2f) void {
 		self.pressed = false;
 		if (GuiComponent.contains(self.pos, self.size, mousePosition)) {
 			const carried = gui.inventory.carried;
-			if (main.KeyBoard.key("mainGuiButton").modsOnPress.shift) {
-				root.sync.client.executeCommand(.{.takeFromPlayerBag = .init(&.{main.game.Player.inventory}, std.math.maxInt(u16))});
+			if (root.KeyBoard.key("mainGuiButton").modsOnPress.shift) {
+				root.sync.client.executeCommand(.{.takeFromPlayerBag = .init(&.{root.game.Player.inventory}, std.math.maxInt(u16))});
 				return;
 			}
 			if (carried.getAmount(0) != 0) {

@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 const Vec4f = vec.Vec4f;
-const gui = main.gui;
+const gui = root.gui;
 const GuiComponent = gui.GuiComponent;
 
 var tooltipTexture: Texture = undefined;
@@ -28,7 +28,7 @@ pub fn globalDeinit() void {
 pub fn render(guiComponent: *GuiComponent, pos: Vec2f) void {
 	const size = guiComponent.size() + Vec2f{cornerSize[0]*2, cornerSize[1]*2};
 
-	const windowSize = main.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
+	const windowSize = root.Window.getWindowSize()/@as(Vec2f, @splat(gui.scale));
 	var renderPos = pos + Vec2f{offsetFromMouse, 0};
 	if (renderPos[0] + size[0] > windowSize[0]) {
 		renderPos = pos - Vec2f{size[0] + cornerSize[0]*2, 0};

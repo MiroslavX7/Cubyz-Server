@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const vulkan = main.graphics.vulkan;
+const vulkan = root.graphics.vulkan;
 
 const c = @import("c");
 
@@ -162,7 +162,7 @@ pub fn endRendering(self: CommandBuffer) void {
 	c.vkCmdEndRendering(self.handle);
 }
 
-pub fn bindPipeline(self: CommandBuffer, pipeline: main.graphics.Pipeline, scissor: ?c.VkRect2D) void {
+pub fn bindPipeline(self: CommandBuffer, pipeline: root.graphics.Pipeline, scissor: ?c.VkRect2D) void {
 	c.vkCmdBindPipeline(self.handle, c.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
 	self.setViewport(.{
 		.x = 0,
@@ -182,7 +182,7 @@ pub fn bindPipeline(self: CommandBuffer, pipeline: main.graphics.Pipeline, sciss
 	}
 }
 
-pub fn bindVertexArray(self: CommandBuffer, buffer: main.graphics.VertexArray) void {
+pub fn bindVertexArray(self: CommandBuffer, buffer: root.graphics.VertexArray) void {
 	c.vkCmdBindVertexBuffers(self.handle, 0, 1, &buffer.buffer.handle, &@as(usize, 0));
 	if (buffer.hasIndices) {
 		c.vkCmdBindIndexBuffer(self.handle, buffer.buffer.handle, buffer.indicesOffset, c.VK_INDEX_TYPE_UINT32);
@@ -198,7 +198,7 @@ const BindingInfo = union(enum) {
 	ssbo: struct {
 		binding: u32,
 		dynamic: bool = false,
-		ssbo: main.graphics.SSBO,
+		ssbo: root.graphics.SSBO,
 		offset: usize = 0,
 		range: usize = c.VK_WHOLE_SIZE,
 	},
@@ -209,7 +209,7 @@ const BindingInfo = union(enum) {
 	},
 };
 
-pub fn bindDescriptors(self: CommandBuffer, pipeline: main.graphics.Pipeline, bindPoint: DescriptorBindPoint, set: u32, bindings: []const BindingInfo) void {
+pub fn bindDescriptors(self: CommandBuffer, pipeline: root.graphics.Pipeline, bindPoint: DescriptorBindPoint, set: u32, bindings: []const BindingInfo) void {
 	const arena = root.stackAllocator.createArena();
 	defer root.stackAllocator.destroyArena(arena);
 	const writeInfo = arena.alloc(c.VkWriteDescriptorSet, bindings.len);
@@ -247,7 +247,7 @@ pub fn bindDescriptors(self: CommandBuffer, pipeline: main.graphics.Pipeline, bi
 	c.vkCmdPushDescriptorSetKHR(self.handle, @intFromEnum(bindPoint), pipeline.pipelineLayout, set, @intCast(writeInfo.len), writeInfo.ptr);
 }
 
-pub fn pushConstants(self: CommandBuffer, pipeline: main.graphics.Pipeline, constants: anytype) void {
+pub fn pushConstants(self: CommandBuffer, pipeline: root.graphics.Pipeline, constants: anytype) void {
 	comptime std.debug.assert(@typeInfo(@TypeOf(constants.*)).@"struct".layout == .@"extern");
 	c.vkCmdPushConstants(self.handle, pipeline.pipelineLayout, c.VK_SHADER_STAGE_ALL, 0, @sizeOf(@TypeOf(constants.*)), constants);
 }

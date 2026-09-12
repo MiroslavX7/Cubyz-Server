@@ -3,22 +3,22 @@ const Atomic = std.atomic.Value;
 
 const root = @import("root");
 const Block = root.blocks.Block;
-const chunk = main.chunk;
-const particles = main.particles;
-const items = main.items;
-const ZonElement = main.ZonElement;
-const game = main.game;
-const settings = main.settings;
-const renderer = main.renderer;
-const utils = main.utils;
-const vec = main.vec;
+const chunk = root.chunk;
+const particles = root.particles;
+const items = root.items;
+const ZonElement = root.ZonElement;
+const game = root.game;
+const settings = root.settings;
+const renderer = root.renderer;
+const utils = root.utils;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const BlockUpdate = renderer.mesh_storage.BlockUpdate;
 
-const network = main.network;
+const network = root.network;
 const Connection = network.Connection;
 
 var clientReceiveList: [256]?*const fn (*Connection, *utils.BinaryReader) anyerror!void = @splat(null);
@@ -155,8 +155,8 @@ pub const handShake = struct { // MARK: handShake
 						std.log.err("Received player name with invalid UTF-8 characters.", .{});
 						return error.Invalid;
 					}
-					if (name.len > 500 or main.graphics.TextBuffer.Parser.countVisibleCharacters(name) > 50) {
-						std.log.err("Player has too long name with {}/{} characters.", .{main.graphics.TextBuffer.Parser.countVisibleCharacters(name), name.len});
+					if (name.len > 500 or root.graphics.TextBuffer.Parser.countVisibleCharacters(name) > 50) {
+						std.log.err("Player has too long name with {}/{} characters.", .{root.graphics.TextBuffer.Parser.countVisibleCharacters(name), name.len});
 						return error.Invalid;
 					}
 					const version = zon.get([]const u8, "version") orelse "unknown";
@@ -275,7 +275,7 @@ pub const handShake = struct { // MARK: handShake
 			defer conn.mutex.unlock();
 			const expectedRestartCounter = conn.restartCounter;
 			while (true) {
-				try main.io.checkCancel();
+				try root.io.checkCancel();
 				conn.handShakeWaiting.timedWait(&conn.mutex, .fromMilliseconds(16)) catch {
 					root.heap.GarbageCollection.syncPoint();
 					continue;
@@ -357,7 +357,7 @@ pub const chunkTransmission = struct { // MARK: chunkTransmission
 		}
 
 		pub fn isStillNeeded(self: *MeshGenerationTask) bool {
-			if (main.game.world == null or main.game.world.?.paused) return false;
+			if (root.game.world == null or root.game.world.?.paused) return false;
 			const distanceSqr = self.pos.getMinDistanceSquared(@trunc(game.Player.getPosBlocking())); // TODO: This is called in loop, find a way to do this without calling the mutex every time.
 			var maxRenderDistance = settings.renderDistance*chunk.chunkSize*self.pos.voxelSize;
 			maxRenderDistance += 2*self.pos.voxelSize*chunk.chunkSize;
@@ -367,9 +367,9 @@ pub const chunkTransmission = struct { // MARK: chunkTransmission
 		pub fn run(self: *MeshGenerationTask) void {
 			defer self.clean();
 			const pos = self.pos;
-			const mesh = main.renderer.chunk_meshing.ChunkMesh.init(pos, self.data) catch |err| {
+			const mesh = root.renderer.chunk_meshing.ChunkMesh.init(pos, self.data) catch |err| {
 				std.log.err("Could not load chunk mesh from server: {s} Disconnecting.", .{@errorName(err)});
-				main.game.world.?.conn.disconnect();
+				root.game.world.?.conn.disconnect();
 				return;
 			};
 			mesh.generateLightingData() catch mesh.deferredDeinit();
@@ -392,7 +392,7 @@ pub const chunkTransmission = struct { // MARK: chunkTransmission
 			},
 			.data = root.globalAllocator.dupe(u8, reader.remaining),
 		};
-		main.threadPool.addTask(task, &MeshGenerationTask.vtable);
+		root.threadPool.addTask(task, &MeshGenerationTask.vtable);
 	}
 	fn sendChunkOverTheNetwork(conn: *Connection, ch: *chunk.ServerChunk) void {
 		ch.mutex.lock();
@@ -455,9 +455,9 @@ pub const entityPosition = struct { // MARK: entityPosition
 		if (conn.manager.world) |world| {
 			const time = try reader.readInt(i16);
 			const playerPos = try reader.readVec(Vec3d);
-			var entityData: main.ListManaged(root.entity.EntityNetworkData) = .init(root.stackAllocator);
+			var entityData: root.ListManaged(root.entity.EntityNetworkData) = .init(root.stackAllocator);
 			defer entityData.deinit();
-			var itemData: main.ListManaged(main.itemdrop.ItemDropNetworkData) = .init(root.stackAllocator);
+			var itemData: root.ListManaged(root.itemdrop.ItemDropNetworkData) = .init(root.stackAllocator);
 			defer itemData.deinit();
 			while (reader.remaining.len != 0) {
 				const typ = try reader.readEnum(Type);
@@ -493,11 +493,11 @@ pub const entityPosition = struct { // MARK: entityPosition
 			world.itemDrops.readPosition(time, itemData.items);
 		}
 	}
-	pub fn send(conn: *Connection, playerPos: Vec3d, entityData: []const root.entity.EntityNetworkData, itemData: []const main.itemdrop.ItemDropNetworkData) void {
+	pub fn send(conn: *Connection, playerPos: Vec3d, entityData: []const root.entity.EntityNetworkData, itemData: []const root.itemdrop.ItemDropNetworkData) void {
 		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 
-		writer.writeInt(i16, @truncate(main.timestamp().toMilliseconds()));
+		writer.writeInt(i16, @truncate(root.timestamp().toMilliseconds()));
 		writer.writeVec(Vec3d, playerPos);
 		for (entityData) |data| {
 			const velocityMagnitudeSqr = vec.lengthSquare(data.vel);
@@ -625,7 +625,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 	fn clientReceive(conn: *Connection, reader: *utils.BinaryReader) !void {
 		switch (try reader.readEnum(UpdateType)) {
 			.gamemode => {
-				root.sync.setGamemode(null, try reader.readEnum(main.game.Gamemode));
+				root.sync.setGamemode(null, try reader.readEnum(root.game.Gamemode));
 			},
 			.teleport => {
 				game.Player.setPosBlocking(try reader.readVec(Vec3d));
@@ -669,7 +669,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 				const newBiome = root.server.terrain.biomes.getByIndex(biomeId) orelse return error.MissingBiome;
 				const oldBiome = world.playerBiome.swap(newBiome, .monotonic);
 				if (oldBiome != newBiome) {
-					main.audio.setMusic(newBiome.preferredMusic);
+					root.audio.setMusic(newBiome.preferredMusic);
 				}
 			},
 			.particles => {
@@ -700,7 +700,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 			.clear => {
 				const typ = try reader.readEnum(ClearType);
 				switch (typ) {
-					.chat => main.gui.windowlist.chat.clearChat(),
+					.chat => root.gui.windowlist.chat.clearChat(),
 				}
 			},
 		}
@@ -727,7 +727,7 @@ pub const genericUpdate = struct { // MARK: genericUpdate
 		}
 	}
 
-	pub fn sendGamemode(conn: *Connection, gamemode: main.game.Gamemode) void {
+	pub fn sendGamemode(conn: *Connection, gamemode: root.game.Gamemode) void {
 		conn.send(.secure, id, &.{@intFromEnum(UpdateType.gamemode), @intFromEnum(gamemode)});
 	}
 
@@ -805,7 +805,7 @@ pub const chat = struct { // MARK: chat
 			std.log.err("Received chat message with invalid UTF-8 characters.", .{});
 			return error.Invalid;
 		}
-		main.gui.windowlist.chat.addMessage(msg);
+		root.gui.windowlist.chat.addMessage(msg);
 	}
 	fn serverReceive(conn: *Connection, reader: *utils.BinaryReader) !void {
 		const msg = reader.remaining;
@@ -814,8 +814,8 @@ pub const chat = struct { // MARK: chat
 			return error.Invalid;
 		}
 		const user = conn.user.?;
-		if (msg.len > 10000 or main.graphics.TextBuffer.Parser.countVisibleCharacters(msg) > 1000) {
-			std.log.err("Received too long chat message with {}/{} characters.", .{main.graphics.TextBuffer.Parser.countVisibleCharacters(msg), msg.len});
+		if (msg.len > 10000 or root.graphics.TextBuffer.Parser.countVisibleCharacters(msg) > 1000) {
+			std.log.err("Received too long chat message with {}/{} characters.", .{root.graphics.TextBuffer.Parser.countVisibleCharacters(msg), msg.len});
 			return error.Invalid;
 		}
 		root.server.messageFrom(msg, user);
@@ -880,7 +880,7 @@ pub const lightMapTransmission = struct { // MARK: lightMapTransmission
 		}
 
 		pub fn isStillNeeded(_: *LightMapTask) bool {
-			if (main.game.world == null or main.game.world.?.paused) return false;
+			if (root.game.world == null or root.game.world.?.paused) return false;
 			return true;
 		}
 
@@ -897,12 +897,12 @@ pub const lightMapTransmission = struct { // MARK: lightMapTransmission
 			defer root.stackAllocator.free(_inflatedData);
 			const _inflatedLen = utils.Compression.inflateTo(_inflatedData, self.data) catch |err| {
 				std.log.err("Got error {s} while decompressing lightmap data at position {} with data {any}", .{@errorName(err), pos, self.data});
-				main.game.world.?.conn.disconnect();
+				root.game.world.?.conn.disconnect();
 				return;
 			};
 			if (_inflatedLen != root.server.terrain.LightMap.LightMapFragment.mapSize*root.server.terrain.LightMap.LightMapFragment.mapSize*2) {
 				std.log.err("Transmission of light map has invalid size: {}. Input data: {any}, After inflate: {any}", .{_inflatedLen, self.data, _inflatedData[0.._inflatedLen]});
-				main.game.world.?.conn.disconnect();
+				root.game.world.?.conn.disconnect();
 				return;
 			}
 			var ligthMapReader = utils.BinaryReader.init(_inflatedData);
@@ -911,7 +911,7 @@ pub const lightMapTransmission = struct { // MARK: lightMapTransmission
 			for (&map.startHeight) |*val| {
 				val.* = ligthMapReader.readInt(i16) catch |err| {
 					std.log.err("Got error {s} while reading decompressed lightmap data at position {} with data {any}", .{@errorName(err), pos, _inflatedData});
-					main.game.world.?.conn.disconnect();
+					root.game.world.?.conn.disconnect();
 					return;
 				};
 			}
@@ -933,7 +933,7 @@ pub const lightMapTransmission = struct { // MARK: lightMapTransmission
 			.voxelSizeShift = try reader.readInt(u5),
 			.data = root.globalAllocator.dupe(u8, reader.remaining),
 		};
-		main.threadPool.addTask(task, &LightMapTask.vtable);
+		root.threadPool.addTask(task, &LightMapTask.vtable);
 	}
 	pub fn sendLightMap(conn: *Connection, map: *root.server.terrain.LightMap.LightMapFragment) void {
 		var ligthMapWriter = utils.BinaryWriter.initCapacity(root.stackAllocator, @sizeOf(@TypeOf(map.startHeight)));
@@ -1023,7 +1023,7 @@ pub const blockEntityUpdate = struct { // MARK: blockEntityUpdate
 	}
 
 	pub fn sendClientDataUpdateToServer(conn: *Connection, pos: Vec3i) void {
-		const mesh = main.renderer.mesh_storage.getMesh(.initFromWorldPos(pos, 1)) orelse return;
+		const mesh = root.renderer.mesh_storage.getMesh(.initFromWorldPos(pos, 1)) orelse return;
 		mesh.mutex.lock();
 		defer mesh.mutex.unlock();
 		const localPos = mesh.chunk.getLocalBlockPos(pos);
@@ -1039,7 +1039,7 @@ pub const blockEntityUpdate = struct { // MARK: blockEntityUpdate
 		conn.send(.secure, id, writer.data.items);
 	}
 
-	fn sendServerDataUpdateToClientsInternal(pos: Vec3i, ch: *chunk.Chunk, block: Block, blockEntity: *const main.block_entity.BlockEntityType) void {
+	fn sendServerDataUpdateToClientsInternal(pos: Vec3i, ch: *chunk.Chunk, block: Block, blockEntity: *const root.block_entity.BlockEntityType) void {
 		var writer = utils.BinaryWriter.init(root.stackAllocator);
 		defer writer.deinit();
 		blockEntity.getServerToClientData(pos, ch, &writer);

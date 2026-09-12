@@ -2,8 +2,8 @@ const std = @import("std");
 
 const root = @import("root");
 const ConnectionManager = root.network.ConnectionManager;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -58,7 +58,7 @@ pub fn onOpen() void {
 		lastLen = root.server.connectionManager.connections.items.len;
 		for (root.server.connectionManager.connections.items) |connection| {
 			const user = connection.user.?;
-			if (user.id == main.game.Player.id and connection.isConnected()) continue;
+			if (user.id == root.game.Player.id and connection.isConnected()) continue;
 			const row = HorizontalList.init();
 			if (connection.handShakeState.load(.monotonic) == .complete) {
 				const string = root.stackAllocator.print("{f}", .{connection.user.?});

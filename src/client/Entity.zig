@@ -1,15 +1,15 @@
 const std = @import("std");
 
 const root = @import("root");
-const chunk = main.chunk;
-const game = main.game;
-const graphics = main.graphics;
-const ZonElement = main.ZonElement;
-const renderer = main.renderer;
-const settings = main.settings;
-const utils = main.utils;
+const chunk = root.chunk;
+const game = root.game;
+const graphics = root.graphics;
+const ZonElement = root.ZonElement;
+const renderer = root.renderer;
+const settings = root.settings;
+const utils = root.utils;
 const BinaryReader = utils.BinaryReader;
-const vec = main.vec;
+const vec = root.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
@@ -78,7 +78,7 @@ pub fn update(self: *@This(), time: i16, lastTime: i16) void {
 }
 
 pub fn format(self: *const @This(), writer: *std.Io.Writer) std.Io.Writer.Error!void {
-	if (main.settings.showPlayerIndexWithName and root.entity.components.@"cubyz:player".client.get(self.id) != null) {
+	if (root.settings.showPlayerIndexWithName and root.entity.components.@"cubyz:player".client.get(self.id) != null) {
 		try self.formatWithPlayerIndex(writer);
 	} else {
 		try writer.print("{s}", .{self.name});

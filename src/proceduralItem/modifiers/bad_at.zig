@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const ProceduralItem = main.items.ProceduralItem;
+const ProceduralItem = root.items.ProceduralItem;
 
-pub const Data = packed struct(u128) { strength: f32, tag: main.Tag, pad: u64 = undefined };
+pub const Data = packed struct(u128) { strength: f32, tag: root.Tag, pad: u64 = undefined };
 
 pub const priority = 1;
 
-pub fn loadData(zon: main.ZonElement) Data {
+pub fn loadData(zon: root.ZonElement) Data {
 	return .{.strength = std.math.clamp(zon.get(f32, "strength") orelse 0, 0, 1), .tag = .find(zon.get([]const u8, "tag") orelse "incorrect")};
 }
 
@@ -23,6 +23,6 @@ pub fn changeBlockDamage(damage: f32, block: root.blocks.Block, data: Data) f32 
 	return damage;
 }
 
-pub fn printTooltip(outString: *main.ListManaged(u8), data: Data) void {
+pub fn printTooltip(outString: *root.ListManaged(u8), data: Data) void {
 	outString.print("#a00050**Bad at**#808080 *Decreases damage by **{d:.0}%** on \n***#a00050{s}#808080*** blocks", .{data.strength*100, data.tag.getName()});
 }

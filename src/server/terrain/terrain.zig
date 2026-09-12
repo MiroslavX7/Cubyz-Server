@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub const biomes = @import("biomes.zig");
@@ -58,7 +58,7 @@ pub const BlockGenerator = struct {
 	});
 
 	fn getAndInitGenerators(allocator: NeverFailingAllocator, settings: ZonElement) []const BlockGenerator {
-		var list: main.List(BlockGenerator) = .initCapacity(allocator, generatorRegistry.values().len);
+		var list: root.List(BlockGenerator) = .initCapacity(allocator, generatorRegistry.values().len);
 		for (generatorRegistry.keys(), generatorRegistry.values()) |id, generator| {
 			const generatorSettings = settings.getChild(id);
 			if ((generatorSettings.get(GeneratorState, "state") orelse generator.defaultState) == .disabled) continue;
@@ -124,9 +124,9 @@ pub const TerrainGenerationProfile = struct {
 };
 
 pub fn globalInit() void {
-	const t1 = main.timestamp();
+	const t1 = root.timestamp();
 	noise.BlueNoise.load();
-	std.log.info("Blue noise took {} ms to load", .{t1.durationTo(main.timestamp()).toMilliseconds()});
+	std.log.info("Blue noise took {} ms to load", .{t1.durationTo(root.timestamp()).toMilliseconds()});
 }
 
 pub fn init(profile: TerrainGenerationProfile) void {

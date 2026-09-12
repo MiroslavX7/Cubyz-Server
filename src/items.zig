@@ -5,13 +5,13 @@ const blocks = @import("blocks.zig");
 const Block = blocks.Block;
 const graphics = @import("graphics.zig");
 const Color = graphics.Color;
-const Tag = main.Tag;
-const ZonElement = main.ZonElement;
-const List = main.List;
+const Tag = root.Tag;
+const ZonElement = root.ZonElement;
+const List = root.List;
 const BinaryReader = root.utils.BinaryReader;
 const BinaryWriter = root.utils.BinaryWriter;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const chunk = main.chunk;
+const chunk = root.chunk;
 const random = @import("random.zig");
 const vec = @import("vec.zig");
 const Mat4f = vec.Mat4f;
@@ -119,7 +119,7 @@ const Material = struct { // MARK: Material
 		}
 	}
 
-	pub fn printTooltip(self: Material, outString: *main.ListManaged(u8)) void {
+	pub fn printTooltip(self: Material, outString: *root.ListManaged(u8)) void {
 		if (self.modifiers.len == 0) {
 			outString.appendSlice("§#808080Material\n");
 		}
@@ -145,7 +145,7 @@ pub const ModifierRestriction = struct {
 	pub const VTable = struct {
 		satisfied: *const fn (data: *anyopaque, proceduralItem: *const ProceduralItem, x: i32, y: i32) bool,
 		loadFromZon: *const fn (allocator: NeverFailingAllocator, zon: ZonElement) *anyopaque,
-		printTooltip: *const fn (data: *anyopaque, outString: *main.ListManaged(u8)) void,
+		printTooltip: *const fn (data: *anyopaque, outString: *root.ListManaged(u8)) void,
 	};
 
 	pub fn satisfied(self: ModifierRestriction, proceduralItem: *const ProceduralItem, x: i32, y: i32) bool {
@@ -164,7 +164,7 @@ pub const ModifierRestriction = struct {
 		};
 	}
 
-	pub fn printTooltip(self: ModifierRestriction, outString: *main.ListManaged(u8)) void {
+	pub fn printTooltip(self: ModifierRestriction, outString: *root.ListManaged(u8)) void {
 		self.vTable.printTooltip(self.data, outString);
 	}
 };
@@ -179,7 +179,7 @@ const Modifier = struct {
 		combineModifiers: *const fn (data1: Data, data2: Data) ?Data,
 		changeProceduralItemParameters: *const fn (proceduralItem: *ProceduralItem, data: Data) void,
 		changeBlockDamage: *const fn (damage: f32, block: Block, data: Data) f32,
-		printTooltip: *const fn (outString: *main.ListManaged(u8), data: Data) void,
+		printTooltip: *const fn (outString: *root.ListManaged(u8), data: Data) void,
 		loadData: *const fn (zon: ZonElement) Data,
 		priority: f32,
 
@@ -219,7 +219,7 @@ const Modifier = struct {
 		return self.vTable.changeBlockDamage(damage, block, self.data);
 	}
 
-	pub fn printTooltip(self: Modifier, outString: *main.ListManaged(u8)) void {
+	pub fn printTooltip(self: Modifier, outString: *root.ListManaged(u8)) void {
 		self.vTable.printTooltip(outString, self.data);
 	}
 };
@@ -330,7 +330,7 @@ pub const BaseItem = struct { // MARK: BaseItem
 		self.texture = null;
 		self.foodValue = zon.get(f32, "food") orelse 0;
 
-		var tooltip: main.ListManaged(u8) = .init(allocator);
+		var tooltip: root.ListManaged(u8) = .init(allocator);
 		tooltip.appendSlice(self.name);
 		tooltip.append('\n');
 		if (self.material) |mat| {
@@ -535,7 +535,7 @@ const TextureGenerator = struct { // MARK: TextureGenerator
 
 	fn mostCommonNeighborMaterial(materialGrid: *const [16][16]?BaseItemIndex, heightMap: *const [17][17]f32, pos: [2]u8, offsets: []const [2]i8) ?Material {
 		const Tally = struct { item: BaseItemIndex, score: f32, lightWeight: f32 };
-		var tallies: main.List(Tally) = .empty;
+		var tallies: root.List(Tally) = .empty;
 		defer tallies.deinit(root.stackAllocator);
 
 		outer: for (offsets) |offset| {
@@ -620,7 +620,7 @@ const ProceduralItemPhysics = struct { // MARK: ProceduralItemPhysics
 	/// Determines all the basic properties of the proceduralItem.
 	pub fn evaluateProceduralItem(proceduralItem: *ProceduralItem) void {
 		proceduralItem.properties = @splat(0);
-		var tempModifiers: main.List(Modifier) = .empty;
+		var tempModifiers: root.List(Modifier) = .empty;
 		defer tempModifiers.deinit(root.stackAllocator);
 		for (proceduralItem.type.properties()) |property| {
 			if (property.destination == null) continue;
@@ -793,7 +793,7 @@ pub const ProceduralItemTypeIndex = enum(u16) {
 
 pub const ProceduralItemType = struct { // MARK: ProceduralItemType
 	id: []const u8,
-	tags: []main.Tag,
+	tags: []root.Tag,
 	properties: []PropertyMatrix,
 	slotInfos: [25]SlotInfo,
 	pixelSources: [16][16]u8,
@@ -821,7 +821,7 @@ pub const ProceduralItem = struct { // MARK: ProceduralItem
 	craftingGrid: [craftingGridSize]?BaseItemIndex,
 	materialGrid: [16][16]?BaseItemIndex,
 	modifiers: []Modifier,
-	tooltip: main.ListManaged(u8),
+	tooltip: root.ListManaged(u8),
 	image: graphics.Image,
 	texture: ?graphics.Texture,
 	seed: u32,
@@ -898,7 +898,7 @@ pub const ProceduralItem = struct { // MARK: ProceduralItem
 	pub fn initFromInventory(inventory: Inventory) ?*ProceduralItem {
 		std.debug.assert(inventory.source == .workbench);
 		const slotInfos = inventory.source.workbench.proceduralItemIndex.slotInfos();
-		var availableItems: [25]?main.items.BaseItemIndex = undefined;
+		var availableItems: [25]?root.items.BaseItemIndex = undefined;
 
 		for (0..25) |i| {
 			if (inventory._items[i].item == .baseItem) {
@@ -1075,7 +1075,7 @@ pub const ProceduralItem = struct { // MARK: ProceduralItem
 		if (self.isEffectiveOn(block)) {
 			return damage;
 		}
-		return main.game.Player.defaultBlockDamage;
+		return root.game.Player.defaultBlockDamage;
 	}
 
 	pub fn onUseReturnBroken(self: *ProceduralItem) bool {
@@ -1323,7 +1323,7 @@ pub const Recipe = struct { // MARK: Recipe
 	resultAmount: u16,
 
 	fn getValidRecipe(self: Recipe) error{Invalid}!*Recipe {
-		outer: for (main.items.getRecipes()) |*recipe| {
+		outer: for (root.items.getRecipes()) |*recipe| {
 			if (recipe.resultItem != self.resultItem) continue;
 			if (recipe.resultAmount != self.resultAmount) continue;
 			if (recipe.sourceItems.len != self.sourceItems.len) continue;
@@ -1351,9 +1351,9 @@ pub const Recipe = struct { // MARK: Recipe
 		const resultAmount = try reader.readVarInt(u16);
 		const sourceCount = try reader.readVarInt(usize);
 
-		var sourceItems: main.List(BaseItemIndex) = .initCapacity(root.stackAllocator, @min(256, sourceCount));
+		var sourceItems: root.List(BaseItemIndex) = .initCapacity(root.stackAllocator, @min(256, sourceCount));
 		defer sourceItems.deinit(root.stackAllocator);
-		var sourceAmounts: main.List(u16) = .initCapacity(root.stackAllocator, @min(256, sourceCount));
+		var sourceAmounts: root.List(u16) = .initCapacity(root.stackAllocator, @min(256, sourceCount));
 		defer sourceAmounts.deinit(root.stackAllocator);
 
 		while (reader.remaining.len > 0 and sourceItems.items.len < sourceCount) {
@@ -1377,7 +1377,7 @@ pub var itemList: [65536]BaseItem = undefined;
 // Due to migrations multiple indices can map to the same item. This must be resolved during inventory loading using this map.
 var itemDeduplicationMap: [65536]BaseItemIndex = undefined;
 
-var recipeList: main.ListManaged(Recipe) = .init(root.worldArena);
+var recipeList: root.ListManaged(Recipe) = .init(root.worldArena);
 
 pub fn hasRegistered(id: []const u8) bool {
 	return reverseIndices.contains(id);
@@ -1447,26 +1447,26 @@ fn loadPixelSources(assetFolder: []const u8, id: []const u8, layerPostfix: []con
 	const proceduralItem = split.rest();
 	const path = root.stackAllocator.print("{s}/{s}/tools/{s}{s}.png", .{assetFolder, mod, proceduralItem, layerPostfix});
 	defer root.stackAllocator.free(path);
-	const image = main.graphics.Image.readFromFile(root.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
+	const image = root.graphics.Image.readFromFile(root.stackAllocator, path, .{.orientation = .openGl}) catch |err| blk: {
 		if (err != error.FileNotFound) {
 			std.log.err("Error while reading procedural item image '{s}': {s}", .{path, @errorName(err)});
 		}
 		const replacementPath = root.stackAllocator.print("assets/{s}/tools/{s}{s}.png", .{mod, proceduralItem, layerPostfix});
 		defer root.stackAllocator.free(replacementPath);
-		break :blk main.graphics.Image.readFromFile(root.stackAllocator, replacementPath, .{.orientation = .openGl}) catch |err2| {
+		break :blk root.graphics.Image.readFromFile(root.stackAllocator, replacementPath, .{.orientation = .openGl}) catch |err2| {
 			if (layerPostfix.len == 0 or err2 != error.FileNotFound) {
 				std.log.err("Error while reading procedural item image. Tried '{s}' and '{s}': {s}", .{path, replacementPath, @errorName(err2)});
 			}
-			break :blk main.graphics.Image.emptyImage;
+			break :blk root.graphics.Image.emptyImage;
 		};
 	};
 	defer image.deinit(root.stackAllocator);
-	if ((image.width != 16 or image.height != 16) and image.imageData.ptr != main.graphics.Image.emptyImage.imageData.ptr) {
+	if ((image.width != 16 or image.height != 16) and image.imageData.ptr != root.graphics.Image.emptyImage.imageData.ptr) {
 		std.log.err("Truncating image for {s} with incorrect dimensions. Should be 16×16.", .{id});
 	}
 	for (0..16) |x| {
 		for (0..16) |y| {
-			const color = if (image.width != 0 and image.height != 0) image.getRGB(@min(image.width - 1, x), image.height - 1 - @min(image.height - 1, y)) else main.graphics.Color{.r = 0, .g = 0, .b = 0, .a = 0};
+			const color = if (image.width != 0 and image.height != 0) image.getRGB(@min(image.width - 1, x), image.height - 1 - @min(image.height - 1, y)) else root.graphics.Color{.r = 0, .g = 0, .b = 0, .a = 0};
 			pixelSources[x][y] = blk: {
 				if (color.a == 0) break :blk 255;
 				const xPos = color.r/52;
@@ -1493,7 +1493,7 @@ pub fn registerProceduralItem(assetFolder: []const u8, id: []const u8, zon: ZonE
 		}
 		slotInfos[i].optional = (zonDisabled.as(usize) orelse 0) != 0;
 	}
-	var parameterMatrices: main.List(PropertyMatrix) = .empty;
+	var parameterMatrices: root.List(PropertyMatrix) = .empty;
 	defer parameterMatrices.deinit(root.stackAllocator);
 	for (zon.getChild("parameters").toSlice()) |paramZon| {
 		const val = parameterMatrices.addOne(root.stackAllocator);

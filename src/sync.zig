@@ -3,21 +3,21 @@ const std = @import("std");
 const root = @import("root");
 const Block = root.blocks.Block;
 const Neighbor = root.chunk.Neighbor;
-const Gamemode = main.game.Gamemode;
+const Gamemode = root.game.Gamemode;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const Inventory = main.items.Inventory;
+const Inventory = root.items.Inventory;
 const InventoryId = Inventory.InventoryId;
 const InventoryAndSlot = Inventory.InventoryAndSlot;
-const Item = main.items.Item;
-const ItemStack = main.items.ItemStack;
-const utils = main.utils;
+const Item = root.items.Item;
+const ItemStack = root.items.ItemStack;
+const utils = root.utils;
 const BinaryReader = utils.BinaryReader;
 const BinaryWriter = utils.BinaryWriter;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const BlockDrop = root.server.BlockDrop;
 
 const @"cubyz:bag" = root.entity.components.@"cubyz:bag";
@@ -55,10 +55,10 @@ pub const client = struct { // MARK: client
 
 		mutex.lock();
 		defer mutex.unlock();
-		cmd.do(root.globalAllocator, .client, null, main.game.Player.gamemode.raw) catch unreachable;
+		cmd.do(root.globalAllocator, .client, null, root.game.Player.gamemode.raw) catch unreachable;
 		const data = cmd.serializePayload(root.stackAllocator);
 		defer root.stackAllocator.free(data);
-		root.network.protocols.inventory.sendCommand(main.game.world.?.conn, cmd.payload, data);
+		root.network.protocols.inventory.sendCommand(root.game.world.?.conn, cmd.payload, data);
 		commands.pushBack(cmd);
 	}
 
@@ -76,7 +76,7 @@ pub const client = struct { // MARK: client
 	pub fn receiveFailure() void {
 		mutex.lock();
 		defer mutex.unlock();
-		var tempData: main.List(Command) = .empty;
+		var tempData: root.List(Command) = .empty;
 		defer tempData.deinit(root.stackAllocator);
 		while (commands.popBack()) |_cmd| {
 			var cmd = _cmd;
@@ -92,7 +92,7 @@ pub const client = struct { // MARK: client
 		}
 		while (tempData.popOrNull()) |_cmd| {
 			var cmd = _cmd;
-			cmd.do(root.globalAllocator, .client, null, main.game.Player.gamemode.raw) catch unreachable;
+			cmd.do(root.globalAllocator, .client, null, root.game.Player.gamemode.raw) catch unreachable;
 			commands.pushBack(cmd);
 		}
 	}
@@ -100,7 +100,7 @@ pub const client = struct { // MARK: client
 	pub fn receiveSyncOperation(reader: *BinaryReader) !void {
 		mutex.lock();
 		defer mutex.unlock();
-		var tempData: main.List(Command) = .empty;
+		var tempData: root.List(Command) = .empty;
 		defer tempData.deinit(root.stackAllocator);
 		while (commands.popBack()) |_cmd| {
 			var cmd = _cmd;
@@ -110,7 +110,7 @@ pub const client = struct { // MARK: client
 		try Command.SyncOperation.executeFromData(reader);
 		while (tempData.popOrNull()) |_cmd| {
 			var cmd = _cmd;
-			cmd.do(root.globalAllocator, .client, null, main.game.Player.gamemode.raw) catch unreachable;
+			cmd.do(root.globalAllocator, .client, null, root.game.Player.gamemode.raw) catch unreachable;
 			commands.pushBack(cmd);
 		}
 	}
@@ -118,8 +118,8 @@ pub const client = struct { // MARK: client
 	fn setGamemode(gamemode: Gamemode) void {
 		mutex.lock();
 		defer mutex.unlock();
-		main.game.Player.setGamemode(gamemode);
-		var tempData: main.List(Command) = .empty;
+		root.game.Player.setGamemode(gamemode);
+		var tempData: root.List(Command) = .empty;
 		defer tempData.deinit(root.stackAllocator);
 		while (commands.popBack()) |_cmd| {
 			var cmd = _cmd;
@@ -218,7 +218,7 @@ pub const server = struct { // MARK: server
 	}
 };
 
-pub fn addHealth(health: f32, cause: main.game.DamageType, side: Side, entity: root.entity.Entity) void {
+pub fn addHealth(health: f32, cause: root.game.DamageType, side: Side, entity: root.entity.Entity) void {
 	threadContext.assertCorrectContext(side);
 	if (side == .client) {
 		client.executeCommand(.{.addHealth = .{.target = entity, .health = health, .cause = cause}});
@@ -328,14 +328,14 @@ pub const Command = struct { // MARK: Command
 		},
 		useDurability: struct {
 			source: InventoryAndSlot,
-			item: main.items.Item = undefined,
+			item: root.items.Item = undefined,
 			durability: u31,
 			previousDurability: u32 = undefined,
 		},
 		addHealth: struct {
 			target: ?*root.server.User,
 			health: f32,
-			cause: main.game.DamageType,
+			cause: root.game.DamageType,
 			previous: f32,
 		},
 		addEnergy: struct {
@@ -426,16 +426,16 @@ pub const Command = struct { // MARK: Command
 					durability.inv.inv.update();
 				},
 				.health => |health| {
-					main.game.Player.super.health = std.math.clamp(main.game.Player.super.health + health.health, 0, main.game.Player.super.maxHealth);
+					root.game.Player.super.health = std.math.clamp(root.game.Player.super.health + health.health, 0, root.game.Player.super.maxHealth);
 				},
 				.kill => |kill| {
-					main.game.Player.kill(kill.spawnPoint);
+					root.game.Player.kill(kill.spawnPoint);
 				},
 				.energy => |energy| {
-					main.game.Player.super.energy = std.math.clamp(main.game.Player.super.energy + energy.energy, 0, main.game.Player.super.maxEnergy);
+					root.game.Player.super.energy = std.math.clamp(root.game.Player.super.energy + energy.energy, 0, root.game.Player.super.maxEnergy);
 				},
 				.rotation => |rotation| {
-					main.game.camera.rotation = rotation.rotation;
+					root.game.camera.rotation = rotation.rotation;
 				},
 			}
 		}
@@ -557,8 +557,8 @@ pub const Command = struct { // MARK: Command
 	};
 
 	payload: Payload,
-	baseOperations: main.List(BaseOperation) = .empty,
-	syncOperations: main.List(SyncOperation) = .empty,
+	baseOperations: root.List(BaseOperation) = .empty,
+	syncOperations: root.List(SyncOperation) = .empty,
 
 	fn serializePayload(self: *Command, allocator: NeverFailingAllocator) []const u8 {
 		var writer = BinaryWriter.init(allocator);
@@ -571,7 +571,7 @@ pub const Command = struct { // MARK: Command
 		return writer.data.toOwnedSlice();
 	}
 
-	fn do(self: *Command, allocator: NeverFailingAllocator, side: Side, user: ?*root.server.User, gamemode: main.game.Gamemode) error{serverFailure}!void { // MARK: do()
+	fn do(self: *Command, allocator: NeverFailingAllocator, side: Side, user: ?*root.server.User, gamemode: root.game.Gamemode) error{serverFailure}!void { // MARK: do()
 		threadContext.assertCorrectContext(side);
 		std.debug.assert(self.baseOperations.items.len == 0); // do called twice without cleaning up
 		switch (self.payload) {
@@ -653,10 +653,10 @@ pub const Command = struct { // MARK: Command
 					info.source.inv.update();
 				},
 				.addHealth => |info| {
-					main.game.Player.super.health = info.previous;
+					root.game.Player.super.health = info.previous;
 				},
 				.addEnergy => |info| {
-					main.game.Player.super.energy = info.previous;
+					root.game.Player.super.energy = info.previous;
 				},
 			}
 		}
@@ -836,8 +836,8 @@ pub const Command = struct { // MARK: Command
 						}});
 					}
 				} else {
-					info.previous = main.game.Player.super.health;
-					main.game.Player.super.health = std.math.clamp(main.game.Player.super.health + info.health, 0, main.game.Player.super.maxHealth);
+					info.previous = root.game.Player.super.health;
+					root.game.Player.super.health = std.math.clamp(root.game.Player.super.health + info.health, 0, root.game.Player.super.maxHealth);
 				}
 			},
 			.addEnergy => |*info| {
@@ -850,8 +850,8 @@ pub const Command = struct { // MARK: Command
 						.energy = info.energy,
 					}});
 				} else {
-					info.previous = main.game.Player.super.energy;
-					main.game.Player.super.energy = std.math.clamp(main.game.Player.super.energy + info.energy, 0, main.game.Player.super.maxEnergy);
+					info.previous = root.game.Player.super.energy;
+					root.game.Player.super.energy = std.math.clamp(root.game.Player.super.energy + info.energy, 0, root.game.Player.super.maxEnergy);
 				}
 			},
 		}
@@ -1371,7 +1371,7 @@ pub const Command = struct { // MARK: Command
 		fn run(self: MoveToPlayerBag, ctx: Context) error{serverFailure}!void {
 			std.debug.assert(ctx.side == .client or ctx.user != null);
 			const bag = switch (ctx.side) {
-				.client => @"cubyz:bag".client.getBag(main.game.Player.id).?,
+				.client => @"cubyz:bag".client.getBag(root.game.Player.id).?,
 				.server => @"cubyz:bag".server.getBag((ctx.user orelse return error.serverFailure).id) orelse return error.serverFailure,
 			};
 			ctx.execute(.{.moveToBag = .{.dest = bag, .source = self.source, .amount = self.amount}});
@@ -1408,7 +1408,7 @@ pub const Command = struct { // MARK: Command
 		fn run(self: TakeFromPlayerBag, ctx: Context) error{serverFailure}!void {
 			std.debug.assert(ctx.side == .client or ctx.user != null);
 			const bag = switch (ctx.side) {
-				.client => @"cubyz:bag".client.getBag(main.game.Player.id).?,
+				.client => @"cubyz:bag".client.getBag(root.game.Player.id).?,
 				.server => @"cubyz:bag".server.getBag((ctx.user orelse return error.serverFailure).id) orelse return error.serverFailure,
 			};
 			var amount: u16 = 0;
@@ -1440,9 +1440,9 @@ pub const Command = struct { // MARK: Command
 	const CraftFrom = struct { // MARK: CraftFrom
 		destinations: Inventory.Inventories,
 		sources: Inventory.Inventories,
-		recipe: *const main.items.Recipe,
+		recipe: *const root.items.Recipe,
 
-		pub fn init(destinations: []const Inventory.ClientInventory, sources: []const Inventory.ClientInventory, recipe: *const main.items.Recipe) CraftFrom {
+		pub fn init(destinations: []const Inventory.ClientInventory, sources: []const Inventory.ClientInventory, recipe: *const root.items.Recipe) CraftFrom {
 			return .{
 				.destinations = .initFromClientInventories(root.globalAllocator, destinations),
 				.sources = .initFromClientInventories(root.globalAllocator, sources),
@@ -1496,7 +1496,7 @@ pub const Command = struct { // MARK: Command
 			errdefer destinations.deinit(root.globalAllocator);
 			const sources = try Inventory.Inventories.fromBytes(root.globalAllocator, reader, side, user);
 			errdefer sources.deinit(root.globalAllocator);
-			const recipe = try main.items.Recipe.fromBytes(reader);
+			const recipe = try root.items.Recipe.fromBytes(reader);
 			return .{
 				.destinations = destinations,
 				.sources = sources,
@@ -1518,7 +1518,7 @@ pub const Command = struct { // MARK: Command
 		}
 
 		fn run(self: CraftProceduralItem, ctx: Context) error{serverFailure}!void {
-			const proceduralItem = Item{.proceduralItem = main.items.ProceduralItem.initFromInventory(self.craftingGrid) orelse return};
+			const proceduralItem = Item{.proceduralItem = root.items.ProceduralItem.initFromInventory(self.craftingGrid) orelse return};
 			if (self.destinations.canHold(.{.item = proceduralItem, .amount = 1}) != .yes) {
 				proceduralItem.deinit();
 				return;
@@ -1670,7 +1670,7 @@ pub const Command = struct { // MARK: Command
 	const AddHealth = struct { // MARK: AddHealth
 		target: root.entity.Entity,
 		health: f32,
-		cause: main.game.DamageType,
+		cause: root.game.DamageType,
 
 		pub fn run(self: AddHealth, ctx: Context) error{serverFailure}!void {
 			var target: ?*root.server.User = null;
@@ -1689,28 +1689,28 @@ pub const Command = struct { // MARK: Command
 
 				if (target.?.gamemode.raw == .creative) return;
 			} else {
-				if (main.game.Player.gamemode.raw == .creative) return;
+				if (root.game.Player.gamemode.raw == .creative) return;
 			}
 
 			ctx.execute(.{.addHealth = .{
 				.target = target,
 				.health = self.health,
 				.cause = self.cause,
-				.previous = if (ctx.side == .server) target.?.player().health else main.game.Player.super.health,
+				.previous = if (ctx.side == .server) target.?.player().health else root.game.Player.super.health,
 			}});
 		}
 
 		fn serialize(self: AddHealth, writer: *BinaryWriter) void {
 			writer.writeEnum(root.entity.Entity, self.target);
 			writer.writeInt(u32, @bitCast(self.health));
-			writer.writeEnum(main.game.DamageType, self.cause);
+			writer.writeEnum(root.game.DamageType, self.cause);
 		}
 
 		fn deserialize(reader: *BinaryReader, _: Side, user: ?*root.server.User) !AddHealth {
 			const result: AddHealth = .{
 				.target = try reader.readEnum(root.entity.Entity),
 				.health = @bitCast(try reader.readInt(u32)),
-				.cause = try reader.readEnum(main.game.DamageType),
+				.cause = try reader.readEnum(root.game.DamageType),
 			};
 			if (user.?.id != result.target) return error.Invalid;
 			return result;
@@ -1728,7 +1728,7 @@ pub const Command = struct { // MARK: Command
 			if (ctx.side == .server) {
 				const user = ctx.user orelse return;
 				if (root.server.world.?.settings.allowCheats) {
-					main.log.server("User \"{f}§#ffffff\" executed command \"{s}\"", .{user, self.message});
+					root.log.server("User \"{f}§#ffffff\" executed command \"{s}\"", .{user, self.message});
 					root.server.command.execute(self.message, .{.user = user});
 				} else {
 					user.sendRawMessage("Commands are not allowed because cheats are disabled");

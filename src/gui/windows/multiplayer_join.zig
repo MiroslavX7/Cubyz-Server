@@ -2,8 +2,8 @@ const std = @import("std");
 
 const root = @import("root");
 const ConnectionManager = root.network.ConnectionManager;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -29,7 +29,7 @@ var thread: ?std.Thread = null;
 const width: f32 = 420;
 
 fn discoverIpAddress() void {
-	connection = ConnectionManager.init(main.settings.defaultPort, .{}) catch |err| {
+	connection = ConnectionManager.init(root.settings.defaultPort, .{}) catch |err| {
 		std.log.err("Could not open Connection: {s}", .{@errorName(err)});
 		ipAddress = root.globalAllocator.dupe(u8, @errorName(err));
 		return;
@@ -40,8 +40,8 @@ fn discoverIpAddress() void {
 }
 
 fn discoverIpAddressFromNewThread() void {
-	main.initThreadLocals();
-	defer main.deinitThreadLocals();
+	root.initThreadLocals();
+	defer root.deinitThreadLocals();
 
 	discoverIpAddress();
 }
@@ -61,7 +61,7 @@ fn join() void {
 		connection = null;
 	} else {
 		std.log.err("No connection found. Cannot connect.", .{});
-		main.gui.windowlist.notification.raiseNotification("No connection found. Cannot connect.", .{});
+		root.gui.windowlist.notification.raiseNotification("No connection found. Cannot connect.", .{});
 	}
 }
 
@@ -70,7 +70,7 @@ pub fn restoreConnection(manager: *ConnectionManager) void {
 }
 
 fn copyIp() void {
-	main.Window.setClipboardString(ipAddress);
+	root.Window.setClipboardString(ipAddress);
 }
 
 pub fn onOpen() void {
@@ -81,7 +81,7 @@ pub fn onOpen() void {
 	list.add(ipAddressLabel);
 	list.add(Button.initText(.{0, 0}, 100, "Copy IP", .{.onAction = .init(copyIp)}));
 	ipAddressEntry = TextInput.init(.{0, 0}, width, 32, settings.lastUsedIPAddress, .{.onNewline = .init(join)});
-	ipAddressEntry.obfuscated = main.settings.streamerMode;
+	ipAddressEntry.obfuscated = root.settings.streamerMode;
 	list.add(ipAddressEntry);
 	list.add(Button.initText(.{0, 0}, 100, "Join", .{.onAction = .init(join)}));
 	list.finish(.center);
@@ -119,7 +119,7 @@ pub fn update() void {
 	if (gotIpAddress.load(.acquire)) {
 		gotIpAddress.store(false, .monotonic);
 
-		if (main.settings.streamerMode) {
+		if (root.settings.streamerMode) {
 			const obfuscatedIp = root.utils.obfuscateString(root.stackAllocator, ipAddress);
 			defer root.stackAllocator.free(obfuscatedIp);
 			ipAddressLabel.updateText(obfuscatedIp);

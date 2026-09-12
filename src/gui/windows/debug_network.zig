@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
-const network = main.network;
-const Vec2f = main.vec.Vec2f;
+const network = root.network;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -25,7 +25,7 @@ pub var window = GuiWindow{
 
 pub fn render() void {
 	var y: f32 = 0;
-	if (main.game.world != null) {
+	if (root.game.world != null) {
 		if (root.server.world != null) {
 			const userList = root.server.getUserList(root.stackAllocator);
 			defer root.stackAllocator.free(userList);

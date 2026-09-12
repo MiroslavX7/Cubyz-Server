@@ -2,10 +2,10 @@ const std = @import("std");
 
 const root = @import("root");
 const ConnectionManager = root.network.ConnectionManager;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const Texture = main.graphics.Texture;
+const Texture = root.graphics.Texture;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -36,7 +36,7 @@ const WorldInfo = struct {
 	name: []const u8,
 	fileName: []const u8,
 };
-var worldList: main.List(WorldInfo) = .empty;
+var worldList: root.List(WorldInfo) = .empty;
 
 pub fn init() void {
 	deleteIcon = Texture.initFromFile("assets/cubyz/ui/delete_icon.png");
@@ -59,21 +59,21 @@ pub fn openWorld(name: []const u8) void {
 		std.log.err("Encountered error while starting server thread: {s}", .{@errorName(err)});
 		return;
 	};
-	root.server.thread.?.setName(main.io, "Server") catch |err| {
+	root.server.thread.?.setName(root.io, "Server") catch |err| {
 		std.log.err("Failed to rename Server thread: {s}", .{@errorName(err)});
 	};
 
 	while (!root.server.running.load(.acquire)) {
-		main.io.sleep(.fromMilliseconds(1), .awake) catch {};
+		root.io.sleep(.fromMilliseconds(1), .awake) catch {};
 		root.heap.GarbageCollection.syncPoint();
 	}
 	const ipPort = root.stackAllocator.print("127.0.0.1:{}", .{root.server.connectionManager.localPort});
 	defer root.stackAllocator.free(ipPort);
-	const zon = main.game.testWorld.init(ipPort, clientConnection) catch |err| {
+	const zon = root.game.testWorld.init(ipPort, clientConnection) catch |err| {
 		std.log.err("Encountered error while opening world: {s}", .{@errorName(err)});
 		return;
 	};
-	main.game.testWorld.finishHandshake(zon) catch |err| {
+	root.game.testWorld.finishHandshake(zon) catch |err| {
 		std.log.err("Encountered error while opening world: {s}", .{@errorName(err)});
 		return;
 	};
@@ -88,9 +88,9 @@ fn openWorldWrap(index: usize) void { // TODO: Improve this situation. Maybe it 
 }
 
 fn deleteWorld(index: usize) void {
-	main.gui.closeWindow("delete_world_confirmation");
-	main.gui.windowlist.delete_world_confirmation.setDeleteWorldName(worldList.items[index].fileName);
-	main.gui.openWindow("delete_world_confirmation");
+	root.gui.closeWindow("delete_world_confirmation");
+	root.gui.windowlist.delete_world_confirmation.setDeleteWorldName(worldList.items[index].fileName);
+	root.gui.openWindow("delete_world_confirmation");
 }
 
 fn openFolder(index: usize) void {
@@ -122,7 +122,7 @@ pub fn onOpen() void {
 		defer dir.close();
 
 		var iterator = dir.iterate();
-		while (iterator.next(main.io) catch |err| {
+		while (iterator.next(root.io) catch |err| {
 			list.add(Label.init(.{0, 0}, 128, "Encountered error while iterating over saves folder:", .center));
 			list.add(Label.init(.{0, 0}, 128, @errorName(err), .center));
 			break :readingSaves;

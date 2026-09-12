@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const vulkan = graphics.vulkan;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
@@ -21,7 +21,7 @@ const Shader = struct { // MARK: Shader
 		const versionLine = source[0..versionLineEnd];
 		const sourceLines = source[versionLineEnd..];
 
-		var sourceWithDefines: main.ListManaged(u8) = .init(root.stackAllocator);
+		var sourceWithDefines: root.ListManaged(u8) = .init(root.stackAllocator);
 		defer sourceWithDefines.deinit();
 		sourceWithDefines.appendSlice(versionLine);
 		sourceWithDefines.appendSlice(defines);
@@ -73,7 +73,7 @@ const Shader = struct { // MARK: Shader
 	}
 
 	fn loadShaderFile(allocator: root.heap.NeverFailingAllocator, filename: []const u8, defines: []const u8) ![]const u8 {
-		var result: main.ListManaged(u8) = .init(allocator);
+		var result: root.ListManaged(u8) = .init(allocator);
 		errdefer result.deinit();
 
 		const arena = root.stackAllocator.createArena();
@@ -699,7 +699,7 @@ pub const Pipeline = struct { // MARK: Pipeline
 		}
 		const blendState = self.blendState.toVulkan(attachments);
 
-		var descriptorSetLayouts: main.List(c.VkDescriptorSetLayout) = .empty;
+		var descriptorSetLayouts: root.List(c.VkDescriptorSetLayout) = .empty;
 		defer descriptorSetLayouts.deinit(root.stackAllocator);
 
 		if (options.bindings.len != 0) {
@@ -738,7 +738,7 @@ pub const Pipeline = struct { // MARK: Pipeline
 		for (self.blendState.formats, 0..) |format, i| {
 			formats[i] = switch (format) {
 				.swapChain => vulkan.SwapChain.imageFormat,
-				.world => main.renderer.worldFrameBufferFormat,
+				.world => root.renderer.worldFrameBufferFormat,
 				.custom => |custom| custom,
 			};
 		}
@@ -791,7 +791,7 @@ pub const Pipeline = struct { // MARK: Pipeline
 			.depthStencilState = options.depthStencilState,
 			.blendState = options.blendState,
 		};
-		if (main.settings.launchConfig.vulkanTestingMode) {
+		if (root.settings.launchConfig.vulkanTestingMode) {
 			self.initVulkan(vertexPath, fragmentPath, defines, VertexType, options) catch |err| {
 				std.log.err("Vulkan pipeline creation for paths {s} {s} failed with error {s}", .{vertexPath, fragmentPath, @errorName(err)});
 			};
@@ -914,7 +914,7 @@ var frameUniformDescriptorSetLayout: c.VkDescriptorSetLayout = undefined;
 pub fn init() void { // MARK: init()
 	if (c.glslang_initialize_process() == c.false) std.log.err("glslang_initialize_process failed", .{});
 
-	if (main.settings.launchConfig.vulkanTestingMode) {
+	if (root.settings.launchConfig.vulkanTestingMode) {
 		const descriptorSetLayoutInfo = c.VkDescriptorSetLayoutCreateInfo{
 			.sType = c.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 			.bindingCount = 1,
@@ -931,7 +931,7 @@ pub fn init() void { // MARK: init()
 
 pub fn deinit() void { // MARK: deinit()
 	c.glslang_finalize_process();
-	if (main.settings.launchConfig.vulkanTestingMode) {
+	if (root.settings.launchConfig.vulkanTestingMode) {
 		c.vkDestroyDescriptorSetLayout(vulkan.device, frameUniformDescriptorSetLayout, null);
 	}
 }

@@ -5,13 +5,13 @@ const Block = blocks.Block;
 const chunk = @import("chunk.zig");
 const Neighbor = chunk.Neighbor;
 const root = @import("root");
-const ModelIndex = main.models.ModelIndex;
-const Tag = main.Tag;
-const vec = main.vec;
+const ModelIndex = root.models.ModelIndex;
+const Tag = root.Tag;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 const Vec3f = vec.Vec3f;
 const Mat4f = vec.Mat4f;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 
 pub const rotations = @import("rotations");
 
@@ -41,11 +41,11 @@ pub const RotationMode = struct { // MARK: RotationMode
 		pub fn rotateZ(data: u16, _: Degrees) u16 {
 			return data;
 		}
-		pub fn generateData(_: *main.game.World, _: Vec3i, _: Vec3f, _: Vec3f, _: Vec3i, _: ?Neighbor, _: *Block, _: Block, blockPlacing: bool) bool {
+		pub fn generateData(_: *root.game.World, _: Vec3i, _: Vec3f, _: Vec3f, _: Vec3i, _: ?Neighbor, _: *Block, _: Block, blockPlacing: bool) bool {
 			return blockPlacing;
 		}
 		pub fn createBlockModel(block: Block, _: *u16, zon: ZonElement) ModelIndex {
-			return main.models.getModelIndex(zon.as([]const u8) orelse blk: {
+			return root.models.getModelIndex(zon.as([]const u8) orelse blk: {
 				std.log.err("Invalid model data for block {s} found {s}, expected string", .{block.id(), @tagName(zon)});
 				break :blk "cubyz:cube";
 			});
@@ -56,14 +56,14 @@ pub const RotationMode = struct { // MARK: RotationMode
 		pub fn modifyBlock(_: *Block, _: u16) bool {
 			return false;
 		}
-		pub fn rayIntersection(block: Block, _: main.items.Item, relativePlayerPos: Vec3f, playerDir: Vec3f) ?RayIntersectionResult {
+		pub fn rayIntersection(block: Block, _: root.items.Item, relativePlayerPos: Vec3f, playerDir: Vec3f) ?RayIntersectionResult {
 			return rayModelIntersection(blocks.meshes.model(block), relativePlayerPos, playerDir);
 		}
 		pub fn rayModelIntersection(modelIndex: ModelIndex, relativePlayerPos: Vec3f, playerDir: Vec3f) ?RayIntersectionResult {
 			const modelData = modelIndex.model();
 			var minimum: ?f32 = null;
 			var normal: ?Vec3f = null;
-			var quadList: main.ListManaged(main.models.QuadInfo) = .init(root.stackAllocator);
+			var quadList: root.ListManaged(root.models.QuadInfo) = .init(root.stackAllocator);
 			defer quadList.deinit();
 			modelData.getRawFaces(&quadList);
 			for (quadList.items) |quad| {
@@ -96,14 +96,14 @@ pub const RotationMode = struct { // MARK: RotationMode
 			}
 			return null;
 		}
-		pub fn onBlockBreaking(_: main.items.Item, _: Vec3f, _: Vec3f, currentData: *Block) void {
+		pub fn onBlockBreaking(_: root.items.Item, _: Vec3f, _: Vec3f, currentData: *Block) void {
 			currentData.* = .{.typ = 0, .data = 0};
 		}
-		pub fn canBeChangedInto(oldBlock: Block, newBlock: Block, item: main.items.ItemStack, shouldDropSourceBlockOnSuccess: *bool) CanBeChangedInto {
+		pub fn canBeChangedInto(oldBlock: Block, newBlock: Block, item: root.items.ItemStack, shouldDropSourceBlockOnSuccess: *bool) CanBeChangedInto {
 			shouldDropSourceBlockOnSuccess.* = true;
 			if (oldBlock == newBlock) return .no;
 			if (oldBlock.typ == newBlock.typ) return .yes;
-			var damage: f32 = main.game.Player.defaultBlockDamage;
+			var damage: f32 = root.game.Player.defaultBlockDamage;
 			const isProceduralItem = item.item == .proceduralItem;
 			if (isProceduralItem) {
 				damage = item.item.proceduralItem.getBlockDamage(oldBlock);
@@ -130,7 +130,7 @@ pub const RotationMode = struct { // MARK: RotationMode
 		pub fn getBlockTags() []const Tag {
 			return &.{};
 		}
-		pub fn formatBlockData(block: Block, _list: *main.ListManaged(u8)) void {
+		pub fn formatBlockData(block: Block, _list: *root.ListManaged(u8)) void {
 			_list.print("{}", .{block.data});
 		}
 	};
@@ -157,29 +157,29 @@ pub const RotationMode = struct { // MARK: RotationMode
 
 	/// Updates the block data of a block in the world or places a block in the world.
 	/// return true if the placing was successful, false otherwise.
-	generateData: *const fn (world: *main.game.World, pos: Vec3i, relativePlayerPos: Vec3f, playerDir: Vec3f, relativeDir: Vec3i, neighbor: ?Neighbor, currentData: *Block, neighborBlock: Block, blockPlacing: bool) bool = DefaultFunctions.generateData,
+	generateData: *const fn (world: *root.game.World, pos: Vec3i, relativePlayerPos: Vec3f, playerDir: Vec3f, relativeDir: Vec3i, neighbor: ?Neighbor, currentData: *Block, neighborBlock: Block, blockPlacing: bool) bool = DefaultFunctions.generateData,
 
 	/// Updates data of a placed block if the RotationMode dependsOnNeighbors.
 	updateData: *const fn (block: *Block, neighbor: Neighbor, neighborBlock: Block) bool = &DefaultFunctions.updateData,
 
 	modifyBlock: *const fn (block: *Block, newType: u16) bool = DefaultFunctions.modifyBlock,
 
-	rayIntersection: *const fn (block: Block, item: main.items.Item, relativePlayerPos: Vec3f, playerDir: Vec3f) ?RayIntersectionResult = &DefaultFunctions.rayIntersection,
+	rayIntersection: *const fn (block: Block, item: root.items.Item, relativePlayerPos: Vec3f, playerDir: Vec3f) ?RayIntersectionResult = &DefaultFunctions.rayIntersection,
 
-	onBlockBreaking: *const fn (item: main.items.Item, relativePlayerPos: Vec3f, playerDir: Vec3f, currentData: *Block) void = &DefaultFunctions.onBlockBreaking,
+	onBlockBreaking: *const fn (item: root.items.Item, relativePlayerPos: Vec3f, playerDir: Vec3f, currentData: *Block) void = &DefaultFunctions.onBlockBreaking,
 
-	canBeChangedInto: *const fn (oldBlock: Block, newBlock: Block, item: main.items.ItemStack, shouldDropSourceBlockOnSuccess: *bool) CanBeChangedInto = DefaultFunctions.canBeChangedInto,
+	canBeChangedInto: *const fn (oldBlock: Block, newBlock: Block, item: root.items.ItemStack, shouldDropSourceBlockOnSuccess: *bool) CanBeChangedInto = DefaultFunctions.canBeChangedInto,
 
 	itemDropsOnChange: *const fn (oldBlock: Block, newBlock: Block) u16 = DefaultFunctions.itemDropsOnChange,
 
 	getBlockTags: *const fn () []const Tag = DefaultFunctions.getBlockTags,
 
-	formatBlockData: *const fn (block: Block, _list: *main.ListManaged(u8)) void = DefaultFunctions.formatBlockData,
+	formatBlockData: *const fn (block: Block, _list: *root.ListManaged(u8)) void = DefaultFunctions.formatBlockData,
 };
 
 var rotationModes: std.StringHashMap(RotationMode) = undefined;
 
-pub fn rotationMatrixTransform(quad: *main.models.QuadInfo, transformMatrix: Mat4f) void {
+pub fn rotationMatrixTransform(quad: *root.models.QuadInfo, transformMatrix: Mat4f) void {
 	quad.normal = vec.xyz(Mat4f.mulVec(transformMatrix, vec.combine(quad.normal, 0)));
 	for (&quad.corners) |*corner| {
 		corner.* = vec.xyz(Mat4f.mulVec(transformMatrix, vec.combine(corner.* - Vec3f{0.5, 0.5, 0.5}, 1))) + Vec3f{0.5, 0.5, 0.5};

@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const Item = main.items.Item;
-const ClientInventory = main.items.Inventory.ClientInventory;
-const Player = main.game.Player;
-const Vec2f = main.vec.Vec2f;
+const Item = root.items.Item;
+const ClientInventory = root.items.Inventory.ClientInventory;
+const Player = root.game.Player;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -26,7 +26,7 @@ pub var window = GuiWindow{
 
 const padding: f32 = 8;
 const slotsPerRow: u32 = 10;
-var items: main.ListManaged(Item) = undefined;
+var items: root.ListManaged(Item) = undefined;
 var inventory: ClientInventory = undefined;
 var searchInput: *TextInput = undefined;
 var searchString: []const u8 = undefined;
@@ -54,7 +54,7 @@ pub fn onClose() void {
 	root.globalAllocator.free(searchString);
 }
 
-fn hasMatchingTag(tags: []const main.Tag, target: []const u8) bool {
+fn hasMatchingTag(tags: []const root.Tag, target: []const u8) bool {
 	for (tags) |tag| {
 		if (std.mem.containsAtLeast(u8, tag.getName(), 1, target)) {
 			return true;
@@ -81,7 +81,7 @@ fn initContent() void {
 	{
 		const list = VerticalList.init(.{0, padding}, 144, 0);
 		items = .init(root.globalAllocator);
-		var itemIterator = main.items.iterator();
+		var itemIterator = root.items.iterator();
 		if (searchString.len > 1 and searchString[0] == '.') {
 			const tag = searchString[1..];
 			while (itemIterator.next()) |item| {

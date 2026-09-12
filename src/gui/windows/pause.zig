@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -28,7 +28,7 @@ pub fn onOpen() void {
 	}
 	list.add(Button.initText(.{0, 0}, 128, "Settings", .{.onAction = gui.openWindowCallback("settings")}));
 	list.add(Button.initText(.{0, 0}, 128, "Reorder HUD", .{.onAction = .init(reorderHudCallbackFunction)}));
-	list.add(Button.initText(.{0, 0}, 128, "Exit World", .{.onAction = .init(main.exitToMenu)}));
+	list.add(Button.initText(.{0, 0}, 128, "Exit World", .{.onAction = .init(root.exitToMenu)}));
 	list.finish(.center);
 	window.rootComponent = list.toComponent();
 	window.contentSize = window.rootComponent.?.pos() + window.rootComponent.?.size() + @as(Vec2f, @splat(padding));

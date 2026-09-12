@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const root = @import("root");
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const Window = @import("graphics/Window.zig");
 
 pub const version = @import("utils/version.zig");
@@ -116,7 +116,7 @@ pub fn init() void {
 
 	// keyboard settings:
 	const keyboard = zon.getChild("keyboard");
-	for (&main.KeyBoard.keys) |*key| {
+	for (&root.KeyBoard.keys) |*key| {
 		const keyZon = keyboard.getChild(key.name);
 		key.key = keyZon.get(c_int, "key") orelse key.key;
 		key.mouseButton = keyZon.get(c_int, "mouseButton") orelse key.mouseButton;
@@ -179,7 +179,7 @@ pub fn save() void {
 
 	// keyboard settings:
 	const keyboard = ZonElement.initObject(root.stackAllocator);
-	for (&main.KeyBoard.keys) |key| {
+	for (&root.KeyBoard.keys) |key| {
 		const keyZon = ZonElement.initObject(root.stackAllocator);
 		keyZon.put("key", key.key);
 		keyZon.put("mouseButton", key.mouseButton);

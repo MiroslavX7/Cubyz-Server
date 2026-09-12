@@ -5,10 +5,10 @@ const Array3D = root.utils.Array3D;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const sdf = root.server.terrain.sdf;
 const SdfInstance = sdf.SdfInstance;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 
 pub const id = "cubyz:partial_sphere";
 
@@ -41,8 +41,8 @@ pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
 pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) SdfInstance {
 	const instance = arena.create(Instance);
 	instance.* = .{
-		.radius = self.minRadius + (self.maxRadius - self.minRadius)*main.random.nextFloat(seed),
-		.cutDirection = vec.normalize(self.cutDirection + main.random.nextFloatVectorSigned(3, seed)*@as(Vec3f, @splat(self.cutDirectionRandomness))),
+		.radius = self.minRadius + (self.maxRadius - self.minRadius)*root.random.nextFloat(seed),
+		.cutDirection = vec.normalize(self.cutDirection + root.random.nextFloatVectorSigned(3, seed)*@as(Vec3f, @splat(self.cutDirectionRandomness))),
 		.cutPercentage = self.cutPercentage,
 	};
 	const bounds: Vec3f = @splat(instance.radius);

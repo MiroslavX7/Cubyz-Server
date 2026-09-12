@@ -2,19 +2,19 @@ const std = @import("std");
 
 const root = @import("root");
 const Block = root.blocks.Block;
-const blocks = main.blocks;
-const ZonElement = main.ZonElement;
-const server = main.server;
+const blocks = root.blocks;
+const ZonElement = root.ZonElement;
+const server = root.server;
 
-pub fn init(_: ZonElement, _: main.callbacks.Creator) ?*@This() {
+pub fn init(_: ZonElement, _: root.callbacks.Creator) ?*@This() {
 	return root.worldArena.create(@This());
 }
-pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.callbacks.Result {
+pub fn run(_: *@This(), params: root.callbacks.ServerBlockCallback.Params) root.callbacks.Result {
 	const wx = params.chunk.super.pos.wx + params.blockPos.x;
 	const wy = params.chunk.super.pos.wy + params.blockPos.y;
 	const wz = params.chunk.super.pos.wz + params.blockPos.z;
 
-	if (params.block.mode() != main.rotation.getByID("cubyz:hanging")) {
+	if (params.block.mode() != root.rotation.getByID("cubyz:hanging")) {
 		std.log.err("Expected {s} to have cubyz:hanging as rotation", .{params.block.id()});
 		return .ignored;
 	}
@@ -34,7 +34,7 @@ pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.
 	return .ignored;
 }
 
-fn decay(x: i32, y: i32, z: i32, current: Block) main.callbacks.Result {
+fn decay(x: i32, y: i32, z: i32, current: Block) root.callbacks.Result {
 	if (server.world.?.cmpxchgBlock(x, y, z, current, blocks.Block.air) == null) return .handled;
 	return .ignored;
 }

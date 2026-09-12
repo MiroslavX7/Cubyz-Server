@@ -14,7 +14,7 @@ pub const Args = union(enum) {
 };
 
 pub fn execute(args: Args, source: Source) void {
-	if (args.@"/server <action>".action == .restart and !main.settings.launchConfig.headlessServer) {
+	if (args.@"/server <action>".action == .restart and !root.settings.launchConfig.headlessServer) {
 		source.sendMessage("#ff0000Headfull restart isn't supported yet.", .{});
 		return;
 	}

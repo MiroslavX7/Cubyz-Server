@@ -2,12 +2,12 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const root = @import("root");
-const server = main.server;
+const server = root.server;
 const User = server.User;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const NeverFailingArenaAllocator = root.heap.NeverFailingArenaAllocator;
-const ZonElement = main.ZonElement;
-const sync = main.sync;
+const ZonElement = root.ZonElement;
+const sync = root.sync;
 
 const PermissionMap = struct { // MARK: PermissionMap
 	map: std.StringHashMapUnmanaged(void) = .{},
@@ -193,7 +193,7 @@ const GroupInstance = struct { // MARK: GroupInstance
 // - Group1 is deleted while User1 is offline (so their data isn’t updated)
 // - A new Group1 is created
 // - When User1 reconnects, they are incorrectly treated as a member of the new Group1
-var groups: main.ListManaged(?*GroupInstance) = undefined;
+var groups: root.ListManaged(?*GroupInstance) = undefined;
 var groupNameToIdMap: std.StringHashMapUnmanaged(Group) = .{};
 
 var groupsArena: NeverFailingArenaAllocator = undefined;

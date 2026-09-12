@@ -2,20 +2,20 @@ const std = @import("std");
 
 const root = @import("root");
 const Block = root.blocks.Block;
-const blocks = main.blocks;
+const blocks = root.blocks;
 const Neighbor = root.chunk.Neighbor;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
-const ZonElement = main.ZonElement;
-const server = main.server;
+const ZonElement = root.ZonElement;
+const server = root.server;
 
-pub fn init(_: ZonElement, _: main.callbacks.Creator) ?*@This() {
+pub fn init(_: ZonElement, _: root.callbacks.Creator) ?*@This() {
 	return @as(*@This(), undefined);
 }
 
-pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.callbacks.Result {
+pub fn run(_: *@This(), params: root.callbacks.ServerBlockCallback.Params) root.callbacks.Result {
 	const wx = params.chunk.super.pos.wx + params.blockPos.x;
 	const wy = params.chunk.super.pos.wy + params.blockPos.y;
 	const wz = params.chunk.super.pos.wz + params.blockPos.z;
@@ -30,10 +30,10 @@ pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.
 
 	var newBlock: Block = params.block;
 
-	inline for (comptime std.meta.declarations(main.rotation.rotations)) |rotationMode| {
-		if (params.block.mode() == main.rotation.getByID(rotationMode.name)) {
-			if (@hasDecl(@field(main.rotation.rotations, rotationMode.name), "updateBlockFromNeighborConnectivity")) {
-				@field(main.rotation.rotations, rotationMode.name).updateBlockFromNeighborConnectivity(&newBlock, neighborSupportive);
+	inline for (comptime std.meta.declarations(root.rotation.rotations)) |rotationMode| {
+		if (params.block.mode() == root.rotation.getByID(rotationMode.name)) {
+			if (@hasDecl(@field(root.rotation.rotations, rotationMode.name), "updateBlockFromNeighborConnectivity")) {
+				@field(root.rotation.rotations, rotationMode.name).updateBlockFromNeighborConnectivity(&newBlock, neighborSupportive);
 			} else {
 				std.log.err("Rotation mode {s} has no updateBlockFromNeighborConnectivity function and cannot be used for {s} callback", .{rotationMode.name, @typeName(@This())});
 			}
@@ -48,16 +48,16 @@ pub fn run(_: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.
 		for (0..dropAmount) |_| {
 			for (drops) |drop| {
 				if (!drop.isDroppedWhenBrokenWithItem(.null)) continue;
-				if (drop.chance == 1 or main.random.nextFloat(&main.seed) < drop.chance) {
+				if (drop.chance == 1 or root.random.nextFloat(&root.seed) < drop.chance) {
 					for (drop.itemStacks) |stack| {
-						var dir = main.vec.normalize(main.random.nextFloatVectorSigned(3, &main.seed));
+						var dir = root.vec.normalize(root.random.nextFloatVectorSigned(3, &root.seed));
 						// Bias upwards
-						dir[2] += main.random.nextFloat(&main.seed)*4.0;
+						dir[2] += root.random.nextFloat(&root.seed)*4.0;
 						const model = params.block.mode().model(params.block).model();
 						const pos = Vec3f{
-							@as(f32, @floatFromInt(wx)) + model.min[0] + main.random.nextFloat(&main.seed)*(model.max[0] - model.min[0]),
-							@as(f32, @floatFromInt(wy)) + model.min[1] + main.random.nextFloat(&main.seed)*(model.max[1] - model.min[1]),
-							@as(f32, @floatFromInt(wz)) + model.min[2] + main.random.nextFloat(&main.seed)*(model.max[2] - model.min[2]),
+							@as(f32, @floatFromInt(wx)) + model.min[0] + root.random.nextFloat(&root.seed)*(model.max[0] - model.min[0]),
+							@as(f32, @floatFromInt(wy)) + model.min[1] + root.random.nextFloat(&root.seed)*(model.max[1] - model.min[1]),
+							@as(f32, @floatFromInt(wz)) + model.min[2] + root.random.nextFloat(&root.seed)*(model.max[2] - model.min[2]),
 						};
 						root.server.world.?.drop(stack.clone(), pos, dir, 1);
 					}

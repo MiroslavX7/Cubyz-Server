@@ -7,7 +7,7 @@ const itemdrop = @import("itemdrop.zig");
 const ClientItemDropManager = itemdrop.ClientItemDropManager;
 const items = @import("items.zig");
 const ClientInventory = items.Inventory.ClientInventory;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const network = @import("network.zig");
 const particles = @import("particles.zig");
 const Connection = network.Connection;
@@ -24,8 +24,8 @@ const Fog = graphics.Fog;
 const renderer = @import("renderer.zig");
 const settings = @import("settings.zig");
 const Block = root.blocks.Block;
-const physics = main.physics;
-const KeyBoard = main.KeyBoard;
+const physics = root.physics;
+const KeyBoard = root.KeyBoard;
 
 pub const camera = struct { // MARK: camera
 	pub var rotation: Vec3f = Vec3f{0, 0, 0};
@@ -187,9 +187,9 @@ pub const Player = struct { // MARK: Player
 		}
 	}
 
-	pub fn placeBlock(mods: main.Window.Key.Modifiers) void {
-		if (main.renderer.MeshSelection.selectedBlockPos) |blockPos| blk: {
-			const mesh = main.renderer.mesh_storage.getMesh(.initFromWorldPos(blockPos, 1)) orelse break :blk;
+	pub fn placeBlock(mods: root.Window.Key.Modifiers) void {
+		if (root.renderer.MeshSelection.selectedBlockPos) |blockPos| blk: {
+			const mesh = root.renderer.mesh_storage.getMesh(.initFromWorldPos(blockPos, 1)) orelse break :blk;
 			const block = mesh.chunk.getBlock(blockPos[0] - mesh.pos.wx, blockPos[1] - mesh.pos.wy, blockPos[2] - mesh.pos.wz);
 			const onInteract = block.onInteract();
 			if (!mods.shift) {
@@ -211,7 +211,7 @@ pub const Player = struct { // MARK: Player
 		Player.jumpCoyote = 0;
 	}
 
-	pub fn dropFromHand(mods: main.Window.Key.Modifiers) void {
+	pub fn dropFromHand(mods: root.Window.Key.Modifiers) void {
 		if (mods.shift) {
 			inventory.dropStack(selectedSlot);
 		} else {
@@ -224,11 +224,11 @@ pub const Player = struct { // MARK: Player
 	}
 
 	pub fn acquireSelectedBlock() void {
-		if (main.renderer.MeshSelection.selectedBlockPos) |selectedPos| {
-			const block = main.renderer.mesh_storage.getBlockFromRenderThread(selectedPos[0], selectedPos[1], selectedPos[2]) orelse return;
+		if (root.renderer.MeshSelection.selectedBlockPos) |selectedPos| {
+			const block = root.renderer.mesh_storage.getBlockFromRenderThread(selectedPos[0], selectedPos[1], selectedPos[2]) orelse return;
 
 			const item: items.Item = for (0..items.itemListSize) |idx| {
-				const baseItem: main.items.BaseItemIndex = @enumFromInt(idx);
+				const baseItem: root.items.BaseItemIndex = @enumFromInt(idx);
 				if (baseItem.block() == block.typ) {
 					break .{.baseItem = baseItem};
 				}
@@ -295,7 +295,7 @@ pub const World = struct { // MARK: World
 			.conn = self.conn,
 			.manager = self.manager,
 			.name = "client",
-			.milliTime = main.timestamp().toMilliseconds(),
+			.milliTime = root.timestamp().toMilliseconds(),
 		};
 
 		return try network.protocols.handShake.clientSide(self.conn, settings.playerName);
@@ -335,22 +335,22 @@ pub const World = struct { // MARK: World
 		self.manager.deinit();
 	}
 	pub fn pause(self: *World) void {
-		main.threadPool.pause();
-		defer main.threadPool.@"continue"();
-		defer main.threadPool.updateTaskPriority();
+		root.threadPool.pause();
+		defer root.threadPool.@"continue"();
+		defer root.threadPool.updateTaskPriority();
 
 		self.paused = true;
 
 		// TODO: Close all world related guis.
-		main.gui.inventory.deinit();
-		main.gui.deinit();
-		main.gui.init();
+		root.gui.inventory.deinit();
+		root.gui.deinit();
+		root.gui.init();
 		Player.inventory.deinit(root.globalAllocator);
 		root.sync.client.reset();
 
 		Player.super.deinit(.client);
 		root.entity.client.clear();
-		main.systems.client.clear();
+		root.systems.client.clear();
 		self.itemDrops.deinit();
 		self.blockPalette.deinit();
 		self.itemPalette.deinit();
@@ -366,7 +366,7 @@ pub const World = struct { // MARK: World
 
 	pub fn finishHandshake(self: *World, zon: ZonElement) !void {
 		self.conn.manager.world = self;
-		main.game.world = self;
+		root.game.world = self;
 		errdefer root.heap.allocators.destroyWorldArena();
 		errdefer self.conn.deinit();
 		self.itemDrops.init(root.globalAllocator);
@@ -393,13 +393,13 @@ pub const World = struct { // MARK: World
 		Player.inventory = ClientInventory.init(root.globalAllocator, Player.inventorySize, .serverShared, .{.playerInventory = Player.id}, .{});
 		Player.setGamemode(std.enums.fromInt(Gamemode, zon.get(u8, "gamemode") orelse return error.Invalid) orelse return error.Invalid);
 		self.playerBiome = .init(root.server.terrain.biomes.getPlaceholderBiome());
-		main.audio.setMusic(self.playerBiome.raw.preferredMusic);
+		root.audio.setMusic(self.playerBiome.raw.preferredMusic);
 
-		main.Window.setMouseGrabbed(true);
+		root.Window.setMouseGrabbed(true);
 		root.blocks.meshes.generateTextureArray();
-		main.particles.ParticleManager.generateTextureArray();
-		main.models.uploadModels();
-		main.entityModel.loadModelsAndTexture();
+		root.particles.ParticleManager.generateTextureArray();
+		root.models.uploadModels();
+		root.entityModel.loadModelsAndTexture();
 
 		try Player.loadFrom(zon.getChild("player"));
 		root.network.protocols.handShake.signalLoadedAssets();
@@ -408,7 +408,7 @@ pub const World = struct { // MARK: World
 	}
 
 	pub fn update(self: *World, deltaTime: f64) void {
-		const newTime: i64 = main.timestamp().toMilliseconds();
+		const newTime: i64 = root.timestamp().toMilliseconds();
 		while (self.milliTime +% 100 -% newTime < 0) {
 			self.milliTime +%= 100;
 			var curTime = self.gameTime.load(.monotonic);
@@ -567,31 +567,31 @@ pub var projectionMatrix: Mat4f = Mat4f.identity();
 var nextBlockPlaceTime: ?std.Io.Timestamp = null;
 var nextBlockBreakTime: ?std.Io.Timestamp = null;
 
-pub fn pressPlace(mods: main.Window.Key.Modifiers) void {
-	const time = main.timestamp();
-	nextBlockPlaceTime = time.addDuration(main.settings.updateRepeatDelay);
+pub fn pressPlace(mods: root.Window.Key.Modifiers) void {
+	const time = root.timestamp();
+	nextBlockPlaceTime = time.addDuration(root.settings.updateRepeatDelay);
 	Player.placeBlock(mods);
 }
 
-pub fn releasePlace(_: main.Window.Key.Modifiers) void {
+pub fn releasePlace(_: root.Window.Key.Modifiers) void {
 	nextBlockPlaceTime = null;
 }
 
-pub fn pressBreak(_: main.Window.Key.Modifiers) void {
-	const time = main.timestamp();
-	nextBlockBreakTime = time.addDuration(main.settings.updateRepeatDelay);
+pub fn pressBreak(_: root.Window.Key.Modifiers) void {
+	const time = root.timestamp();
+	nextBlockBreakTime = time.addDuration(root.settings.updateRepeatDelay);
 	Player.breakBlock(0);
 }
 
-pub fn releaseBreak(_: main.Window.Key.Modifiers) void {
+pub fn releaseBreak(_: root.Window.Key.Modifiers) void {
 	nextBlockBreakTime = null;
 }
 
-pub fn pressAcquireSelectedBlock(_: main.Window.Key.Modifiers) void {
+pub fn pressAcquireSelectedBlock(_: root.Window.Key.Modifiers) void {
 	Player.acquireSelectedBlock();
 }
 
-pub fn flyToggle(_: main.Window.Key.Modifiers) void {
+pub fn flyToggle(_: root.Window.Key.Modifiers) void {
 	if (!Player.isCreative()) return;
 
 	const newIsFlying = !Player.isActuallyFlying();
@@ -600,7 +600,7 @@ pub fn flyToggle(_: main.Window.Key.Modifiers) void {
 	Player.isGhost.store(false, .monotonic);
 }
 
-pub fn ghostToggle(_: main.Window.Key.Modifiers) void {
+pub fn ghostToggle(_: root.Window.Key.Modifiers) void {
 	if (!Player.isCreative()) return;
 
 	const newIsGhost = !Player.isGhost.load(.monotonic);
@@ -609,7 +609,7 @@ pub fn ghostToggle(_: main.Window.Key.Modifiers) void {
 	Player.isFlying.store(newIsGhost, .monotonic);
 }
 
-pub fn hyperSpeedToggle(_: main.Window.Key.Modifiers) void {
+pub fn hyperSpeedToggle(_: root.Window.Key.Modifiers) void {
 	if (!Player.isCreative()) return;
 
 	Player.hyperSpeed.store(!Player.hyperSpeed.load(.monotonic), .monotonic);
@@ -617,7 +617,7 @@ pub fn hyperSpeedToggle(_: main.Window.Key.Modifiers) void {
 
 pub fn getBlockWithSide(comptime side: root.sync.Side, x: i32, y: i32, z: i32) ?Block {
 	if (side == .client) {
-		return main.renderer.mesh_storage.getBlockFromRenderThread(x, y, z);
+		return root.renderer.mesh_storage.getBlockFromRenderThread(x, y, z);
 	} else {
 		return root.server.world.?.getBlock(x, y, z);
 	}
@@ -650,7 +650,7 @@ pub fn update(deltaTime: f64) void { // MARK: update()
 	const right = Vec3d{-horizontalForward[1], horizontalForward[0], 0};
 	var movementDir: Vec3d = .{0, 0, 0};
 
-	if (main.Window.grabbed) {
+	if (root.Window.grabbed) {
 		const walkingSpeed: f64 = if (Player.crouching) 2.5 else 4.5;
 		var movementSpeed: f64 = walkingSpeed*@min(1, vec.length(Vec2f{
 			@max(KeyBoard.key("forward").value, KeyBoard.key("backward").value),
@@ -738,17 +738,17 @@ pub fn update(deltaTime: f64) void { // MARK: update()
 			acc += movementDir*@as(Vec3d, @splat(movementSpeed*fricMul));
 		}
 
-		const newSlot: i32 = @as(i32, @intCast(Player.selectedSlot)) -% main.Window.scrollOffsetInteger;
+		const newSlot: i32 = @as(i32, @intCast(Player.selectedSlot)) -% root.Window.scrollOffsetInteger;
 		Player.selectedSlot = @intCast(@mod(newSlot, 12));
 
 		const newPos = Vec2f{
-			@floatCast(main.KeyBoard.key("cameraRight").value - main.KeyBoard.key("cameraLeft").value),
-			@floatCast(main.KeyBoard.key("cameraDown").value - main.KeyBoard.key("cameraUp").value),
+			@floatCast(root.KeyBoard.key("cameraRight").value - root.KeyBoard.key("cameraLeft").value),
+			@floatCast(root.KeyBoard.key("cameraDown").value - root.KeyBoard.key("cameraUp").value),
 		}*@as(Vec2f, @splat(std.math.pi*settings.controllerSensitivity));
-		main.game.camera.moveRotation(newPos[0]/64.0, newPos[1]/64.0);
+		root.game.camera.moveRotation(newPos[0]/64.0, newPos[1]/64.0);
 	}
 
-	Player.crouching = main.Window.grabbed and KeyBoard.key("crouch").pressed and !Player.isFlying.load(.monotonic);
+	Player.crouching = root.Window.grabbed and KeyBoard.key("crouch").pressed and !Player.isFlying.load(.monotonic);
 
 	if (physics.collision.collides(.client, .x, 0, Player.super.pos + Player.standingBoundingBoxExtent - Player.crouchingBoundingBoxExtent, .{
 		.min = -Player.standingBoundingBoxExtent,
@@ -821,16 +821,16 @@ pub fn update(deltaTime: f64) void { // MARK: update()
 		Player.jumpCoyote -= deltaTime;
 	}
 
-	const time = main.timestamp();
+	const time = root.timestamp();
 	if (nextBlockPlaceTime) |*placeTime| {
 		if (placeTime.durationTo(time).nanoseconds >= 0) {
-			placeTime.* = placeTime.addDuration(main.settings.updateRepeatSpeed);
-			Player.placeBlock(main.KeyBoard.key("placeBlock").modsOnPress);
+			placeTime.* = placeTime.addDuration(root.settings.updateRepeatSpeed);
+			Player.placeBlock(root.KeyBoard.key("placeBlock").modsOnPress);
 		}
 	}
 	if (nextBlockBreakTime) |*breakTime| {
 		if (breakTime.durationTo(time).nanoseconds >= 0 or !Player.isCreative()) {
-			breakTime.* = breakTime.addDuration(main.settings.updateRepeatSpeed);
+			breakTime.* = breakTime.addDuration(root.settings.updateRepeatSpeed);
 			Player.breakBlock(deltaTime);
 		}
 	}
@@ -852,16 +852,16 @@ pub fn restart() void {
 				},
 				else => {
 					std.log.err("Encountered error while opening world: {s}", .{@errorName(err)});
-					main.gui.windowlist.notification.raiseNotification("Encountered error while opening world: {s}", .{@errorName(err)});
+					root.gui.windowlist.notification.raiseNotification("Encountered error while opening world: {s}", .{@errorName(err)});
 					world = null;
 
-					main.gui.openWindow("main");
+					root.gui.openWindow("main");
 					return;
 				},
 			};
 
 			break;
 		}
-		main.gui.openHud();
+		root.gui.openHud();
 	}
 }

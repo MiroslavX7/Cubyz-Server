@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const Tag = main.Tag;
-const utils = main.utils;
-const ZonElement = main.ZonElement;
+const Tag = root.Tag;
+const utils = root.utils;
+const ZonElement = root.ZonElement;
 const chunk = @import("chunk.zig");
 const Neighbor = chunk.Neighbor;
 const Chunk = chunk.Chunk;
@@ -22,12 +22,12 @@ const Degrees = rotation.Degrees;
 const Entity = root.server.Entity;
 const block_entity = @import("block_entity.zig");
 const BlockEntityType = block_entity.BlockEntityType;
-const ClientBlockCallback = main.callbacks.ClientBlockCallback;
-const ServerBlockCallback = main.callbacks.ServerBlockCallback;
-const BlockTouchCallback = main.callbacks.BlockTouchCallback;
+const ClientBlockCallback = root.callbacks.ClientBlockCallback;
+const ServerBlockCallback = root.callbacks.ServerBlockCallback;
+const BlockTouchCallback = root.callbacks.BlockTouchCallback;
 const sbb = root.server.terrain.sbb;
-const blueprint = main.blueprint;
-const Assets = main.assets.Assets;
+const blueprint = root.blueprint;
+const Assets = root.assets.Assets;
 const BlockDrop = root.server.BlockDrop;
 
 const c = @import("c");
@@ -81,7 +81,7 @@ const SelectionCapabilities = union(enum) {
 		}
 	},
 
-	pub fn loadFromZon(zon: main.ZonElement) SelectionCapabilities {
+	pub fn loadFromZon(zon: root.ZonElement) SelectionCapabilities {
 		var result: SelectionCapabilities = .{.custom = .{}};
 
 		const Capability = std.meta.FieldEnum(@TypeOf(result.custom));
@@ -145,7 +145,7 @@ var reverseIndices: std.StringHashMapUnmanaged(u16) = .{};
 
 var size: u32 = 0;
 
-pub var ores: main.List(Ore) = .empty;
+pub var ores: root.List(Ore) = .empty;
 
 pub fn register(_: []const u8, id: []const u8, zon: ZonElement) u16 {
 	_id[size] = root.worldArena.dupe(u8, id);
@@ -187,7 +187,7 @@ pub fn register(_: []const u8, id: []const u8, zon: ZonElement) u16 {
 	_hasBackFace[size] = zon.get(bool, "hasBackFace") orelse false;
 	_friction[size] = zon.get(f32, "friction") orelse 20;
 	_bounciness[size] = zon.get(f32, "bounciness") orelse 0.0;
-	_density[size] = zon.get(f32, "density") orelse main.physics.airDensity;
+	_density[size] = zon.get(f32, "density") orelse root.physics.airDensity;
 	_terminalVelocity[size] = zon.get(f32, "terminalVelocity") orelse 90;
 	_mobility[size] = zon.get(f32, "mobility") orelse 1.0;
 	_allowOres[size] = zon.get(bool, "allowOres") orelse false;
@@ -225,7 +225,7 @@ pub fn loadBlockDrop(blockId: []const u8, zon: ZonElement) []const BlockDrop {
 
 	for (drops, 0..) |blockDrop, i| {
 		const itemZons = blockDrop.getChild("items").toSlice();
-		var resultItems = main.List(items.ItemStack).initCapacity(root.worldArena, itemZons.len);
+		var resultItems = root.List(items.ItemStack).initCapacity(root.worldArena, itemZons.len);
 
 		for (itemZons) |itemZon| {
 			var string = itemZon.as([]const u8) orelse "auto";
@@ -378,7 +378,7 @@ pub fn parseBlockWithOptions(data: []const u8, comptime config: ParseBlockConfig
 		blockData = parseBlockData(data, data[pos + 1 ..], config);
 	}
 	if (config.applyMigrations) {
-		id = main.migrations.applySingle(.block, id);
+		id = root.migrations.applySingle(.block, id);
 	}
 	if (reverseIndices.get(id)) |resultType| {
 		var result: Block = .{.typ = resultType, .data = 0};
@@ -434,7 +434,7 @@ pub const Block = packed struct(u32) { // MARK: Block
 		return _id[self.typ];
 	}
 
-	pub inline fn idAndData(self: Block, list: *main.ListManaged(u8)) void {
+	pub inline fn idAndData(self: Block, list: *root.ListManaged(u8)) void {
 		list.appendSlice(self.id());
 		if (self.data == 0) return;
 		list.append(':');
@@ -562,7 +562,7 @@ pub const Block = packed struct(u32) { // MARK: Block
 		return _blockEntity[self.typ];
 	}
 
-	pub fn canBeChangedInto(self: Block, newBlock: Block, item: main.items.ItemStack, shouldDropSourceBlockOnSuccess: *bool) main.rotation.RotationMode.CanBeChangedInto {
+	pub fn canBeChangedInto(self: Block, newBlock: Block, item: root.items.ItemStack, shouldDropSourceBlockOnSuccess: *bool) root.rotation.RotationMode.CanBeChangedInto {
 		return newBlock.mode().canBeChangedInto(self, newBlock, item, shouldDropSourceBlockOnSuccess);
 	}
 
@@ -590,17 +590,17 @@ pub const meshes = struct { // MARK: meshes
 	/// Number of loaded meshes. Used to determine if an update is needed.
 	var loadedMeshes: u32 = 0;
 
-	var textureIds: main.List([]const u8) = .empty;
-	var texturePaths: main.List([]const u8) = .empty;
+	var textureIds: root.List([]const u8) = .empty;
+	var texturePaths: root.List([]const u8) = .empty;
 	var animationData: []AnimationData = &.{};
-	var blockTextures: main.List(Image) = .empty;
-	var emissionTextures: main.List(Image) = .empty;
-	var reflectivityTextures: main.List(Image) = .empty;
-	var absorptionTextures: main.List(Image) = .empty;
-	var textureFogData: main.List(FogData) = .empty;
+	var blockTextures: root.List(Image) = .empty;
+	var emissionTextures: root.List(Image) = .empty;
+	var reflectivityTextures: root.List(Image) = .empty;
+	var absorptionTextures: root.List(Image) = .empty;
+	var textureFogData: root.List(FogData) = .empty;
 	pub var textureOcclusionData: []std.atomic.Value(bool) = &.{};
 
-	pub var blockBreakingTextures: main.List(u16) = .empty;
+	pub var blockBreakingTextures: root.List(u16) = .empty;
 
 	const sideNames = blk: {
 		var names: [6][]const u8 = undefined;
@@ -777,7 +777,7 @@ pub const meshes = struct { // MARK: meshes
 				return err2;
 			};
 		};
-		file.close(main.io); // It was only openend to check if it exists.
+		file.close(root.io); // It was only openend to check if it exists.
 		// Otherwise read it into the list:
 		result = @intCast(textureIds.items.len);
 
@@ -855,9 +855,9 @@ pub const meshes = struct { // MARK: meshes
 
 	pub fn generateTextureArray() void {
 		blockTextureArray.generate(blockTextures.items, true, true);
-		c.glTexParameterf(c.GL_TEXTURE_2D_ARRAY, c.GL_TEXTURE_MAX_ANISOTROPY, @floatFromInt(main.settings.anisotropicFiltering));
+		c.glTexParameterf(c.GL_TEXTURE_2D_ARRAY, c.GL_TEXTURE_MAX_ANISOTROPY, @floatFromInt(root.settings.anisotropicFiltering));
 		emissionTextureArray.generate(emissionTextures.items, true, false);
-		c.glTexParameterf(c.GL_TEXTURE_2D_ARRAY, c.GL_TEXTURE_MAX_ANISOTROPY, @floatFromInt(main.settings.anisotropicFiltering));
+		c.glTexParameterf(c.GL_TEXTURE_2D_ARRAY, c.GL_TEXTURE_MAX_ANISOTROPY, @floatFromInt(root.settings.anisotropicFiltering));
 		const reflectivityAndAbsorptionTextures = root.stackAllocator.alloc(Image, reflectivityTextures.items.len);
 		defer root.stackAllocator.free(reflectivityAndAbsorptionTextures);
 		defer for (reflectivityAndAbsorptionTextures) |texture| {
@@ -876,7 +876,7 @@ pub const meshes = struct { // MARK: meshes
 			}
 		}
 		reflectivityAndAbsorptionTextureArray.generate(reflectivityAndAbsorptionTextures, true, false);
-		c.glTexParameterf(c.GL_TEXTURE_2D_ARRAY, c.GL_TEXTURE_MAX_ANISOTROPY, @floatFromInt(main.settings.anisotropicFiltering));
+		c.glTexParameterf(c.GL_TEXTURE_2D_ARRAY, c.GL_TEXTURE_MAX_ANISOTROPY, @floatFromInt(root.settings.anisotropicFiltering));
 
 		// Also generate additional buffers:
 		if (animationSSBO) |ssbo| {

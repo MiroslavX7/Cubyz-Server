@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const Entity = root.entity.Entity;
-const utils = main.utils;
+const utils = root.utils;
 const BinaryReader = utils.BinaryReader;
 const BinaryWriter = utils.BinaryWriter;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;

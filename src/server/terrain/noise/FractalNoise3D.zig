@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const Array3D = root.utils.Array3D;
 const ChunkPosition = root.chunk.ChunkPosition;
-const random = main.random;
+const random = root.random;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 pub fn generateAligned(allocator: NeverFailingAllocator, wx: i32, wy: i32, wz: i32, voxelSize: u31, width: u31, depth: u31, height: u31, worldSeed: u64, scale: u31) Array3D(f32) {

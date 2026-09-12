@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const TextBuffer = graphics.TextBuffer;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -14,7 +14,7 @@ const HorizontalList = @This();
 
 pos: Vec2f,
 size: Vec2f,
-children: main.ListManaged(GuiComponent),
+children: root.ListManaged(GuiComponent),
 
 pub fn init() *HorizontalList {
 	const self = root.globalAllocator.create(HorizontalList);
@@ -76,7 +76,7 @@ pub fn updateSelected(self: *HorizontalList) void {
 	}
 }
 
-pub fn updateHovered(self: *HorizontalList, mousePosition: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *HorizontalList, mousePosition: Vec2f) root.callbacks.Result {
 	// reverse order of rendering, the last-rendered element is the first one that we should try to interact with
 	var i: usize = self.children.items.len;
 	while (i != 0) {
@@ -97,7 +97,7 @@ pub fn render(self: *HorizontalList, mousePosition: Vec2f) void {
 	draw.restoreTranslation(oldTranslation);
 }
 
-pub fn mainButtonPressed(self: *HorizontalList, mousePosition: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *HorizontalList, mousePosition: Vec2f) root.callbacks.Result {
 	// reverse order of rendering, the last-rendered element is the first one that we should try to interact with
 	var iterator = std.mem.reverseIterator(self.children.items);
 	while (iterator.next()) |child| {

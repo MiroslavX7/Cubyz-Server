@@ -5,7 +5,7 @@ const command = root.server.command;
 const Source = command.Source;
 
 const Block = root.blocks.Block;
-const Blueprint = main.blueprint.Blueprint;
+const Blueprint = root.blueprint.Blueprint;
 
 pub const description = "Count block(s) appearance(s) in selection.";
 pub const usage =
@@ -41,7 +41,7 @@ pub fn execute(args: Args, source: Source) void {
 				user.sendMessage("#ffff00{s} #ffffff{d}", .{block.block.id(), count});
 			} else {
 				const TypAndCount = struct { typ: u16, count: u32 };
-				var items: main.List(TypAndCount) = .empty;
+				var items: root.List(TypAndCount) = .empty;
 				defer items.deinit(root.stackAllocator);
 
 				var iterator = context.iterator();

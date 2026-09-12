@@ -2,13 +2,13 @@ const std = @import("std");
 
 const root = @import("root");
 const Block = root.blocks.Block;
-const random = main.random;
-const ZonElement = main.ZonElement;
+const random = root.random;
+const ZonElement = root.ZonElement;
 const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
 const CaveMapView = terrain.CaveMap.CaveMapView;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
@@ -37,9 +37,9 @@ pub fn loadModel(parameters: ZonElement) ?*FallenTree {
 		.height0 = parameters.get(u32, "height") orelse 6,
 		.deltaHeight = parameters.get(u31, "height_variation") orelse 3,
 	};
-	if (self.woodBlock.mode() == main.rotation.getByID("cubyz:branch")) self.woodRotationModeType = .branch;
-	if (self.woodBlock.mode() == main.rotation.getByID("cubyz:log")) self.woodRotationModeType = .log;
-	if (self.woodBlock.mode() == main.rotation.getByID("cubyz:direction")) self.woodRotationModeType = .direction;
+	if (self.woodBlock.mode() == root.rotation.getByID("cubyz:branch")) self.woodRotationModeType = .branch;
+	if (self.woodBlock.mode() == root.rotation.getByID("cubyz:log")) self.woodRotationModeType = .log;
+	if (self.woodBlock.mode() == root.rotation.getByID("cubyz:direction")) self.woodRotationModeType = .direction;
 	return self;
 }
 
@@ -55,7 +55,7 @@ pub fn generateFallen(self: *FallenTree, x: i32, y: i32, z: i32, length: u32, ch
 	var d: ?Neighbor = null;
 
 	for (0..4) |_| {
-		const dir: Neighbor = @enumFromInt(main.random.nextIntBounded(u32, seed, 4) + 2);
+		const dir: Neighbor = @enumFromInt(root.random.nextIntBounded(u32, seed, 4) + 2);
 
 		const dx: i32 = dir.relX();
 		const dy: i32 = dir.relY();

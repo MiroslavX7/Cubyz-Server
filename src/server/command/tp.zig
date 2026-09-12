@@ -53,7 +53,7 @@ pub fn execute(args: Args, source: Source) void {
 		=> |params| command.Target.fromPlayerIndex(params.sourcePlayerIndex, source) catch return,
 		else => command.Target.fromPlayerIndex(null, source) catch return,
 	};
-	const pos: main.vec.Vec3d = blk: switch (args) {
+	const pos: root.vec.Vec3d = blk: switch (args) {
 		.@"/tp <sourcePlayerIndex> <biome>" => |b| {
 			const user = target.user;
 			const biome = b.biome.biome;
@@ -73,8 +73,8 @@ pub fn execute(args: Args, source: Source) void {
 			for (0..spiralLen) |_| {
 				const map = root.server.terrain.ClimateMap.getOrGenerateFragment(wx, wy);
 				for (0..map.map.len) |_| {
-					const x = main.random.nextIntBounded(u31, &main.seed, map.map.len);
-					const y = main.random.nextIntBounded(u31, &main.seed, map.map.len);
+					const x = root.random.nextIntBounded(u31, &root.seed, map.map.len);
+					const y = root.random.nextIntBounded(u31, &root.seed, map.map.len);
 					const sample = map.map[x][y];
 					if (sample.biome == biome) {
 						const z = sample.height + sample.hills + sample.mountains + sample.roughness;

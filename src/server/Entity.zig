@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const ZonElement = main.ZonElement;
-const vec = main.vec;
+const ZonElement = root.ZonElement;
+const vec = root.vec;
 const Vec3f = vec.Vec3f;
 const Vec3d = vec.Vec3d;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;

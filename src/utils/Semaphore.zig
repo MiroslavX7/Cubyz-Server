@@ -50,13 +50,13 @@ pub fn wait(sem: *Semaphore) void {
 }
 
 pub fn timedWait(sem: *Semaphore, timeout: std.Io.Duration) error{Timeout}!void {
-	const start = main.timestamp();
+	const start = root.timestamp();
 
 	sem.mutex.lock();
 	defer sem.mutex.unlock();
 
 	while (sem.permits == 0) {
-		const elapsed = start.durationTo(main.timestamp());
+		const elapsed = start.durationTo(root.timestamp());
 		if (elapsed.nanoseconds > timeout.nanoseconds) {
 			return error.Timeout;
 		}

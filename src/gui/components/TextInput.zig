@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const TextBuffer = graphics.TextBuffer;
 const Texture = graphics.Texture;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -28,7 +28,7 @@ pressed: bool = false,
 obfuscated: bool = false,
 cursor: ?u32 = null,
 selectionStart: ?u32 = null,
-currentString: main.ListManaged(u8),
+currentString: root.ListManaged(u8),
 textBuffer: TextBuffer,
 maxWidth: f32,
 maxHeight: f32,
@@ -48,10 +48,10 @@ pub fn globalDeinit() void {
 
 const Options = struct {
 	disabled: bool = false,
-	onNewline: main.callbacks.SimpleCallback = .{},
-	onUp: main.callbacks.SimpleCallback = .{},
-	onDown: main.callbacks.SimpleCallback = .{},
-	onUpdate: main.callbacks.SimpleCallback = .{},
+	onNewline: root.callbacks.SimpleCallback = .{},
+	onUp: root.callbacks.SimpleCallback = .{},
+	onDown: root.callbacks.SimpleCallback = .{},
+	onUpdate: root.callbacks.SimpleCallback = .{},
 };
 
 pub fn init(pos: Vec2f, maxWidth: f32, maxHeight: f32, text: []const u8, options: Options) *TextInput {
@@ -96,11 +96,11 @@ pub fn toComponent(self: *TextInput) GuiComponent {
 	return .{.textInput = self};
 }
 
-pub fn updateHovered(self: *TextInput, mousePosition: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *TextInput, mousePosition: Vec2f) root.callbacks.Result {
 	if (self.textSize[1] > self.maxHeight - 2*border) {
 		const diff = self.textSize[1] - (self.maxHeight - 2*border);
-		self.scrollBar.scroll(-main.Window.scrollOffset*32/diff);
-		main.Window.scrollOffset = 0;
+		self.scrollBar.scroll(-root.Window.scrollOffset*32/diff);
+		root.Window.scrollOffset = 0;
 		self.scrollBar.pos = Vec2f{self.size[0] - border - scrollBarWidth, border};
 		if (GuiComponent.contains(self.scrollBar.pos, self.scrollBar.size, mousePosition - self.pos)) {
 			if (self.scrollBar.updateHovered(mousePosition - self.pos) == .handled) return .handled;
@@ -109,7 +109,7 @@ pub fn updateHovered(self: *TextInput, mousePosition: Vec2f) main.callbacks.Resu
 	return .handled;
 }
 
-pub fn mainButtonPressed(self: *TextInput, mousePosition: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *TextInput, mousePosition: Vec2f) root.callbacks.Result {
 	if (self.textSize[1] > self.maxHeight - 2*border) {
 		self.scrollBar.pos = Vec2f{self.size[0] - border - scrollBarWidth, border};
 		if (GuiComponent.contains(self.scrollBar.pos, self.scrollBar.size, mousePosition - self.pos)) {
@@ -177,7 +177,7 @@ fn characterType(char: u8) enum { literal, symbol, whitespace } {
 	return .symbol;
 }
 
-fn moveCursorLeft(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+fn moveCursorLeft(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (mods.control) {
 		const text = self.currentString.items;
 		if (self.cursor.? == 0) return;
@@ -202,7 +202,7 @@ fn moveCursorLeft(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn left(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn left(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor) |*cursor| {
 		if (mods.shift) {
 			if (self.selectionStart == null) {
@@ -224,7 +224,7 @@ pub fn left(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-fn moveCursorRight(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+fn moveCursorRight(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor.? < self.currentString.items.len) {
 		if (mods.control) {
 			const text = self.currentString.items;
@@ -245,7 +245,7 @@ fn moveCursorRight(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn right(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn right(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor) |*cursor| {
 		if (mods.shift) {
 			if (self.selectionStart == null) {
@@ -276,7 +276,7 @@ fn moveCursorVertically(self: *TextInput, relativeLines: f32) enum { changed, sa
 	return .same;
 }
 
-pub fn down(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn down(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor) |*cursor| {
 		if (mods.shift) {
 			if (self.selectionStart == null) {
@@ -300,7 +300,7 @@ pub fn down(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn up(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn up(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor) |*cursor| {
 		if (mods.shift) {
 			if (self.selectionStart == null) {
@@ -324,7 +324,7 @@ pub fn up(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-fn moveCursorToStart(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+fn moveCursorToStart(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (mods.control) {
 		self.cursor.? = 0;
 	} else {
@@ -332,7 +332,7 @@ fn moveCursorToStart(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn gotoStart(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn gotoStart(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor) |*cursor| {
 		if (mods.shift) {
 			if (self.selectionStart == null) {
@@ -354,7 +354,7 @@ pub fn gotoStart(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-fn moveCursorToEnd(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+fn moveCursorToEnd(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (mods.control) {
 		self.cursor.? = @intCast(self.currentString.items.len);
 	} else {
@@ -362,7 +362,7 @@ fn moveCursorToEnd(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn gotoEnd(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn gotoEnd(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor) |*cursor| {
 		if (mods.shift) {
 			if (self.selectionStart == null) {
@@ -397,7 +397,7 @@ fn deleteSelection(self: *TextInput) void {
 	}
 }
 
-pub fn deleteLeft(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn deleteLeft(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor == null or self.options.disabled) return;
 	if (self.selectionStart == null) {
 		self.selectionStart = self.cursor;
@@ -408,7 +408,7 @@ pub fn deleteLeft(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	self.ensureCursorVisibility();
 }
 
-pub fn deleteRight(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn deleteRight(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.cursor == null or self.options.disabled) return;
 	if (self.selectionStart == null) {
 		self.selectionStart = self.cursor;
@@ -440,7 +440,7 @@ pub fn setString(self: *TextInput, utf8EncodedString: []const u8) void {
 	self.ensureCursorVisibility();
 }
 
-pub fn selectAll(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn selectAll(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (mods.control) {
 		self.selectionStart = 0;
 		self.cursor = @intCast(self.currentString.items.len);
@@ -448,23 +448,23 @@ pub fn selectAll(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn copy(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn copy(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (mods.control) {
 		if (self.cursor) |cursor| {
 			if (self.selectionStart) |selectionStart| {
 				const start = @min(cursor, selectionStart);
 				const end = @max(cursor, selectionStart);
-				main.Window.setClipboardString(self.currentString.items[start..end]);
+				root.Window.setClipboardString(self.currentString.items[start..end]);
 			}
 		}
 		self.ensureCursorVisibility();
 	}
 }
 
-pub fn paste(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn paste(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (self.options.disabled) return;
 	if (mods.control) {
-		const string = main.Window.getClipboardString();
+		const string = root.Window.getClipboardString();
 		self.deleteSelection();
 		self.currentString.insertSlice(self.cursor.?, string);
 		self.cursor.? += @intCast(string.len);
@@ -473,7 +473,7 @@ pub fn paste(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn cut(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn cut(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (mods.control and !self.options.disabled) {
 		self.copy(mods);
 		self.deleteSelection();
@@ -482,7 +482,7 @@ pub fn cut(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 	}
 }
 
-pub fn newline(self: *TextInput, mods: main.Window.Key.Modifiers) void {
+pub fn newline(self: *TextInput, mods: root.Window.Key.Modifiers) void {
 	if (!mods.shift and self.options.onNewline.inner != null and !self.options.disabled) {
 		self.options.onNewline.run();
 		return;
@@ -494,7 +494,7 @@ pub fn newline(self: *TextInput, mods: main.Window.Key.Modifiers) void {
 fn ensureCursorVisibility(self: *TextInput) void {
 	self.showCursor = true;
 	if (self.options.disabled) return;
-	self.lastBlinkTime = main.timestamp();
+	self.lastBlinkTime = root.timestamp();
 	if (self.textSize[1] > self.maxHeight - 2*border) {
 		var y: f32 = 0;
 		const diff = self.textSize[1] - (self.maxHeight - 2*border);
@@ -517,7 +517,7 @@ fn getRenderCursorPos(self: *const TextInput, pos: u32) u32 {
 }
 
 pub fn render(self: *TextInput, mousePosition: Vec2f) void {
-	if (main.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
+	if (root.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
 		graphics.vulkan.currentFrame.guiCommands.bindPipeline(Button.pipeline, graphics.draw.getScissor());
 		graphics.vulkan.currentFrame.guiCommands.bindDescriptors(Button.pipeline, .graphics, 0, &.{
 			.{.image = .{.binding = 0, .image = texture.vulkanImage.?}},
@@ -567,7 +567,7 @@ pub fn render(self: *TextInput, mousePosition: Vec2f) void {
 			textBuffer.drawSelection(textPos, @min(selectionStart, cursor), @max(selectionStart, cursor));
 		}
 
-		const currentTime = main.timestamp();
+		const currentTime = root.timestamp();
 		if (!self.options.disabled) {
 			if (self.lastBlinkTime.durationTo(currentTime).nanoseconds > blinkDuration.nanoseconds) {
 				self.lastBlinkTime = currentTime;

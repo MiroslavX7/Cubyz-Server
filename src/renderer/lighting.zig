@@ -3,14 +3,14 @@ const Atomic = std.atomic.Value;
 const builtin = @import("builtin");
 
 const root = @import("root");
-const blocks = main.blocks;
-const chunk = main.chunk;
+const blocks = root.blocks;
+const chunk = root.chunk;
 const BlockPos = chunk.BlockPos;
 const chunk_meshing = @import("chunk_meshing.zig");
 const ChunkMesh = chunk_meshing.ChunkMesh;
 const mesh_storage = @import("mesh_storage.zig");
-const QuadIndex = main.models.QuadIndex;
-const vec = main.vec;
+const QuadIndex = root.models.QuadIndex;
+const vec = root.vec;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
 
@@ -72,7 +72,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 
 	const ChunkEntries = struct {
 		mesh: ?*chunk_meshing.ChunkMesh,
-		entries: main.List(BlockPos),
+		entries: root.List(BlockPos),
 	};
 
 	pub fn getValue(self: *ChannelChunk, pos: BlockPos) LightValue {
@@ -106,8 +106,8 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		}
 	}
 
-	fn propagateDirect(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
-		var neighborLists: [6]main.List(Entry) = @splat(.empty);
+	fn propagateDirect(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) void {
+		var neighborLists: [6]root.List(Entry) = @splat(.empty);
 		defer {
 			for (&neighborLists) |*list| {
 				list.deinit(root.stackAllocator);
@@ -155,7 +155,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		}
 	}
 
-	fn addSelfToLightRefreshList(self: *ChannelChunk, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
+	fn addSelfToLightRefreshList(self: *ChannelChunk, lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) void {
 		for (lightRefreshList.items) |other| {
 			if (self.ch.pos.equals(other)) {
 				return;
@@ -164,9 +164,9 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		lightRefreshList.append(self.ch.pos);
 	}
 
-	fn propagateDestructive(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), constructiveEntries: *main.List(ChunkEntries), isFirstBlock: bool, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) main.List(BlockPos) {
-		var neighborLists: [6]main.List(Entry) = @splat(.empty);
-		var constructiveList: main.List(BlockPos) = .empty;
+	fn propagateDestructive(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), constructiveEntries: *root.List(ChunkEntries), isFirstBlock: bool, lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) root.List(BlockPos) {
+		var neighborLists: [6]root.List(Entry) = @splat(.empty);
+		var constructiveList: root.List(BlockPos) = .empty;
 		defer {
 			for (&neighborLists) |*list| {
 				list.deinit(root.stackAllocator);
@@ -245,7 +245,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		return constructiveList;
 	}
 
-	fn propagateFromNeighbor(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lights: []const Entry, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
+	fn propagateFromNeighbor(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lights: []const Entry, lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) void {
 		std.debug.assert(lightQueue.isEmpty());
 		for (lights) |entry| {
 			var result = entry;
@@ -255,7 +255,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		self.propagateDirect(lightQueue, lightRefreshList);
 	}
 
-	fn propagateDestructiveFromNeighbor(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lights: []const Entry, constructiveEntries: *main.List(ChunkEntries), lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) main.List(BlockPos) {
+	fn propagateDestructiveFromNeighbor(self: *ChannelChunk, lightQueue: *root.utils.CircularBufferQueue(Entry), lights: []const Entry, constructiveEntries: *root.List(ChunkEntries), lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) root.List(BlockPos) {
 		std.debug.assert(lightQueue.isEmpty());
 		for (lights) |entry| {
 			var result = entry;
@@ -265,7 +265,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		return self.propagateDestructive(lightQueue, constructiveEntries, false, lightRefreshList);
 	}
 
-	pub fn propagateLights(self: *ChannelChunk, lights: []const BlockPos, comptime checkNeighbors: bool, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
+	pub fn propagateLights(self: *ChannelChunk, lights: []const BlockPos, comptime checkNeighbors: bool, lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) void {
 		var lightQueue = root.utils.CircularBufferQueue(Entry).init(root.stackAllocator, 1 << 12);
 		defer lightQueue.deinit();
 		for (lights) |pos| {
@@ -319,7 +319,7 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		self.propagateDirect(&lightQueue, lightRefreshList);
 	}
 
-	pub fn propagateUniformSun(self: *ChannelChunk, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
+	pub fn propagateUniformSun(self: *ChannelChunk, lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) void {
 		std.debug.assert(self.isSun);
 		self.mutex.lock();
 		self.data.fillUniform(.fromArray(.{255, 255, 255}));
@@ -369,13 +369,13 @@ pub const ChannelChunk = struct { // MARK: ChannelChunk
 		}
 	}
 
-	pub fn propagateLightsDestructive(self: *ChannelChunk, lights: []const BlockPos, lightRefreshList: *main.ListManaged(chunk.ChunkPosition)) void {
+	pub fn propagateLightsDestructive(self: *ChannelChunk, lights: []const BlockPos, lightRefreshList: *root.ListManaged(chunk.ChunkPosition)) void {
 		var lightQueue = root.utils.CircularBufferQueue(Entry).init(root.stackAllocator, 1 << 12);
 		defer lightQueue.deinit();
 		for (lights) |pos| {
 			lightQueue.pushBack(.{.pos = pos, .value = self.data.getValue(pos.toIndex()).toArray(), .sourceDir = 6, .activeValue = 0b111});
 		}
-		var constructiveEntries: main.List(ChunkEntries) = .empty;
+		var constructiveEntries: root.List(ChunkEntries) = .empty;
 		defer constructiveEntries.deinit(root.stackAllocator);
 		constructiveEntries.append(root.stackAllocator, .{
 			.mesh = null,

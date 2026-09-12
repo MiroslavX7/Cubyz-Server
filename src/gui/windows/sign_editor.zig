@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -20,7 +20,7 @@ var textComponent: *TextInput = undefined;
 
 const padding: f32 = 8;
 
-var pos: main.vec.Vec3i = undefined;
+var pos: root.vec.Vec3i = undefined;
 var oldText: []const u8 = &.{};
 
 pub fn deinit() void {
@@ -28,23 +28,23 @@ pub fn deinit() void {
 	oldText = &.{};
 }
 
-pub fn openFromSignData(_pos: main.vec.Vec3i, _oldText: []const u8) void {
+pub fn openFromSignData(_pos: root.vec.Vec3i, _oldText: []const u8) void {
 	pos = _pos;
 	root.globalAllocator.free(oldText);
 	oldText = root.globalAllocator.dupe(u8, _oldText);
 	gui.closeWindowFromRef(&window);
 	gui.openWindowFromRef(&window);
-	main.Window.setMouseGrabbed(false);
+	root.Window.setMouseGrabbed(false);
 }
 
 fn apply() void {
-	const visibleCharacterCount = main.graphics.TextBuffer.Parser.countVisibleCharacters(textComponent.currentString.items);
+	const visibleCharacterCount = root.graphics.TextBuffer.Parser.countVisibleCharacters(textComponent.currentString.items);
 	if (textComponent.currentString.items.len > 500 or visibleCharacterCount > 100) {
 		std.log.err("Text is too long with {}/{} characters. Limits are 100/500", .{visibleCharacterCount, textComponent.currentString.items.len});
 		return;
 	}
 
-	main.block_entity.BlockEntityTypes.@"cubyz:sign".updateTextFromClient(pos, textComponent.currentString.items);
+	root.block_entity.BlockEntityTypes.@"cubyz:sign".updateTextFromClient(pos, textComponent.currentString.items);
 
 	gui.toggleGameMenu();
 }

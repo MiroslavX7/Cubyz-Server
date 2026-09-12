@@ -2,21 +2,21 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 
 const root = @import("root");
-const blocks = main.blocks;
-const chunk = main.chunk;
-const game = main.game;
-const network = main.network;
-const settings = main.settings;
-const utils = main.utils;
+const blocks = root.blocks;
+const chunk = root.chunk;
+const game = root.game;
+const network = root.network;
+const settings = root.settings;
+const utils = root.utils;
 const LightMap = root.server.terrain.LightMap;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 const Vec3i = vec.Vec3i;
 const Vec3f = vec.Vec3f;
 const Vec3d = vec.Vec3d;
 const Vec4f = vec.Vec4f;
 const Mat4f = vec.Mat4f;
-const EventStatus = main.block_entity.EventStatus;
+const EventStatus = root.block_entity.EventStatus;
 
 const chunk_meshing = @import("chunk_meshing.zig");
 const ChunkMesh = chunk_meshing.ChunkMesh;
@@ -34,9 +34,9 @@ const storageSize = 64;
 const storageMask = storageSize - 1;
 var storageLists: [settings.highestSupportedLod + 1]*[storageSize*storageSize*storageSize]ChunkMeshNode = undefined;
 var mapStorageLists: [settings.highestSupportedLod + 1]*[storageSize*storageSize]Atomic(?*LightMap.LightMapFragment) = undefined;
-var meshList: main.List(*chunk_meshing.ChunkMesh) = .empty;
+var meshList: root.List(*chunk_meshing.ChunkMesh) = .empty;
 var priorityMeshUpdateList: root.utils.ConcurrentQueue(chunk.ChunkPosition) = undefined;
-pub var updatableList: main.List(chunk.ChunkPosition) = .empty;
+pub var updatableList: root.List(chunk.ChunkPosition) = .empty;
 var mapUpdatableList: root.utils.ConcurrentQueue(*LightMap.LightMapFragment) = undefined;
 var lastPx: i32 = 0;
 var lastPy: i32 = 0;
@@ -407,7 +407,7 @@ fn freeOldMeshes(olderPx: i32, olderPy: i32, olderPz: i32, olderRD: u16) void { 
 	}
 }
 
-fn createNewMeshes(olderPx: i32, olderPy: i32, olderPz: i32, olderRD: u16, meshRequests: *main.ListManaged(chunk.ChunkPosition), mapRequests: *main.ListManaged(LightMap.MapFragmentPosition)) void { // MARK: createNewMeshes()
+fn createNewMeshes(olderPx: i32, olderPy: i32, olderPz: i32, olderRD: u16, meshRequests: *root.ListManaged(chunk.ChunkPosition), mapRequests: *root.ListManaged(LightMap.MapFragmentPosition)) void { // MARK: createNewMeshes()
 	for (0..settings.highestLod + 1) |_lod| {
 		const lod: u5 = @intCast(_lod);
 		const maxRenderDistanceNew = lastRD*chunk.chunkSize << lod;
@@ -544,14 +544,14 @@ fn createNewMeshes(olderPx: i32, olderPy: i32, olderPz: i32, olderRD: u16, meshR
 	}
 }
 
-pub noinline fn updateAndGetRenderChunks(conn: *network.Connection, frustum: *const main.renderer.Frustum, playerPos: Vec3d, renderDistance: u16) []*chunk_meshing.ChunkMesh { // MARK: updateAndGetRenderChunks()
+pub noinline fn updateAndGetRenderChunks(conn: *network.Connection, frustum: *const root.renderer.Frustum, playerPos: Vec3d, renderDistance: u16) []*chunk_meshing.ChunkMesh { // MARK: updateAndGetRenderChunks()
 	meshList.clearRetainingCapacity();
 
 	const playerPosInt: Vec3i = @floor(playerPos);
 
-	var meshRequests: main.ListManaged(chunk.ChunkPosition) = .init(root.stackAllocator);
+	var meshRequests: root.ListManaged(chunk.ChunkPosition) = .init(root.stackAllocator);
 	defer meshRequests.deinit();
-	var mapRequests: main.ListManaged(LightMap.MapFragmentPosition) = .init(root.stackAllocator);
+	var mapRequests: root.ListManaged(LightMap.MapFragmentPosition) = .init(root.stackAllocator);
 	defer mapRequests.deinit();
 
 	const olderPx = lastPx;
@@ -596,7 +596,7 @@ pub noinline fn updateAndGetRenderChunks(conn: *network.Connection, frustum: *co
 			searchList.pushBack(node);
 		}
 	}
-	var nodeList: main.ListManaged(*ChunkMeshNode) = .initCapacity(root.stackAllocator, 1024);
+	var nodeList: root.ListManaged(*ChunkMeshNode) = .initCapacity(root.stackAllocator, 1024);
 	defer nodeList.deinit();
 	while (searchList.popFront()) |node| {
 		std.debug.assert(node.finishedMeshing);
@@ -719,7 +719,7 @@ pub fn updateMeshes(targetTime: std.Io.Timestamp) void { // MARK: updateMeshes()
 		mutex.unlock();
 		defer mutex.lock();
 		mesh.uploadData();
-		if (targetTime.durationTo(main.timestamp()).nanoseconds >= 0) break; // Update at least one mesh.
+		if (targetTime.durationTo(root.timestamp()).nanoseconds >= 0) break; // Update at least one mesh.
 	}
 	while (mapUpdatableList.popFront()) |map| {
 		if (!isMapInRenderDistance(map.pos)) {
@@ -767,7 +767,7 @@ pub fn updateMeshes(targetTime: std.Io.Timestamp) void { // MARK: updateMeshes()
 			updateHigherLodNodeFinishedMeshing(pos, true);
 			mesh.uploadData();
 		}
-		if (targetTime.durationTo(main.timestamp()).nanoseconds >= 0) break; // Update at least one mesh.
+		if (targetTime.durationTo(root.timestamp()).nanoseconds >= 0) break; // Update at least one mesh.
 	}
 }
 
@@ -834,7 +834,7 @@ pub fn addBreakingAnimation(pos: Vec3i, breakingProgress: f32) void {
 	}
 }
 
-fn addBreakingAnimationFace(pos: Vec3i, quadIndex: main.models.QuadIndex, texture: u16, neighbor: ?chunk.Neighbor, isTransparent: bool) void {
+fn addBreakingAnimationFace(pos: Vec3i, quadIndex: root.models.QuadIndex, texture: u16, neighbor: ?chunk.Neighbor, isTransparent: bool) void {
 	const worldPos = pos +% if (neighbor) |n| n.relPos() else Vec3i{0, 0, 0};
 	const relPos = worldPos & @as(Vec3i, @splat(root.chunk.chunkMask));
 	const mesh = getMesh(.{.wx = worldPos[0], .wy = worldPos[1], .wz = worldPos[2], .voxelSize = 1}) orelse return;
@@ -868,7 +868,7 @@ fn addBreakingAnimationFace(pos: Vec3i, quadIndex: main.models.QuadIndex, textur
 	});
 }
 
-fn removeBreakingAnimationFace(pos: Vec3i, quadIndex: main.models.QuadIndex, neighbor: ?chunk.Neighbor) void {
+fn removeBreakingAnimationFace(pos: Vec3i, quadIndex: root.models.QuadIndex, neighbor: ?chunk.Neighbor) void {
 	const worldPos = pos +% if (neighbor) |n| n.relPos() else Vec3i{0, 0, 0};
 	const relPos = worldPos & @as(Vec3i, @splat(root.chunk.chunkMask));
 	const mesh = getMesh(.{.wx = worldPos[0], .wy = worldPos[1], .wz = worldPos[2], .voxelSize = 1}) orelse return;

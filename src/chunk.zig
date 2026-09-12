@@ -369,7 +369,7 @@ pub const Chunk = struct { // MARK: Chunk
 	voxelSizeShift: u5,
 	voxelSizeMask: i32,
 
-	blockPosToEntityDataMap: std.AutoHashMapUnmanaged(BlockPos, main.block_entity.BlockEntity),
+	blockPosToEntityDataMap: std.AutoHashMapUnmanaged(BlockPos, root.block_entity.BlockEntity),
 	blockPosToEntityDataMapMutex: root.utils.Mutex,
 
 	pub fn init(pos: ChunkPosition) *Chunk {

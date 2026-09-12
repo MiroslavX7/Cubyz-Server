@@ -1,30 +1,30 @@
 const std = @import("std");
 
 const root = @import("root");
-const BaseItem = main.items.BaseItem;
+const BaseItem = root.items.BaseItem;
 const Block = root.blocks.Block;
-const Item = main.items.Item;
-const ItemStack = main.items.ItemStack;
-const ProceduralItem = main.items.ProceduralItem;
-const utils = main.utils;
+const Item = root.items.Item;
+const ItemStack = root.items.ItemStack;
+const ProceduralItem = root.items.ProceduralItem;
+const utils = root.utils;
 const BinaryWriter = utils.BinaryWriter;
 const BinaryReader = utils.BinaryReader;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const sync = main.sync;
-const vec = main.vec;
+const sync = root.sync;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const Neighbor = root.chunk.Neighbor;
-const BaseItemIndex = main.items.BaseItemIndex;
-const ProceduralItemTypeIndex = main.items.ProceduralItemTypeIndex;
+const BaseItemIndex = root.items.BaseItemIndex;
+const ProceduralItemTypeIndex = root.items.ProceduralItemTypeIndex;
 
 pub const InventoryId = enum(u32) { _ };
 
 pub const client = struct { // MARK: client
 	var maxId: InventoryId = @enumFromInt(0);
-	var freeIdList: main.List(InventoryId) = .empty;
+	var freeIdList: root.List(InventoryId) = .empty;
 	var serverToClientMap: std.AutoHashMap(InventoryId, Inventory) = undefined;
 
 	pub fn init() void {
@@ -93,7 +93,7 @@ pub const client = struct { // MARK: client
 pub const server = struct { // MARK: server
 	const ServerInventory = struct {
 		inv: Inventory,
-		users: main.List(struct { user: *root.server.User, cliendId: InventoryId }),
+		users: root.List(struct { user: *root.server.User, cliendId: InventoryId }),
 		source: Source,
 		managed: Managed,
 
@@ -158,7 +158,7 @@ pub const server = struct { // MARK: server
 
 	var inventories: root.utils.VirtualList(ServerInventory, 1 << 24) = undefined;
 	var maxId: InventoryId = @enumFromInt(0);
-	var freeIdList: main.List(InventoryId) = .empty;
+	var freeIdList: root.List(InventoryId) = .empty;
 	var inventoryCreationMutex: root.utils.Mutex = .{};
 
 	pub fn init() void {
@@ -232,8 +232,8 @@ pub const server = struct { // MARK: server
 			if (itemStack.amount == 0) continue;
 			root.server.world.?.drop(
 				itemStack.*,
-				@as(Vec3d, @floatFromInt(pos)) + main.random.nextDoubleVector(3, &main.seed),
-				main.random.nextFloatVectorSigned(3, &main.seed),
+				@as(Vec3d, @floatFromInt(pos)) + root.random.nextDoubleVector(3, &root.seed),
+				root.random.nextFloatVectorSigned(3, &root.seed),
 				0.1,
 			);
 			itemStack.* = .{};
@@ -285,7 +285,7 @@ pub const server = struct { // MARK: server
 					}
 				};
 				callbacks.onLastCloseCallback = &workbench_close_callback.callback;
-				callbacks.canPutInto = main.items.ProceduralItem.canPutIntoWorkbenchCallback;
+				callbacks.canPutInto = root.items.ProceduralItem.canPutIntoWorkbenchCallback;
 			},
 			.other => {},
 			.alreadyFreed => unreachable,
@@ -416,7 +416,7 @@ pub const ClientInventory = struct { // MARK: ClientInventory
 	const ClientType = union(enum) {
 		serverShared: void,
 		creative: void,
-		crafting: *const main.items.Recipe,
+		crafting: *const root.items.Recipe,
 		workbenchResult: InventoryId,
 	};
 	super: Inventory,
@@ -434,7 +434,7 @@ pub const ClientInventory = struct { // MARK: ClientInventory
 	}
 
 	pub fn deinit(self: ClientInventory, allocator: NeverFailingAllocator) void {
-		if (main.game.world.?.connected) {
+		if (root.game.world.?.connected) {
 			sync.client.executeCommand(.{.close = .{.inv = self.super, .allocator = allocator}});
 		} else {
 			root.sync.client.mutex.lock();
@@ -550,12 +550,12 @@ pub const ClientInventory = struct { // MARK: ClientInventory
 
 	pub fn placeBlock(self: ClientInventory, slot: u32) void {
 		std.debug.assert(self.type == .serverShared);
-		main.renderer.MeshSelection.placeBlock(self, slot);
+		root.renderer.MeshSelection.placeBlock(self, slot);
 	}
 
 	pub fn breakBlock(self: ClientInventory, slot: u32, deltaTime: f64) void {
 		std.debug.assert(self.type == .serverShared);
-		main.renderer.MeshSelection.breakBlock(self, slot, deltaTime);
+		root.renderer.MeshSelection.breakBlock(self, slot, deltaTime);
 	}
 
 	pub fn size(self: ClientInventory) usize {
@@ -705,7 +705,7 @@ pub const InventoryAndSlot = struct {
 
 pub const BagInventory = struct { // MARK: BagInventory
 	sizeLimit: u32,
-	slots: main.ListManaged(ItemStack),
+	slots: root.ListManaged(ItemStack),
 
 	pub fn init(allocator: NeverFailingAllocator, sizeLimit: u32) BagInventory {
 		return .{
@@ -890,7 +890,7 @@ pub const Inventories = struct { // MARK: Inventories
 		return remainingAmount;
 	}
 
-	pub fn removeItems(self: Inventories, ctx: sync.Command.Context, itemAmount: u16, baseItem: main.items.BaseItemIndex) void {
+	pub fn removeItems(self: Inventories, ctx: sync.Command.Context, itemAmount: u16, baseItem: root.items.BaseItemIndex) void {
 		var fullSlot: ?u32 = null;
 		var fullInv: ?Inventory = null;
 		var remainingAmount: usize = itemAmount;

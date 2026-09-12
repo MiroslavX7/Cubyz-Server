@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const Player = main.game.Player;
-const ItemStack = main.items.ItemStack;
-const Vec2f = main.vec.Vec2f;
-const Texture = main.graphics.Texture;
+const Player = root.game.Player;
+const ItemStack = root.items.ItemStack;
+const Vec2f = root.vec.Vec2f;
+const Texture = root.graphics.Texture;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -27,15 +27,15 @@ pub var window = GuiWindow{
 };
 
 const padding: f32 = 8;
-var itemSlots: main.List(*ItemSlot) = .empty;
+var itemSlots: root.List(*ItemSlot) = .empty;
 
 pub fn deinit() void {
 	itemSlots.clearAndFree(root.globalAllocator);
 }
 
-pub var openInventory: main.items.Inventory.ClientInventory = undefined;
+pub var openInventory: root.items.Inventory.ClientInventory = undefined;
 
-pub fn setInventory(selectedInventory: main.items.Inventory.ClientInventory) void {
+pub fn setInventory(selectedInventory: root.items.Inventory.ClientInventory) void {
 	openInventory = selectedInventory;
 }
 

@@ -2,8 +2,8 @@ const std = @import("std");
 
 const root = @import("root");
 const Compression = root.utils.Compression;
-const ZonElement = main.ZonElement;
-const vec = main.vec;
+const ZonElement = root.ZonElement;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 
 const Array3D = root.utils.Array3D;
@@ -11,14 +11,14 @@ const Block = root.blocks.Block;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const User = root.server.User;
 const ServerChunk = root.chunk.ServerChunk;
-const Degrees = main.rotation.Degrees;
-const Tag = main.Tag;
+const Degrees = root.rotation.Degrees;
+const Tag = root.Tag;
 
 const BinaryWriter = root.utils.BinaryWriter;
 const BinaryReader = root.utils.BinaryReader;
 
 const AliasTable = root.utils.AliasTable;
-const List = main.List;
+const List = root.List;
 
 const GameIdToBlueprintIdMapType = std.AutoHashMap(Block, BlockStorageType);
 const BlockIdSizeType = u32;
@@ -305,7 +305,7 @@ pub const Blueprint = struct { // MARK: Blueprint
 
 		std.log.info("Blueprint block palette:", .{});
 
-		var idAndDataList: main.ListManaged(u8) = .init(root.stackAllocator);
+		var idAndDataList: root.ListManaged(u8) = .init(root.stackAllocator);
 		defer idAndDataList.deinit();
 
 		for (0..blockPalette.len) |index| {
@@ -349,7 +349,7 @@ pub const Blueprint = struct { // MARK: Blueprint
 					const current = self.blocks.get(x, y, z);
 					if (whitelist) |m| if (!m.match(current)) continue;
 					if (blacklist) |m| if (m.match(current)) continue;
-					self.blocks.set(x, y, z, newBlocks.blocks.sample(&main.seed).block);
+					self.blocks.set(x, y, z, newBlocks.blocks.sample(&root.seed).block);
 				}
 			}
 		}

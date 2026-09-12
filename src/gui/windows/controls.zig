@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const c = @import("c");
 
@@ -21,11 +21,11 @@ pub var window = GuiWindow{
 };
 
 const padding: f32 = 8;
-var selectedKey: ?*main.Window.Key = null;
+var selectedKey: ?*root.Window.Key = null;
 var editingKeyboard: bool = true;
 var needsUpdate: bool = false;
-fn keyFunction(key: *main.Window.Key) void {
-	main.Window.setNextKeypressListener(&keypressListener) catch return;
+fn keyFunction(key: *root.Window.Key) void {
+	root.Window.setNextKeypressListener(&keypressListener) catch return;
 	selectedKey = key;
 	needsUpdate = true;
 }
@@ -35,41 +35,41 @@ fn keypressListener(key: c_int, mouseButton: c_int, scancode: c_int) void {
 	selectedKey.?.scancode = scancode;
 	selectedKey = null;
 	needsUpdate = true;
-	main.settings.save();
+	root.settings.save();
 }
 
-fn gamepadFunction(key: *main.Window.Key) void {
-	main.Window.setNextGamepadListener(&gamepadListener) catch return;
+fn gamepadFunction(key: *root.Window.Key) void {
+	root.Window.setNextGamepadListener(&gamepadListener) catch return;
 	selectedKey = key;
 	needsUpdate = true;
 }
-fn gamepadListener(axis: ?main.Window.GamepadAxis, btn: c_int) void {
+fn gamepadListener(axis: ?root.Window.GamepadAxis, btn: c_int) void {
 	selectedKey.?.gamepadAxis = axis;
 	selectedKey.?.gamepadButton = btn;
 	selectedKey = null;
 	needsUpdate = true;
-	main.settings.save();
+	root.settings.save();
 }
 fn updateSensitivity(sensitivity: f32) void {
 	if (editingKeyboard) {
-		main.settings.mouseSensitivity = sensitivity;
+		root.settings.mouseSensitivity = sensitivity;
 	} else {
-		main.settings.controllerSensitivity = sensitivity;
+		root.settings.controllerSensitivity = sensitivity;
 	}
-	main.settings.save();
+	root.settings.save();
 }
 
 fn invertMouseYCallback(newValue: bool) void {
-	main.settings.invertMouseY = newValue;
-	main.settings.save();
+	root.settings.invertMouseY = newValue;
+	root.settings.save();
 }
 fn sprintIsToggleCallback(newValue: bool) void {
-	main.KeyBoard.setIsToggling("sprint", newValue);
-	main.settings.save();
+	root.KeyBoard.setIsToggling("sprint", newValue);
+	root.settings.save();
 }
 
 fn updateDeadzone(deadzone: f32) void {
-	main.settings.controllerAxisDeadzone = deadzone;
+	root.settings.controllerAxisDeadzone = deadzone;
 }
 
 fn deadzoneFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) []const u8 {
@@ -82,7 +82,7 @@ fn sensitivityFormatter(allocator: root.heap.NeverFailingAllocator, value: f32) 
 
 fn abortBindingProcess() void {
 	selectedKey = null;
-	main.Window.resetNextInputListenters();
+	root.Window.resetNextInputListenters();
 	needsUpdate = true;
 }
 
@@ -92,7 +92,7 @@ fn toggleKeyboard() void {
 }
 
 fn unbindKey(keyPtr: usize) void {
-	var key: ?*main.Window.Key = @ptrFromInt(keyPtr);
+	var key: ?*root.Window.Key = @ptrFromInt(keyPtr);
 	if (editingKeyboard) {
 		key.?.key = c.GLFW_KEY_UNKNOWN;
 		key.?.mouseButton = -1;
@@ -111,14 +111,14 @@ fn initWindow() void {
 
 	const list = VerticalList.init(.{padding, 16 + padding}, 364, 8);
 	list.add(Button.initText(.{0, 0}, keybindButtonWidth, if (editingKeyboard) "Gamepad" else "Keyboard", .{.onAction = .init(toggleKeyboard)}));
-	list.add(ContinuousSlider.init(.{0, 0}, controlsListWidth, 0, 5, if (editingKeyboard) main.settings.mouseSensitivity else main.settings.controllerSensitivity, &updateSensitivity, &sensitivityFormatter));
-	list.add(CheckBox.init(.{0, 0}, controlsListWidth, "Invert mouse Y", main.settings.invertMouseY, &invertMouseYCallback));
-	list.add(CheckBox.init(.{0, 0}, controlsListWidth, "Toggle sprint", main.KeyBoard.key("sprint").isToggling == .yes, &sprintIsToggleCallback));
+	list.add(ContinuousSlider.init(.{0, 0}, controlsListWidth, 0, 5, if (editingKeyboard) root.settings.mouseSensitivity else root.settings.controllerSensitivity, &updateSensitivity, &sensitivityFormatter));
+	list.add(CheckBox.init(.{0, 0}, controlsListWidth, "Invert mouse Y", root.settings.invertMouseY, &invertMouseYCallback));
+	list.add(CheckBox.init(.{0, 0}, controlsListWidth, "Toggle sprint", root.KeyBoard.key("sprint").isToggling == .yes, &sprintIsToggleCallback));
 
 	if (!editingKeyboard) {
-		list.add(ContinuousSlider.init(.{0, 0}, controlsListWidth, 0, 1, main.settings.controllerAxisDeadzone, &updateDeadzone, &deadzoneFormatter));
+		list.add(ContinuousSlider.init(.{0, 0}, controlsListWidth, 0, 1, root.settings.controllerAxisDeadzone, &updateDeadzone, &deadzoneFormatter));
 	}
-	for (&main.KeyBoard.keys) |*key| {
+	for (&root.KeyBoard.keys) |*key| {
 		const label = Label.init(.{0, 0}, keybindButtonWidth, key.name, .left);
 		const button = blk: {
 			if (key == selectedKey) {

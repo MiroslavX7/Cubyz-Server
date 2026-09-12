@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const ServerChunk = root.chunk.ServerChunk;
 const terrain = root.server.terrain;
-const Assets = main.assets.Assets;
+const Assets = root.assets.Assets;
 const biomes = root.server.terrain.biomes;
-const Tag = main.Tag;
+const Tag = root.Tag;
 
 pub const simple_structures = @import("simple_structures/_list.zig");
 
@@ -86,7 +86,7 @@ pub const StructureTable = struct {
 			.tags = Tag.loadTagsFromZon(root.worldArena, zon.getChild("tags")),
 		};
 		const tableChance: ?f32 = zon.get(f32, "chance");
-		var structureList: main.List(SimpleStructureModel) = .empty;
+		var structureList: root.List(SimpleStructureModel) = .empty;
 		defer structureList.deinit(root.stackAllocator);
 
 		const structures = zon.getChild("structures");
@@ -116,7 +116,7 @@ pub const StructureTable = struct {
 };
 
 var finishedLoading: bool = false;
-var structureTables: main.List(StructureTable) = .empty;
+var structureTables: root.List(StructureTable) = .empty;
 var structureTablesById: std.StringHashMapUnmanaged(*StructureTable) = .{};
 
 fn register(id: []const u8, zon: ZonElement) void {

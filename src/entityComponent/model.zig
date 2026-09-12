@@ -1,21 +1,21 @@
 const std = @import("std");
 
 const root = @import("root");
-const chunk = main.chunk;
+const chunk = root.chunk;
 const Entity = root.entity.Entity;
-const game = main.game;
-const graphics = main.graphics;
-const ZonElement = main.ZonElement;
-const renderer = main.renderer;
-const settings = main.settings;
-const utils = main.utils;
+const game = root.game;
+const graphics = root.graphics;
+const ZonElement = root.ZonElement;
+const renderer = root.renderer;
+const settings = root.settings;
+const utils = root.utils;
 const BinaryReader = utils.BinaryReader;
-const vec = main.vec;
+const vec = root.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const EntityModel = main.entityModel.EntityModel;
+const EntityModel = root.entityModel.EntityModel;
 
 const c = @import("c");
 const Self = @This();
@@ -26,7 +26,7 @@ pub const entityComponentVersion = 0;
 // ############################# Client only stuff ################################
 pub const client = struct {
 	const Component = struct {
-		entityModel: main.entityModel.EntityModelIndex,
+		entityModel: root.entityModel.EntityModelIndex,
 
 		bufferAllocation: graphics.SubAllocation = .{.len = 0, .start = 0},
 		matrices: []Mat4f = undefined,
@@ -36,7 +36,7 @@ pub const client = struct {
 			root.globalAllocator.free(self.matrices);
 			root.globalAllocator.free(self.nodes);
 
-			main.systems.systems.modelRenderer.client.nodeBuffer.free(self.bufferAllocation);
+			root.systems.systems.modelRenderer.client.nodeBuffer.free(self.bufferAllocation);
 		}
 	};
 	pub var components: root.utils.SparseSet(Component, Entity) = .{};
@@ -81,7 +81,7 @@ pub const client = struct {
 
 pub const server = struct {
 	pub const Component = struct {
-		entityModel: main.entityModel.EntityModelIndex,
+		entityModel: root.entityModel.EntityModelIndex,
 		pub fn save(self: Component, writer: *utils.BinaryWriter, audience: root.entity.AudienceInfo) root.entity.ComponentSaveBehaviour {
 			_ = audience;
 			writer.writeVarInt(u32, self.entityModel.index);

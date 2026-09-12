@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const TextBuffer = graphics.TextBuffer;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -18,7 +18,7 @@ const border: f32 = 3;
 
 pos: Vec2f,
 size: Vec2f,
-children: main.ListManaged(GuiComponent),
+children: root.ListManaged(GuiComponent),
 padding: f32,
 maxHeight: f32,
 childrenHeight: f32 = 0,
@@ -97,13 +97,13 @@ pub fn updateSelected(self: *VerticalList) void {
 	}
 }
 
-pub fn updateHovered(self: *VerticalList, mousePosition: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *VerticalList, mousePosition: Vec2f) root.callbacks.Result {
 	var shiftedPos = self.pos;
 	if (self.scrollBarEnabled) {
 		const diff = self.childrenHeight - self.maxHeight;
 		shiftedPos[1] -= diff*self.scrollBar.currentState;
-		self.scrollBar.scroll(-main.Window.scrollOffset*32/diff);
-		main.Window.scrollOffset = 0;
+		self.scrollBar.scroll(-root.Window.scrollOffset*32/diff);
+		root.Window.scrollOffset = 0;
 		if (GuiComponent.contains(self.scrollBar.pos, self.scrollBar.size, mousePosition - self.pos)) {
 			if (self.scrollBar.updateHovered(mousePosition - self.pos) == .handled) return .handled;
 		}
@@ -144,7 +144,7 @@ pub fn render(self: *VerticalList, mousePosition: Vec2f) void {
 	}
 }
 
-pub fn mainButtonPressed(self: *VerticalList, mousePosition: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *VerticalList, mousePosition: Vec2f) root.callbacks.Result {
 	var shiftedPos = self.pos;
 	if (self.scrollBarEnabled) {
 		const diff = self.childrenHeight - self.maxHeight;

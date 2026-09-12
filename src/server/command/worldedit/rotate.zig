@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Degrees = main.rotation.Degrees;
+const Degrees = root.rotation.Degrees;
 const Source = root.server.command.Source;
 
 pub const description = "rotate clipboard content around Z axis counterclockwise.";

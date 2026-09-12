@@ -1,17 +1,17 @@
 const std = @import("std");
 
 const root = @import("root");
-const Vec3i = main.vec.Vec3i;
-const ZonElement = main.ZonElement;
-const Blueprint = main.blueprint.Blueprint;
-const ListManaged = main.ListManaged;
-const List = main.List;
+const Vec3i = root.vec.Vec3i;
+const ZonElement = root.ZonElement;
+const Blueprint = root.blueprint.Blueprint;
+const ListManaged = root.ListManaged;
+const List = root.List;
 const AliasTable = root.utils.AliasTable;
 const Neighbor = root.chunk.Neighbor;
 const Block = root.blocks.Block;
-const Degrees = main.rotation.Degrees;
+const Degrees = root.rotation.Degrees;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const Assets = main.assets.Assets;
+const Assets = root.assets.Assets;
 
 var structureList: List(StructureBuildingBlock) = .empty;
 var structureMap: std.StringHashMapUnmanaged(StructureIndex) = .{};
@@ -121,7 +121,7 @@ const BlueprintEntry = struct {
 								.data = block.data,
 							};
 							hasOrigin = true;
-							self.blueprint.blocks.set(x, y, z, main.blueprint.getVoidBlock());
+							self.blueprint.blocks.set(x, y, z, root.blueprint.getVoidBlock());
 						}
 					} else if (isChildBlock(block)) {
 						const childBlockLocalId = childBlockNumericIdMap.get(block.typ) orelse return error.ChildBlockNotRecognized;
@@ -132,7 +132,7 @@ const BlueprintEntry = struct {
 							.index = childBlockLocalId,
 							.data = block.data,
 						});
-						self.blueprint.blocks.set(x, y, z, main.blueprint.getVoidBlock());
+						self.blueprint.blocks.set(x, y, z, root.blueprint.getVoidBlock());
 					}
 				}
 			}
@@ -187,7 +187,7 @@ pub const Rotation = union(RotationMode) {
 		};
 	}
 	fn sampleRandom(seed: *u64) Rotation {
-		return .{.fixed = @enumFromInt(main.random.nextInt(u2, seed))};
+		return .{.fixed = @enumFromInt(root.random.nextInt(u2, seed))};
 	}
 	pub fn getChildRotation(self: Rotation, seed: *u64, child: Rotation, direction: Neighbor) Rotation {
 		return switch (direction) {

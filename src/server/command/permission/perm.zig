@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const ListManaged = main.ListManaged;
+const ListManaged = root.ListManaged;
 const permission = root.server.permission;
 const ListType = permission.Permissions.ListType;
 const command = root.server.command;

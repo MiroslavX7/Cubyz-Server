@@ -3,11 +3,11 @@ const std = @import("std");
 const root = @import("root");
 const command = root.server.command;
 const Source = command.Source;
-const Vec3i = main.vec.Vec3i;
+const Vec3i = root.vec.Vec3i;
 
 const Block = root.blocks.Block;
-const Blueprint = main.blueprint.Blueprint;
-const Pattern = main.blueprint.Pattern;
+const Blueprint = root.blueprint.Blueprint;
+const Pattern = root.blueprint.Pattern;
 
 pub const description = "Set all blocks within selection to a block.";
 pub const usage = "/set <pattern>";

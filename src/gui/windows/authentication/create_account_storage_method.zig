@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
-const gui = main.gui;
+const gui = root.gui;
 const GuiComponent = gui.GuiComponent;
 const GuiWindow = gui.GuiWindow;
 const Button = GuiComponent.Button;

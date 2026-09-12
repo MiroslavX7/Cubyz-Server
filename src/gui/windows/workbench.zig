@@ -1,16 +1,16 @@
 const std = @import("std");
 
 const root = @import("root");
-const items = main.items;
+const items = root.items;
 const BaseItem = items.BaseItem;
 const ClientInventory = items.Inventory.ClientInventory;
 const Item = items.Item;
 const ProceduralItem = items.ProceduralItem;
 const ProceduralItemType = items.ProceduralItemType;
 const ProceduralItemTypeIndex = items.ProceduralItemTypeIndex;
-const Player = main.game.Player;
-const Texture = main.graphics.Texture;
-const Vec2f = main.vec.Vec2f;
+const Player = root.game.Player;
+const Texture = root.graphics.Texture;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -40,7 +40,7 @@ var craftingResultInv: ClientInventory = undefined;
 
 var itemSlots: [25]*ItemSlot = undefined;
 
-var proceduralItemTypes: main.List(ProceduralItemTypeIndex) = undefined;
+var proceduralItemTypes: root.List(ProceduralItemTypeIndex) = undefined;
 var currentProceduralItemType: usize = 0;
 
 var proceduralItemButton: *Button = undefined;
@@ -54,14 +54,14 @@ fn toggleProceduralItem() void {
 	needsUpdate = true;
 }
 
-fn updateResult(_: main.items.Inventory.Source) void {
+fn updateResult(_: root.items.Inventory.Source) void {
 	craftingResultInv.super._items[0].deinit();
 	craftingResultInv.super._items[0] = .{};
-	craftingResultInv.super._items[0] = .{.item = Item{.proceduralItem = main.items.ProceduralItem.initFromInventory(craftingGridInv.super) orelse return}, .amount = 1};
+	craftingResultInv.super._items[0] = .{.item = Item{.proceduralItem = root.items.ProceduralItem.initFromInventory(craftingGridInv.super) orelse return}, .amount = 1};
 }
 
 fn openInventory() void {
-	craftingGridInv = ClientInventory.init(root.globalAllocator, 25, .serverShared, .{.workbench = .{.playerId = main.game.Player.id, .proceduralItemIndex = proceduralItemTypes.items[currentProceduralItemType]}}, .{.onUpdateCallback = &updateResult, .canPutInto = items.ProceduralItem.canPutIntoWorkbenchCallback});
+	craftingGridInv = ClientInventory.init(root.globalAllocator, 25, .serverShared, .{.workbench = .{.playerId = root.game.Player.id, .proceduralItemIndex = proceduralItemTypes.items[currentProceduralItemType]}}, .{.onUpdateCallback = &updateResult, .canPutInto = items.ProceduralItem.canPutIntoWorkbenchCallback});
 	craftingResultInv = ClientInventory.init(root.globalAllocator, 1, .{.workbenchResult = craftingGridInv.super.id}, .other, .{});
 	const list = HorizontalList.init();
 	{ // crafting grid
@@ -124,9 +124,9 @@ pub fn render() void {
 	const offsetY = 4*ItemSlot.sizeWithBorder;
 	const fontSize = 16;
 
-	main.graphics.draw.print("{s}{} durability", .{if (currentResult.proceduralItem.getProperty(.maxDurability) != 0) "#ffffff" else "#ff0000", @as(usize, @trunc(currentResult.proceduralItem.getProperty(.maxDurability)))}, offsetX, offsetY, fontSize);
-	main.graphics.draw.print("#ffffff{d:.1} swings/s", .{currentResult.proceduralItem.getProperty(.swingSpeed)}, offsetX, offsetY + fontSize, fontSize);
-	main.graphics.draw.print("#ffffff{d:.1} damage", .{currentResult.proceduralItem.getProperty(.damage)}, offsetX, offsetY + 2*fontSize, fontSize);
+	root.graphics.draw.print("{s}{} durability", .{if (currentResult.proceduralItem.getProperty(.maxDurability) != 0) "#ffffff" else "#ff0000", @as(usize, @trunc(currentResult.proceduralItem.getProperty(.maxDurability)))}, offsetX, offsetY, fontSize);
+	root.graphics.draw.print("#ffffff{d:.1} swings/s", .{currentResult.proceduralItem.getProperty(.swingSpeed)}, offsetX, offsetY + fontSize, fontSize);
+	root.graphics.draw.print("#ffffff{d:.1} damage", .{currentResult.proceduralItem.getProperty(.damage)}, offsetX, offsetY + 2*fontSize, fontSize);
 }
 
 pub fn onOpen() void {

@@ -4,10 +4,10 @@ const root = @import("root");
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const terrain = root.server.terrain;
 const CaveBiomeMapView = terrain.CaveBiomeMap.CaveBiomeMapView;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 
 const sdf_models = @import("sdf_models/_list.zig");
 
@@ -50,12 +50,12 @@ pub const SdfModel = struct { // MARK: SdfModel
 	}
 
 	pub fn generate(self: SdfModel, sdf: root.utils.Array3D(f32), biomeMap: *const CaveBiomeMapView, interpolationSmoothness: root.utils.Array3D(f32), sdfPos: Vec3i, biomePos: Vec3i, seed: *u64, perimeter: comptime_int, voxelSize: u31, voxelSizeShift: u5) void {
-		const amount: usize = @floor(self.minAmount + main.random.nextFloat(seed)*(self.maxAmount - self.minAmount) + main.random.nextFloat(seed));
+		const amount: usize = @floor(self.minAmount + root.random.nextFloat(seed)*(self.maxAmount - self.minAmount) + root.random.nextFloat(seed));
 		for (0..amount) |_| {
 			const arena = root.stackAllocator.createArena();
 			defer root.stackAllocator.destroyArena(arena);
 			const offsetDir = blk: while (true) {
-				const offset = main.random.nextFloatVectorSigned(3, seed);
+				const offset = root.random.nextFloatVectorSigned(3, seed);
 				if (vec.lengthSquare(offset) < 1) break :blk offset;
 			};
 			var pos = biomePos +% @as(Vec3i, @trunc(offsetDir*@as(Vec3f, @splat(self.maxBiomeCenterDistance))));

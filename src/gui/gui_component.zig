@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 pub const GuiComponent = union(enum) { // MARK: GuiComponent
@@ -83,7 +83,7 @@ pub const GuiComponent = union(enum) { // MARK: GuiComponent
 		}
 	}
 
-	pub fn updateHovered(self: GuiComponent, mousePosition: Vec2f) main.callbacks.Result {
+	pub fn updateHovered(self: GuiComponent, mousePosition: Vec2f) root.callbacks.Result {
 		switch (self) {
 			inline else => |impl| {
 				if (@hasDecl(@TypeOf(impl.*), "updateHovered")) {
@@ -104,7 +104,7 @@ pub const GuiComponent = union(enum) { // MARK: GuiComponent
 		}
 	}
 
-	pub fn mainButtonPressed(self: GuiComponent, mousePosition: Vec2f) main.callbacks.Result {
+	pub fn mainButtonPressed(self: GuiComponent, mousePosition: Vec2f) root.callbacks.Result {
 		switch (self) {
 			inline else => |impl| {
 				if (@hasDecl(@TypeOf(impl.*), "mainButtonPressed")) {

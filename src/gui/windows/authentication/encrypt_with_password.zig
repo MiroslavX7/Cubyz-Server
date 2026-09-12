@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
-const gui = main.gui;
+const gui = root.gui;
 const GuiComponent = gui.GuiComponent;
 const GuiWindow = gui.GuiWindow;
 const Button = GuiComponent.Button;
@@ -106,7 +106,7 @@ pub fn update() void {
 pub fn onClose() void {
 	// Make sure there remains no trace of the account code or password in memory
 	accountCode.deinit();
-	main.Window.setClipboardString("");
+	root.Window.setClipboardString("");
 	gui.openWindow("clipboard_deleted");
 
 	if (!encryptAccountCode) {

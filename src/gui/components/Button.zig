@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const TextBuffer = graphics.TextBuffer;
 const Texture = graphics.Texture;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -64,7 +64,7 @@ size: Vec2f,
 disabled: bool = false,
 pressed: bool = false,
 hovered: bool = false,
-onAction: main.callbacks.SimpleCallback,
+onAction: root.callbacks.SimpleCallback,
 child: GuiComponent,
 
 pub fn globalInit() void {
@@ -97,7 +97,7 @@ pub fn globalDeinit() void {
 }
 
 const Options = struct {
-	onAction: main.callbacks.SimpleCallback = .{},
+	onAction: root.callbacks.SimpleCallback = .{},
 	disabled: bool = false,
 };
 
@@ -136,12 +136,12 @@ pub fn toComponent(self: *Button) GuiComponent {
 	return .{.button = self};
 }
 
-pub fn updateHovered(self: *Button, _: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *Button, _: Vec2f) root.callbacks.Result {
 	self.hovered = true;
 	return .handled;
 }
 
-pub fn mainButtonPressed(self: *Button, _: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *Button, _: Vec2f) root.callbacks.Result {
 	if (!self.disabled) self.pressed = true;
 	return .handled;
 }
@@ -165,7 +165,7 @@ pub fn render(self: *Button, mousePosition: Vec2f) void {
 		break :blk normalTextures;
 	};
 	{
-		if (main.settings.launchConfig.vulkanTestingMode and textures.texture.vulkanImage != null) {
+		if (root.settings.launchConfig.vulkanTestingMode and textures.texture.vulkanImage != null) {
 			graphics.vulkan.currentFrame.guiCommands.bindPipeline(pipeline, graphics.draw.getScissor());
 			graphics.vulkan.currentFrame.guiCommands.bindDescriptors(pipeline, .graphics, 0, &.{
 				.{.image = .{.binding = 0, .image = textures.texture.vulkanImage.?}},

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const vec = main.vec;
+const vec = root.vec;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
 

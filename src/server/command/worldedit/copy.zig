@@ -5,7 +5,7 @@ const command = root.server.command;
 const Source = command.Source;
 
 const Block = root.blocks.Block;
-const Blueprint = main.blueprint.Blueprint;
+const Blueprint = root.blueprint.Blueprint;
 
 pub const description = "Copy selection to clipboard.";
 pub const usage = "/copy";

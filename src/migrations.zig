@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const ZonElement = main.ZonElement;
-const Palette = main.assets.Palette;
-const Assets = main.assets.Assets;
+const ZonElement = root.ZonElement;
+const Palette = root.assets.Palette;
+const Assets = root.assets.Assets;
 
 var blockMigrations: std.StringHashMapUnmanaged([]const u8) = .{};
 var itemMigrations: std.StringHashMapUnmanaged([]const u8) = .{};
@@ -35,7 +35,7 @@ pub fn registerAll(comptime typ: MigrationType, migrations: *Assets.AddonNameToZ
 
 	// apply transitive migrations
 	var iterator = collection.iterator();
-	var entries: main.List([]const u8) = .empty;
+	var entries: root.List([]const u8) = .empty;
 	defer entries.deinit(root.stackAllocator);
 	while (iterator.next()) |migrationEntry| {
 		defer entries.clearRetainingCapacity();

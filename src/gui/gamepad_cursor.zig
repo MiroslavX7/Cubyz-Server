@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const Texture = graphics.Texture;
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("gui.zig");
 
@@ -20,7 +20,7 @@ pub fn deinit() void {
 }
 
 pub fn render() void {
-	if (main.Window.lastUsedMouse or main.Window.grabbed) return;
-	const mousePos = main.Window.getMousePosition();
+	if (root.Window.lastUsedMouse or root.Window.grabbed) return;
+	const mousePos = root.Window.getMousePosition();
 	graphics.draw.image(texture, @as(Vec2f, @splat(-size/2.0)) + (mousePos/@as(Vec2f, @splat(gui.scale))), .{size, size});
 }

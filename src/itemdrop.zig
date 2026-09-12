@@ -10,8 +10,8 @@ const ServerWorld = root.server.ServerWorld;
 const graphics = @import("graphics.zig");
 const items = @import("items.zig");
 const ItemStack = items.ItemStack;
-const ZonElement = main.ZonElement;
-const physics = main.physics;
+const ZonElement = root.ZonElement;
+const physics = root.physics;
 const random = @import("random.zig");
 const settings = @import("settings.zig");
 const utils = @import("utils.zig");
@@ -121,7 +121,7 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 		const pos = try reader.readVec(Vec3d);
 		const vel = try reader.readVec(Vec3d);
 		const itemStack = try items.ItemStack.fromBytes(reader);
-		self.addWithIndex(i, pos, vel, random.nextFloatVector(3, &main.seed)*@as(Vec3f, @splat(2*std.math.pi)), itemStack, despawnTime, 0);
+		self.addWithIndex(i, pos, vel, random.nextFloatVector(3, &root.seed)*@as(Vec3f, @splat(2*std.math.pi)), itemStack, despawnTime, 0);
 	}
 
 	fn storeSingleToBytes(writer: *root.utils.BinaryWriter, itemdrop: ItemDrop) void {
@@ -142,7 +142,7 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 			zon.get(Vec3d, "pos") orelse .{0, 0, 0},
 			zon.get(Vec3d, "vel") orelse .{0, 0, 0},
 
-			random.nextFloatVector(3, &main.seed)*@as(Vec3f, @splat(2*std.math.pi)),
+			random.nextFloatVector(3, &root.seed)*@as(Vec3f, @splat(2*std.math.pi)),
 			items.ItemStack{.item = item, .amount = zon.get(u16, "amount") orelse 1},
 			zon.get(i32, "despawnTime") orelse 60,
 			0,
@@ -377,14 +377,14 @@ pub const ItemDropManager = struct { // MARK: ItemDropManager
 				ii += 1;
 				continue;
 			}
-			const hitbox = main.game.Player.outerBoundingBox;
+			const hitbox = root.game.Player.outerBoundingBox;
 			const min = user.player().pos + hitbox.min;
 			const max = user.player().pos + hitbox.max;
 			const itemPos = self.list.items(.pos)[i];
 			const dist = @max(min - itemPos, itemPos - max);
 			if (@reduce(.Max, dist) < radius + pickupRange) {
 				const itemStack = &self.list.items(.itemStack)[i];
-				main.items.Inventory.server.tryCollectingToPlayerInventory(user, itemStack);
+				root.items.Inventory.server.tryCollectingToPlayerInventory(user, itemStack);
 				if (itemStack.amount == 0) {
 					self.directRemove(i);
 					continue;
@@ -415,7 +415,7 @@ pub const ClientItemDropManager = struct { // MARK: ClientItemDropManager
 		instance = self;
 		self.* = .{
 			.super = undefined,
-			.lastTime = @as(i16, @truncate(main.timestamp().toMilliseconds())) -% settings.entityLookback,
+			.lastTime = @as(i16, @truncate(root.timestamp().toMilliseconds())) -% settings.entityLookback,
 		};
 		self.super.init(allocator, null);
 		self.interpolation.init(
@@ -445,7 +445,7 @@ pub const ClientItemDropManager = struct { // MARK: ClientItemDropManager
 
 	pub fn updateInterpolationData(self: *ClientItemDropManager) void {
 		self.super.processChanges();
-		var time = @as(i16, @truncate(main.timestamp().toMilliseconds())) -% settings.entityLookback;
+		var time = @as(i16, @truncate(root.timestamp().toMilliseconds())) -% settings.entityLookback;
 		time -%= self.timeDifference.difference.load(.monotonic);
 		{
 			mutex.lock();
@@ -518,8 +518,8 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 	} = undefined;
 
 	var itemModelSSBO: graphics.SSBO = undefined;
-	var modelData: main.ListManaged(u32) = undefined;
-	var freeSlots: main.ListManaged(*ItemVoxelModel) = undefined;
+	var modelData: root.ListManaged(u32) = undefined;
+	var freeSlots: root.ListManaged(*ItemVoxelModel) = undefined;
 
 	const ItemVoxelModel = struct {
 		index: u31 = undefined,
@@ -549,7 +549,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 				// Find sizes and free index:
 				const block = self.item.baseItem.getDisplayBlock().?;
 				const model = blocks.meshes.model(block).model();
-				var data: main.ListManaged(u32) = .init(root.stackAllocator);
+				var data: root.ListManaged(u32) = .init(root.stackAllocator);
 				defer data.deinit();
 				for (model.internalQuads) |quad| {
 					const textureIndex = blocks.meshes.textureIndex(block, quad.quadInfo().textureSlot);
@@ -649,7 +649,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 
 	fn bindCommonUniforms(ambientLight: Vec3f) void {
 		itemPipeline.bind(null);
-		c.glUniform1f(itemUniforms.reflectionMapSize, main.renderer.reflectionCubeMapSize);
+		c.glUniform1f(itemUniforms.reflectionMapSize, root.renderer.reflectionCubeMapSize);
 		c.glUniform3fv(itemUniforms.ambientLight, 1, @ptrCast(&ambientLight));
 		c.glUniform1f(itemUniforms.contrast, 0.12);
 		var depthRange: [2]f32 = undefined;
@@ -670,7 +670,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 
 	fn drawItem(vertices: u31, modelMatrix: Mat4f) void {
 		c.glUniformMatrix4fv(itemUniforms.modelMatrix, 1, c.GL_TRUE, @ptrCast(&modelMatrix));
-		main.renderer.chunk_meshing.vao.bind();
+		root.renderer.chunk_meshing.vao.bind();
 		c.glDrawElements(c.GL_TRIANGLES, vertices, c.GL_UNSIGNED_INT, null);
 	}
 
@@ -685,7 +685,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 				var pos = itemDrops.list.items(.pos)[i];
 				const rot = itemDrops.list.items(.rot)[i];
 				const blockPos: Vec3i = @floor(pos);
-				const light: [6]u8 = main.renderer.mesh_storage.getLight(blockPos[0], blockPos[1], blockPos[2]) orelse @splat(0);
+				const light: [6]u8 = root.renderer.mesh_storage.getLight(blockPos[0], blockPos[1], blockPos[2]) orelse @splat(0);
 				bindLightUniform(light, ambientLight);
 				pos -= playerPos;
 
@@ -729,7 +729,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 		if (!ItemDisplayManager.showItem) return;
 
 		const displayItemUbo = graphics.frame_uniforms.StaticUbo.init(.{
-			.projectionMatrix = Mat4f.perspective(std.math.degreesToRadians(65), @as(f32, @floatFromInt(main.renderer.lastWidth))/@as(f32, @floatFromInt(main.renderer.lastHeight)), 0.01, 3).toGl(),
+			.projectionMatrix = Mat4f.perspective(std.math.degreesToRadians(65), @as(f32, @floatFromInt(root.renderer.lastWidth))/@as(f32, @floatFromInt(root.renderer.lastHeight)), 0.01, 3).toGl(),
 			.viewMatrix = Mat4f.identity().toGl(),
 			.playerPositionInteger = @splat(0),
 			.playerPositionFraction = @splat(0),
@@ -752,7 +752,7 @@ pub const ItemDropRenderer = struct { // MARK: ItemDropRenderer
 			inline for (0..2) |z| {
 				inline for (0..2) |y| {
 					inline for (0..2) |x| {
-						const light: [6]u8 = main.renderer.mesh_storage.getLight(
+						const light: [6]u8 = root.renderer.mesh_storage.getLight(
 							blockPos[0] +% @as(i32, @intCast(x)),
 							blockPos[1] +% @as(i32, @intCast(y)),
 							blockPos[2] +% @as(i32, @intCast(z)),

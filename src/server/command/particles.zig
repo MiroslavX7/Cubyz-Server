@@ -3,7 +3,7 @@ const std = @import("std");
 const root = @import("root");
 const command = root.server.command;
 const Source = command.Source;
-const particles = main.particles;
+const particles = root.particles;
 const User = root.server.User;
 
 pub const description = "Spawns particles.";

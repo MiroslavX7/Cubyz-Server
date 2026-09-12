@@ -2,10 +2,10 @@ const std = @import("std");
 
 const root = @import("root");
 const Source = root.server.command.Source;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 
-const Blueprint = main.blueprint.Blueprint;
+const Blueprint = root.blueprint.Blueprint;
 
 pub const description =
 	\\Paste clipboard content to current player position.

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 const root = @import("root");
-const Vec2f = main.vec.Vec2f;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -31,9 +31,9 @@ const messageTimeout: i32 = 10000;
 const messageFade = 1000;
 const reusableHistoryMaxSize = 8192;
 
-var history: main.ListManaged(*Label) = undefined;
+var history: root.ListManaged(*Label) = undefined;
 var messageQueue: root.utils.ConcurrentQueue([]const u8) = undefined;
-var expirationTime: main.ListManaged(i32) = undefined;
+var expirationTime: root.ListManaged(i32) = undefined;
 var historyStart: u32 = 0;
 var fadeOutEnd: u32 = 0;
 pub var input: *TextInput = undefined;
@@ -209,7 +209,7 @@ pub fn onClose() void {
 
 pub fn update() void {
 	if (!messageQueue.isEmpty()) {
-		const currentTime: i32 = @truncate(main.timestamp().toMilliseconds());
+		const currentTime: i32 = @truncate(root.timestamp().toMilliseconds());
 		while (messageQueue.popFront()) |msg| {
 			history.append(Label.init(.{0, 0}, 256, msg, .left));
 			root.globalAllocator.free(msg);
@@ -218,12 +218,12 @@ pub fn update() void {
 		refresh();
 	}
 
-	const currentTime: i32 = @truncate(main.timestamp().toMilliseconds());
+	const currentTime: i32 = @truncate(root.timestamp().toMilliseconds());
 	while (fadeOutEnd < history.items.len and currentTime -% expirationTime.items[fadeOutEnd] >= 0) {
 		fadeOutEnd += 1;
 	}
-	if (hideInput != main.Window.grabbed) {
-		hideInput = main.Window.grabbed;
+	if (hideInput != root.Window.grabbed) {
+		hideInput = root.Window.grabbed;
 		refresh();
 	}
 	if (hideInput) {
@@ -241,9 +241,9 @@ pub fn update() void {
 
 pub fn render() void {
 	if (!hideInput) {
-		const oldColor = main.graphics.draw.setColor(0x80000000);
-		defer main.graphics.draw.restoreColor(oldColor);
-		main.graphics.draw.rect(.{0, 0}, window.contentSize);
+		const oldColor = root.graphics.draw.setColor(0x80000000);
+		defer root.graphics.draw.restoreColor(oldColor);
+		root.graphics.draw.rect(.{0, 0}, window.contentSize);
 	}
 }
 
@@ -254,8 +254,8 @@ pub fn addMessage(msg: []const u8) void {
 pub fn sendMessage() void {
 	if (input.currentString.items.len != 0) {
 		const data = input.currentString.items;
-		if (data.len > 10000 or main.graphics.TextBuffer.Parser.countVisibleCharacters(data) > 1000) {
-			std.log.err("Chat message is too long with {}/{} characters. Limits are 1000/10000", .{main.graphics.TextBuffer.Parser.countVisibleCharacters(data), data.len});
+		if (data.len > 10000 or root.graphics.TextBuffer.Parser.countVisibleCharacters(data) > 1000) {
+			std.log.err("Chat message is too long with {}/{} characters. Limits are 1000/10000", .{root.graphics.TextBuffer.Parser.countVisibleCharacters(data), data.len});
 		} else {
 			messageHistory.flushUp();
 			if (!messageHistory.isDuplicate(data)) {
@@ -265,7 +265,7 @@ pub fn sendMessage() void {
 			if (input.currentString.items[0] == '/') {
 				root.sync.client.executeCommand(.{.chatCommand = .{.message = root.globalAllocator.dupe(u8, input.currentString.items[1..])}});
 			} else {
-				root.network.protocols.chat.send(main.game.world.?.conn, data);
+				root.network.protocols.chat.send(root.game.world.?.conn, data);
 			}
 			input.clear();
 		}

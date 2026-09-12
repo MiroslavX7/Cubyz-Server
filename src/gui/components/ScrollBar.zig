@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const graphics = main.graphics;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const TextBuffer = graphics.TextBuffer;
 const Texture = graphics.Texture;
-const random = main.random;
-const vec = main.vec;
+const random = root.random;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -73,14 +73,14 @@ pub fn scroll(self: *ScrollBar, offset: f32) void {
 	self.currentState = @min(1, @max(0, self.currentState));
 }
 
-pub fn updateHovered(self: *ScrollBar, mousePosition: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *ScrollBar, mousePosition: Vec2f) root.callbacks.Result {
 	if (GuiComponent.contains(self.button.pos, self.button.size, mousePosition - self.pos)) {
 		if (self.button.updateHovered(mousePosition - self.pos) == .handled) return .handled;
 	}
 	return .ignored;
 }
 
-pub fn mainButtonPressed(self: *ScrollBar, mousePosition: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *ScrollBar, mousePosition: Vec2f) root.callbacks.Result {
 	if (GuiComponent.contains(self.button.pos, self.button.size, mousePosition - self.pos)) {
 		if (self.button.mainButtonPressed(mousePosition - self.pos) == .handled) {
 			self.mouseAnchor = mousePosition[1] - self.button.pos[1];
@@ -95,7 +95,7 @@ pub fn mainButtonReleased(self: *ScrollBar, mousePosition: Vec2f) void {
 }
 
 pub fn render(self: *ScrollBar, mousePosition: Vec2f) void {
-	if (main.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
+	if (root.settings.launchConfig.vulkanTestingMode and texture.vulkanImage != null) {
 		graphics.vulkan.currentFrame.guiCommands.bindPipeline(Button.pipeline, graphics.draw.getScissor());
 		graphics.vulkan.currentFrame.guiCommands.bindDescriptors(Button.pipeline, .graphics, 0, &.{
 			.{.image = .{.binding = 0, .image = texture.vulkanImage.?}},

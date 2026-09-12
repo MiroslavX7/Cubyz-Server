@@ -4,7 +4,7 @@ const root = @import("root");
 const Source = root.server.command.Source;
 
 const Block = root.blocks.Block;
-const Blueprint = main.blueprint.Blueprint;
+const Blueprint = root.blueprint.Blueprint;
 
 pub const description = "Undo last change done to world with world editing commands.";
 pub const usage = "/undo";

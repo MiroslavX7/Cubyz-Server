@@ -5,12 +5,12 @@ const Array3D = root.utils.Array3D;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const sdf = root.server.terrain.sdf;
 const SdfInstance = sdf.SdfInstance;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 const Vec2i = vec.Vec2i;
 const Vec3f = vec.Vec3f;
 const Vec3i = vec.Vec3i;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 
 pub const id = "cubyz:cylinder";
 
@@ -40,8 +40,8 @@ pub fn initAndGetExtend(zon: ZonElement) sdf.SdfModel.InitResult {
 pub fn instantiate(self: *@This(), arena: NeverFailingAllocator, seed: *u64) SdfInstance {
 	const instance = arena.create(Instance);
 	instance.* = .{
-		.radius = self.minRadius + (self.maxRadius - self.minRadius)*main.random.nextFloat(seed),
-		.halfHeight = self.minHalfHeight + (self.maxHalfHeight - self.minHalfHeight)*main.random.nextFloat(seed),
+		.radius = self.minRadius + (self.maxRadius - self.minRadius)*root.random.nextFloat(seed),
+		.halfHeight = self.minHalfHeight + (self.maxHalfHeight - self.minHalfHeight)*root.random.nextFloat(seed),
 	};
 	const bounds: Vec3f = .{instance.radius, instance.radius, instance.halfHeight};
 	return .{

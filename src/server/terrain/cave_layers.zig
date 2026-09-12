@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 const terrain = root.server.terrain;
 const Biome = terrain.biomes.Biome;
-const Assets = main.assets.Assets;
-const Tag = main.Tag;
+const Assets = root.assets.Assets;
+const Tag = root.Tag;
 
 pub const CaveLayer = struct {
 	minHeight: i32,
@@ -43,7 +43,7 @@ pub const CaveLayer = struct {
 				return null;
 			}
 		}
-		var biomes: main.List(*const Biome) = .empty;
+		var biomes: root.List(*const Biome) = .empty;
 		defer biomes.deinit(root.stackAllocator);
 		outer: for (terrain.biomes.getCaveBiomes()) |*biome| {
 			for (tags) |tag| {
@@ -72,7 +72,7 @@ pub const CaveLayer = struct {
 };
 
 var finishedLoading: bool = false;
-var caveLayers: main.List(CaveLayer) = .empty;
+var caveLayers: root.List(CaveLayer) = .empty;
 
 fn register(id: []const u8, zon: ZonElement) void {
 	const caveLayer = CaveLayer.init(id, zon) orelse return;

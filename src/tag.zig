@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 
-var tagList: main.List([]const u8) = .empty;
+var tagList: root.List([]const u8) = .empty;
 var tagIds: std.StringHashMapUnmanaged(Tag) = .{};
 
 pub const Tag = enum(u32) {
@@ -38,7 +38,7 @@ pub const Tag = enum(u32) {
 		return result;
 	}
 
-	pub fn loadTagsFromZon(_allocator: root.heap.NeverFailingAllocator, zon: main.ZonElement) []Tag {
+	pub fn loadTagsFromZon(_allocator: root.heap.NeverFailingAllocator, zon: root.ZonElement) []Tag {
 		const result = _allocator.alloc(Tag, zon.toSlice().len);
 		for (zon.toSlice(), 0..) |tagZon, i| {
 			result[i] = Tag.find(tagZon.as([]const u8) orelse blk: {

@@ -1,13 +1,13 @@
 const std = @import("std");
 
 const root = @import("root");
-const items = main.items;
+const items = root.items;
 const BaseItemIndex = items.BaseItemIndex;
 const ClientInventory = items.Inventory.ClientInventory;
 const ItemStack = items.ItemStack;
-const Player = main.game.Player;
-const Texture = main.graphics.Texture;
-const Vec2f = main.vec.Vec2f;
+const Player = root.game.Player;
+const Texture = root.graphics.Texture;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -32,9 +32,9 @@ pub var window = GuiWindow{
 
 const padding: f32 = 8;
 
-var availableItems: main.ListManaged(BaseItemIndex) = undefined;
-var itemAmount: main.ListManaged(u32) = undefined;
-var inventories: main.ListManaged(ClientInventory) = undefined;
+var availableItems: root.ListManaged(BaseItemIndex) = undefined;
+var itemAmount: root.ListManaged(u32) = undefined;
+var inventories: root.ListManaged(ClientInventory) = undefined;
 
 pub var arrowTexture: Texture = undefined;
 
@@ -67,8 +67,8 @@ fn findAvailableRecipes(list: *VerticalList) bool {
 		amount.* = 0;
 	}
 	// Figure out what items are available in the inventory:
-	for (0..main.game.Player.inventory.size()) |i| {
-		addItemStackToAvailable(main.game.Player.inventory.getStack(i));
+	for (0..root.game.Player.inventory.size()) |i| {
+		addItemStackToAvailable(root.game.Player.inventory.getStack(i));
 	}
 	if (std.mem.eql(u32, oldAmounts, itemAmount.items)) return false;
 	// Remove no longer present items:

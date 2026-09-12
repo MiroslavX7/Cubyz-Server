@@ -831,7 +831,7 @@ pub const Deadline = struct {
 
 		// std.time.Timer is required to be supported for somewhat accurate reportings of error.Timeout.
 		if (deadline.timeout != null) {
-			deadline.started = main.timestamp();
+			deadline.started = root.timestamp();
 		}
 
 		return deadline;
@@ -854,7 +854,7 @@ pub const Deadline = struct {
 		// Get how much time has passed since we started waiting
 		// then subtract that from the init() timeout to get how much longer to wait.
 		// Use overflow to detect when we've been waiting longer than the init() timeout.
-		const elapsed_ns: u64 = @intCast(self.started.durationTo(main.timestamp()).nanoseconds);
+		const elapsed_ns: u64 = @intCast(self.started.durationTo(root.timestamp()).nanoseconds);
 		const until_timeout_ns = std.math.sub(u64, timeout_ns, elapsed_ns) catch 0;
 		return Futex.timedWait(ptr, expect, until_timeout_ns);
 	}

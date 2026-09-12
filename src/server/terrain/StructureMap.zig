@@ -5,9 +5,9 @@ const root = @import("root");
 const ServerChunk = root.chunk.ServerChunk;
 const ChunkPosition = root.chunk.ChunkPosition;
 const Cache = root.utils.Cache;
-const ZonElement = main.ZonElement;
+const ZonElement = root.ZonElement;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
-const vec = main.vec;
+const vec = root.vec;
 const Vec3i = vec.Vec3i;
 
 const terrain = @import("terrain.zig");
@@ -47,7 +47,7 @@ pub const StructureMapFragment = struct {
 	allocator: root.heap.NeverFailingAllocator,
 
 	tempData: struct {
-		lists: *[chunkedSize*chunkedSize*chunkedSize]main.List(Structure),
+		lists: *[chunkedSize*chunkedSize*chunkedSize]root.List(Structure),
 		allocator: NeverFailingAllocator,
 	},
 
@@ -63,7 +63,7 @@ pub const StructureMapFragment = struct {
 			.arena = .init(root.globalAllocator),
 			.allocator = self.arena.allocator(),
 			.tempData = .{
-				.lists = tempAllocator.create([chunkedSize*chunkedSize*chunkedSize]main.List(Structure)),
+				.lists = tempAllocator.create([chunkedSize*chunkedSize*chunkedSize]root.List(Structure)),
 				.allocator = tempAllocator,
 			},
 		};
@@ -150,7 +150,7 @@ pub const StructureMapGenerator = struct {
 	});
 
 	pub fn getAndInitGenerators(allocator: NeverFailingAllocator, settings: ZonElement) []StructureMapGenerator {
-		var list: main.List(StructureMapGenerator) = .initCapacity(allocator, generatorRegistry.values().len);
+		var list: root.List(StructureMapGenerator) = .initCapacity(allocator, generatorRegistry.values().len);
 		for (generatorRegistry.keys(), generatorRegistry.values()) |id, generator| {
 			const generatorSettings = settings.getChild(id);
 			if ((generatorSettings.get(GeneratorState, "state") orelse generator.defaultState) == .disabled) continue;

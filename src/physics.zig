@@ -8,8 +8,8 @@ const Vec3f = vec.Vec3f;
 const Vec3d = vec.Vec3d;
 const Vec3i = vec.Vec3i;
 const settings = @import("settings.zig");
-const Player = main.game.Player;
-const camera = main.game.camera;
+const Player = root.game.Player;
+const camera = root.game.camera;
 
 pub const baseGravity = 30.0;
 pub const playerAirTerminalVelocity = 90.0;
@@ -107,7 +107,7 @@ pub const collision = struct { // MARK: collision
 			while (y <= maxY) : (y += 1) {
 				var z: i32 = maxZ;
 				while (z >= minZ) : (z -= 1) {
-					if (main.game.getBlockWithSide(side, x, y, z)) |block| {
+					if (root.game.getBlockWithSide(side, x, y, z)) |block| {
 						if (collideWithBlock(block, x, y, z, boundingBoxCenter, fullBoundingBoxExtent, directionVector)) |res| {
 							if (res.dist < minDistance) {
 								resultBox = res.box;
@@ -150,7 +150,7 @@ pub const collision = struct { // MARK: collision
 		while (x <= maxX) : (x += 1) {
 			var y = minY;
 			while (y <= maxY) : (y += 1) {
-				if (main.game.getBlockWithSide(side, x, y, z)) |block| {
+				if (root.game.getBlockWithSide(side, x, y, z)) |block| {
 					const blockPos: Vec3d = .{@floatFromInt(x), @floatFromInt(y), @floatFromInt(z)};
 
 					const blockBox: Box = .{
@@ -235,7 +235,7 @@ pub const collision = struct { // MARK: collision
 					const gridVolume = overlapVolume(boundingBox, totalBox);
 					volumeSum += gridVolume;
 
-					if (main.game.getBlockWithSide(side, x, y, z)) |block| {
+					if (root.game.getBlockWithSide(side, x, y, z)) |block| {
 						const collisionBox: Box = .{ // TODO: Check all AABBs individually
 							.min = totalBox.min + root.blocks.meshes.model(block).model().min,
 							.max = totalBox.min + root.blocks.meshes.model(block).model().max,
@@ -336,7 +336,7 @@ pub const collision = struct { // MARK: collision
 			while (posY <= maxY) : (posY += 1) {
 				var posZ: i32 = minZ;
 				while (posZ <= maxZ) : (posZ += 1) {
-					const block = main.game.getBlockWithSide(side, posX, posY, posZ);
+					const block = root.game.getBlockWithSide(side, posX, posY, posZ);
 					if (block == null or block.?.onTouch().isNoop()) continue;
 					const touchX: bool = isBlockIntersecting(block.?, posX, posY, posZ, center, extentX);
 					const touchY: bool = isBlockIntersecting(block.?, posX, posY, posZ, center, extentY);
@@ -356,13 +356,13 @@ pub const FrictionState = struct {
 };
 
 pub fn calculateVolumeProperties(comptime side: root.sync.Side, volumeProperties: *collision.VolumeProperties, pos: @Vector(3, f64), hitBox: collision.Box, airTerminalVelocity: f64) void {
-	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
+	if (root.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
 		volumeProperties.* = collision.calculateVolumeProperties(side, pos, hitBox, .{.density = airDensity, .terminalVelocity = airTerminalVelocity, .maxDensity = airDensity, .mobileFriction = 1.0/airTerminalVelocity});
 	}
 }
 
 pub fn calculateFriction(comptime side: root.sync.Side, volumeProperties: *const collision.VolumeProperties, friction: *FrictionState, pos: @Vector(3, f64), hitBox: collision.Box, onGround: bool) void {
-	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
+	if (root.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
 		const groundFriction = if (!onGround) 0 else collision.calculateSurfaceProperties(side, pos, hitBox, 20).friction;
 		const volumeFrictionCoeffecient: f32 = @floatCast(baseGravity/volumeProperties.terminalVelocity);
 		const mobileFriction: f32 = @floatCast(baseGravity*volumeProperties.mobileFriction);
@@ -374,7 +374,7 @@ pub fn calculateFriction(comptime side: root.sync.Side, volumeProperties: *const
 pub fn calculateMotion(comptime side: root.sync.Side, deltaTime: f64, friction: FrictionState, volumeProperties: collision.VolumeProperties, density: f64, pos: Vec3d, velocity: *Vec3d, inputAcc: Vec3d, gravity: f64, jumpHeight: f64) Vec3d {
 	var move: Vec3d = .{0, 0, 0};
 
-	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
+	if (root.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
 		const effectiveGravity = gravity*(density - volumeProperties.density)/density;
 		const volumeFrictionCoeffecient: f32 = @floatCast(baseGravity/volumeProperties.terminalVelocity);
 
@@ -418,7 +418,7 @@ pub fn calculateMotion(comptime side: root.sync.Side, deltaTime: f64, friction: 
 }
 
 pub fn calculateEyeMovement(comptime side: root.sync.Side, deltaTime: f64, pos: Vec3d, vel: Vec3d, eye: *Player.EyeData, stepAmount: f64) void {
-	if (main.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
+	if (root.game.getBlockWithSide(side, @floor(pos[0]), @floor(pos[1]), @floor(pos[2])) != null) {
 		var directionalFrictionCoefficients: Vec3f = @splat(0);
 		var acc: Vec3d = @splat(0);
 		// Apply springs to the eye position:

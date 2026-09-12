@@ -4,7 +4,7 @@ const root = @import("root");
 
 block: root.blocks.Block,
 
-pub fn init(zon: main.ZonElement, _: main.callbacks.Creator) ?*@This() {
+pub fn init(zon: root.ZonElement, _: root.callbacks.Creator) ?*@This() {
 	const result = root.worldArena.create(@This());
 	result.* = .{
 		.block = root.blocks.parseBlock(zon.get([]const u8, "block") orelse {
@@ -15,7 +15,7 @@ pub fn init(zon: main.ZonElement, _: main.callbacks.Creator) ?*@This() {
 	return result;
 }
 
-pub fn run(self: *@This(), params: main.callbacks.ServerBlockCallback.Params) main.callbacks.Result {
+pub fn run(self: *@This(), params: root.callbacks.ServerBlockCallback.Params) root.callbacks.Result {
 	const wx = params.chunk.super.pos.wx + params.blockPos.x;
 	const wy = params.chunk.super.pos.wy + params.blockPos.y;
 	const wz = params.chunk.super.pos.wz + params.blockPos.z;

@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const ItemStack = main.items.ItemStack;
-const Player = main.game.Player;
-const Vec2f = main.vec.Vec2f;
-const Texture = main.graphics.Texture;
+const ItemStack = root.items.ItemStack;
+const Player = root.game.Player;
+const Vec2f = root.vec.Vec2f;
+const Texture = root.graphics.Texture;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;

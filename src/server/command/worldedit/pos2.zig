@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const Source = root.server.command.Source;
-const Vec3i = main.vec.Vec3i;
+const Vec3i = root.vec.Vec3i;
 
 pub const description = "Select the player position as position 2.";
 pub const usage = "/pos2";

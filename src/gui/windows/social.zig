@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -23,20 +23,20 @@ var logoutButton: *Button = undefined;
 var inGameDisabled: bool = undefined;
 
 fn toggleStreamerMode(value: bool) void {
-	main.settings.streamerMode = value;
-	main.settings.save();
+	root.settings.streamerMode = value;
+	root.settings.save();
 }
 
 fn toggleNamesWithIndex(value: bool) void {
-	main.settings.showPlayerIndexWithName = value;
-	main.settings.save();
+	root.settings.showPlayerIndexWithName = value;
+	root.settings.save();
 }
 
 fn logout() void {
 	root.network.authentication.KeyCollection.initialized = false;
-	main.settings.storedAccount.deinit(root.globalAllocator);
-	main.settings.storedAccount = .empty;
-	main.settings.save();
+	root.settings.storedAccount.deinit(root.globalAllocator);
+	root.settings.storedAccount = .empty;
+	root.settings.save();
 	for (gui.openWindows.items) |openWindow| {
 		if (std.mem.containsAtLeast(u8, openWindow.id, 1, "multiplayer")) {
 			gui.closeWindowFromRef(openWindow);
@@ -51,15 +51,15 @@ fn logout() void {
 fn copy() void {
 	const key = root.network.authentication.KeyCollection.getPublicKey(root.stackAllocator, settings.launchConfig.preferredAuthenticationAlgorithm);
 	defer root.stackAllocator.free(key);
-	main.Window.setClipboardString(key);
+	root.Window.setClipboardString(key);
 }
 
 pub fn onOpen() void {
 	const list = VerticalList.init(.{padding, 16 + padding}, 400, 16);
-	list.add(CheckBox.init(.{0, 0}, 316, "Streamer Mode (hides sensitive data)", main.settings.streamerMode, &toggleStreamerMode));
-	list.add(CheckBox.init(.{0, 0}, 316, "Display players index after their name", main.settings.showPlayerIndexWithName, &toggleNamesWithIndex));
+	list.add(CheckBox.init(.{0, 0}, 316, "Streamer Mode (hides sensitive data)", root.settings.streamerMode, &toggleStreamerMode));
+	list.add(CheckBox.init(.{0, 0}, 316, "Display players index after their name", root.settings.showPlayerIndexWithName, &toggleNamesWithIndex));
 	list.add(Button.initText(.{0, 0}, 150, "Copy public key", .{.onAction = .init(copy), .disabled = !root.network.authentication.KeyCollection.initialized}));
-	inGameDisabled = main.game.world != null;
+	inGameDisabled = root.game.world != null;
 	list.add(Button.initText(.{0, 0}, 150, "Change Name", .{.onAction = gui.openWindowCallback("change_name"), .disabled = inGameDisabled}));
 	logoutButton = Button.initText(.{0, 0}, 150, "Logout", .{.onAction = .init(logout), .disabled = inGameDisabled or !root.network.authentication.KeyCollection.initialized});
 	list.add(logoutButton);

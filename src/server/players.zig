@@ -2,8 +2,8 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 const root = @import("root");
-const ZonElement = main.ZonElement;
-const sync = main.sync;
+const ZonElement = root.ZonElement;
+const sync = root.sync;
 
 const PlayerRecord = struct { playerIndex: usize, blocked: bool };
 
@@ -28,7 +28,7 @@ pub fn loadPlayerLoginInfo(dir: root.files.Dir, path: []const u8, loadedLocalPla
 	var playerDir = try dir.openIterableDir("players");
 	defer playerDir.close();
 	var iterator = playerDir.iterate();
-	while (try iterator.next(main.io)) |file| {
+	while (try iterator.next(root.io)) |file| {
 		if (file.kind == .file and std.mem.endsWith(u8, file.name, ".zon")) {
 			const zon = try playerDir.readToZon(root.stackAllocator, file.name);
 			defer zon.deinit(root.stackAllocator);

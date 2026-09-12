@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
 
-const gui = main.gui;
+const gui = root.gui;
 const GuiComponent = gui.GuiComponent;
 const GuiWindow = gui.GuiWindow;
 const Button = GuiComponent.Button;
@@ -25,20 +25,20 @@ var loginAnyways: bool = false;
 const padding: f32 = 8;
 
 fn login() void {
-	var failureText: main.ListManaged(u8) = .init(root.stackAllocator);
+	var failureText: root.ListManaged(u8) = .init(root.stackAllocator);
 	defer failureText.deinit();
 	var accountCode = root.network.authentication.AccountCode.initFromUserInput(textComponent.currentString.items, &failureText);
 	defer accountCode.deinit();
 
 	if (accountCode.text.len == 0) {
-		main.gui.windowlist.notification.raiseNotification("Account Code is empty. Please enter a valid Account Code.", .{});
+		root.gui.windowlist.notification.raiseNotification("Account Code is empty. Please enter a valid Account Code.", .{});
 		return;
 	}
 
 	if (failureText.items.len != 0 and !loginAnyways) {
 		failureText.insertSlice(0, "Encountered errors while verifying your Account. This may happen if you created your account in a future version, in which case it's fine to continue.\n\n");
 
-		main.gui.windowlist.notification.raiseNotification("{s}", .{failureText.items});
+		root.gui.windowlist.notification.raiseNotification("{s}", .{failureText.items});
 
 		loginAnyways = true;
 		loginButton.child.label.updateText("Login anyways");
@@ -101,7 +101,7 @@ pub fn onClose() void {
 	// Make sure there remains no trace of the account code or password in memory
 	std.crypto.secureZero(@TypeOf(textComponent.textBuffer.glyphs[0]), textComponent.textBuffer.glyphs);
 	std.crypto.secureZero(u8, textComponent.currentString.items);
-	main.Window.setClipboardString("");
+	root.Window.setClipboardString("");
 	gui.openWindow("clipboard_deleted");
 
 	if (window.rootComponent) |*comp| {

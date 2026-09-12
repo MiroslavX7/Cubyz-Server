@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const Player = main.game.Player;
-const ItemStack = main.items.ItemStack;
-const Vec2f = main.vec.Vec2f;
-const Texture = main.graphics.Texture;
+const Player = root.game.Player;
+const ItemStack = root.items.ItemStack;
+const Vec2f = root.vec.Vec2f;
+const Texture = root.graphics.Texture;
 
 const gui = @import("../gui.zig");
 const GuiComponent = gui.GuiComponent;
@@ -48,7 +48,7 @@ pub fn onOpen() void {
 	{
 		const row = HorizontalList.init();
 		blk: {
-			row.add(GuiComponent.BagSlot.init(.{0, 0}, root.entity.components.@"cubyz:bag".client.getBag(main.game.Player.id) orelse break :blk));
+			row.add(GuiComponent.BagSlot.init(.{0, 0}, root.entity.components.@"cubyz:bag".client.getBag(root.game.Player.id) orelse break :blk));
 		}
 		row.add(Button.initIcon(.{32, 0}, .{32, 32}, craftingIcon, .{.onAction = gui.openWindowCallback("inventory_crafting")}));
 		list.add(row);

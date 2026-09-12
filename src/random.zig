@@ -1,9 +1,9 @@
 const std = @import("std");
 
 const root = @import("root");
-const Vec2f = main.vec.Vec2f;
-const Vec2i = main.vec.Vec2i;
-const Vec3i = main.vec.Vec3i;
+const Vec2f = root.vec.Vec2f;
+const Vec2i = root.vec.Vec2i;
+const Vec3i = root.vec.Vec3i;
 
 const ZonElement = @import("zon.zig").ZonElement;
 

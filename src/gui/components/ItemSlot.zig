@@ -1,12 +1,12 @@
 const std = @import("std");
 
 const root = @import("root");
-const ClientInventory = main.items.Inventory.ClientInventory;
-const graphics = main.graphics;
+const ClientInventory = root.items.Inventory.ClientInventory;
+const graphics = root.graphics;
 const draw = graphics.draw;
 const Texture = graphics.Texture;
 const TextBuffer = graphics.TextBuffer;
-const vec = main.vec;
+const vec = root.vec;
 const Vec2f = vec.Vec2f;
 
 const gui = @import("../gui.zig");
@@ -87,7 +87,7 @@ pub fn init(pos: Vec2f, inventory: ClientInventory, itemSlot: u32, texture: Text
 }
 
 pub fn deinit(self: *const ItemSlot) void {
-	main.gui.inventory.deleteItemSlotReferences(self);
+	root.gui.inventory.deleteItemSlotReferences(self);
 	self.text.deinit();
 	root.globalAllocator.destroy(self);
 }
@@ -112,13 +112,13 @@ pub fn toComponent(self: *ItemSlot) GuiComponent {
 	return .{.itemSlot = self};
 }
 
-pub fn updateHovered(self: *ItemSlot, _: Vec2f) main.callbacks.Result {
+pub fn updateHovered(self: *ItemSlot, _: Vec2f) root.callbacks.Result {
 	self.hovered = true;
 	gui.hoveredItemSlot = self;
 	return .handled;
 }
 
-pub fn mainButtonPressed(self: *ItemSlot, _: Vec2f) main.callbacks.Result {
+pub fn mainButtonPressed(self: *ItemSlot, _: Vec2f) root.callbacks.Result {
 	self.pressed = true;
 	return .handled;
 }

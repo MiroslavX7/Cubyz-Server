@@ -2,7 +2,7 @@ const std = @import("std");
 
 const root = @import("root");
 const Array2D = root.utils.Array2D;
-const random = main.random;
+const random = root.random;
 const NeverFailingAllocator = root.heap.NeverFailingAllocator;
 
 // TODO: Simplify with Vec2f and Vec2i.

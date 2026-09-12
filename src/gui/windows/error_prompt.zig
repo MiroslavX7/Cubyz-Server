@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const root = @import("root");
-const files = main.files;
-const settings = main.settings;
-const Vec2f = main.vec.Vec2f;
-const Texture = main.graphics.Texture;
+const files = root.files;
+const settings = root.settings;
+const Vec2f = root.vec.Vec2f;
+const Texture = root.graphics.Texture;
 
 const gui = @import("../gui.zig");
 const GuiWindow = gui.GuiWindow;
@@ -38,7 +38,7 @@ fn openLog() void {
 
 const padding: f32 = 8;
 pub fn update() void {
-	if (main.Window.Gamepad.wereControllerMappingsDownloaded()) {
+	if (root.Window.Gamepad.wereControllerMappingsDownloaded()) {
 		gui.closeWindowFromRef(&window);
 	}
 }
