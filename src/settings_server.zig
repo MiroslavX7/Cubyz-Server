@@ -47,7 +47,7 @@ pub const launchConfig = struct {
     };
 
     pub fn init() !void {
-        const zon = std.files.cwd().readToZon(std.heap.general_purpose_allocator, "launchConfig.zon") catch |err| blk: {
+        const zon = std.files.cwd().readToZon(std.heap.general_purpose_allocator, "launchConfig.zon") catch blk: {
             // File doesn't exist, create it with defaults
             std.log.info("launchConfig.zon not found, creating with defaults", .{});
             const defaultConfig = 
@@ -61,15 +61,29 @@ pub const launchConfig = struct {
                 .data = defaultConfig,
                 .sub_path = "launchConfig.zon",
             });
-            break :blk .null;
+            break :blk null;
         };
-        defer zon.deinit(std.heap.general_purpose_allocator);
-
-        // Parse with error handling - use defaults for invalid values
-        cubyzDir = globalArena.dupe(u8, zon.get([]const u8, "cubyzDir") orelse cubyzDir);
-        autoEnterWorld = globalArena.dupe(u8, zon.get([]const u8, "autoEnterWorld") orelse autoEnterWorld);
-        headlessServer = zon.get(bool, "headlessServer") orelse true;
-        preferredAuthenticationAlgorithm = zon.get(KeyTypeEnum, "preferredAuthenticationAlgorithm") orelse .ed25519;
+        
+        if (zon) |parsed_zon| {
+            defer parsed_zon.deinit(std.heap.general_purpose_allocator);
+            
+            // Parse with error handling - use defaults for invalid values
+            const parsedCubyzDir = parsed_zon.get([]const u8, "cubyzDir") orelse "";
+            const parsedAutoEnterWorld = parsed_zon.get([]const u8, "autoEnterWorld") orelse "";
+            const parsedHeadlessServer = parsed_zon.get(bool, "headlessServer") orelse true;
+            const parsedAuthAlgorithm = parsed_zon.get(KeyTypeEnum, "preferredAuthenticationAlgorithm") orelse .ed25519;
+            
+            cubyzDir = std.heap.general_purpose_allocator.dupe(u8, parsedCubyzDir) catch cubyzDir;
+            autoEnterWorld = std.heap.general_purpose_allocator.dupe(u8, parsedAutoEnterWorld) catch autoEnterWorld;
+            headlessServer = parsedHeadlessServer;
+            preferredAuthenticationAlgorithm = parsedAuthAlgorithm;
+        } else {
+            // Use defaults when file was just created
+            cubyzDir = "";
+            autoEnterWorld = "";
+            headlessServer = true;
+            preferredAuthenticationAlgorithm = .ed25519;
+        }
     }
 };
 

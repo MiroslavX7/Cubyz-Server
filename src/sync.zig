@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const Block = main.blocks.Block;
 const Neighbor = main.chunk.Neighbor;
 const Gamemode = main.game.Gamemode;

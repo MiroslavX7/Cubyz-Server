@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const gui = main.gui;
 const GuiComponent = gui.GuiComponent;
 const GuiWindow = gui.GuiWindow;

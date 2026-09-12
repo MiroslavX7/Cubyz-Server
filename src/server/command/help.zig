@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const NeverFailingAllocator = main.heap.NeverFailingAllocator;
 const ListManaged = main.ListManaged;
 const command = main.server.command;

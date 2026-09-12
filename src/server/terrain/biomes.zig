@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const blocks = main.blocks;
 const ServerChunk = main.chunk.ServerChunk;
 const ZonElement = main.ZonElement;

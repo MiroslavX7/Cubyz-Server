@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const terrain = main.server.terrain;
 const Vec3i = main.vec.Vec3i;
 const GenerationMode = terrain.structures.SimpleStructureModel.GenerationMode;

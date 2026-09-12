@@ -3,7 +3,7 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 const IpAddress = std.Io.net.IpAddress;
 
-const main = @import("main");
+const root = @import("root");
 const game = main.game;
 const settings = main.settings;
 const utils = main.utils;

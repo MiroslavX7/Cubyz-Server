@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 const Atomic = std.atomic.Value;
 const builtin = @import("builtin");
 
-const main = @import("main");
+const root = @import("root");
 const NeverFailingAllocator = main.heap.NeverFailingAllocator;
 
 pub const list = @import("utils/list.zig");

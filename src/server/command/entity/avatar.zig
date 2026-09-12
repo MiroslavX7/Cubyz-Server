@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const command = main.server.command;
 const Source = command.Source;
 const model = main.entity.components.@"cubyz:model";

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const items = main.items;
 const BaseItemIndex = items.BaseItemIndex;
 const ClientInventory = items.Inventory.ClientInventory;

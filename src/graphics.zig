@@ -11,7 +11,7 @@ const Vec2f = vec.Vec2f;
 const Vec2i = vec.Vec2i;
 const Vec3f = vec.Vec3f;
 
-const main = @import("main");
+const root = @import("root");
 const Window = main.Window;
 const NeverFailingAllocator = main.heap.NeverFailingAllocator;
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 
 var tagList: main.List([]const u8) = .empty;
 var tagIds: std.StringHashMapUnmanaged(Tag) = .{};

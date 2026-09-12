@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const Blueprint = main.blueprint.Blueprint;
 const Mask = main.blueprint.Mask;
 const Pattern = main.blueprint.Pattern;

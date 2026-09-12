@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const build_options = @import("build_options");
 
 // Server-only imports - no graphics dependencies
-pub const log = @import("log.zig");
+pub const log = @import("log_server.zig");
 pub const settings = @import("settings_server.zig");
 pub const files = @import("files.zig");
 pub const heap = @import("utils/heap.zig");

@@ -13,7 +13,7 @@
 //! efficiently wait for cross-thread events or signals.
 
 const std = @import("std");
-const main = @import("main");
+const root = @import("root");
 const builtin = @import("builtin");
 const windows = std.os.windows;
 const linux = std.os.linux;

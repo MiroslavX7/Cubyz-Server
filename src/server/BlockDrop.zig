@@ -1,4 +1,4 @@
-const main = @import("main");
+const root = @import("root");
 const Tag = main.Tag;
 const items = main.items;
 const Item = items.Item;

@@ -24,7 +24,7 @@
 //! ```
 
 const std = @import("std");
-const main = @import("main");
+const root = @import("root");
 const Mutex = main.utils.Mutex;
 const Condition = main.utils.Condition;
 

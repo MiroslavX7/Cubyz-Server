@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 
 pub const FormatArg = union(enum) {
 	int: i128,

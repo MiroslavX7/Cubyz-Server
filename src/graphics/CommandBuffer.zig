@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const vulkan = main.graphics.vulkan;
 
 const c = @import("c");

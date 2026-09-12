@@ -1,7 +1,7 @@
 const std = @import("std");
 const Atomic = std.atomic.Value;
 
-const main = @import("main");
+const root = @import("root");
 const Block = main.blocks.Block;
 const chunk = main.chunk;
 const particles = main.particles;

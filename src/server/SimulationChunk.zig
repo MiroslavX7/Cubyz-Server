@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const ChunkPosition = main.chunk.ChunkPosition;
 const ServerChunk = main.chunk.ServerChunk;
 const BlockUpdateSystem = main.server.BlockUpdateSystem;

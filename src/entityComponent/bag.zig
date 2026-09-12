@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const chunk = main.chunk;
 const Entity = main.entity.Entity;
 const ServerChunk = chunk.ServerChunk;

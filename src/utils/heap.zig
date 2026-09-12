@@ -3,7 +3,6 @@ const Allocator = std.mem.Allocator;
 
 const build_options = @import("build_options");
 
-const main = @import("main");
 
 var testingErrorHandlingAllocator = ErrorHandlingAllocator.init(std.testing.allocator);
 pub const testingAllocator = testingErrorHandlingAllocator.allocator();
@@ -14,7 +13,7 @@ pub const allocators = struct { // MARK: allocators
 	pub var globalArenaAllocator: NeverFailingArenaAllocator = .init(handledGpa.allocator());
 	pub var worldArenaAllocator: NeverFailingArenaAllocator = undefined;
 	var worldArenaOpenCount: usize = 0;
-	var worldArenaMutex: main.utils.Mutex = .{};
+	var worldArenaMutex: @import("../utils.zig").Mutex = .{};
 
 	pub fn deinit() void {
 		std.log.info("Clearing global arena with {} MiB", .{globalArenaAllocator.arena.queryCapacity() >> 20});
@@ -597,7 +596,7 @@ pub fn MemoryPool(Item: type) type { // MARK: MemoryPool
 		free_list: ?NodePtr = null,
 		freeAllocations: usize = 0,
 		totalAllocations: usize = 0,
-		mutex: main.utils.Mutex = .{},
+		mutex: @import("../utils.zig").Mutex = .{},
 
 		/// Creates a new memory pool.
 		pub fn init(arena: NeverFailingAllocator) Pool {
@@ -663,7 +662,7 @@ pub const GarbageCollection = struct { // MARK: GarbageCollection
 		ptr: *anyopaque,
 		freeFunction: *const fn (*anyopaque) void,
 	};
-	threadlocal var lists: [4]main.List(FreeItem) = undefined;
+	threadlocal var lists: [4]@import("../utils.zig").List(FreeItem) = undefined;
 
 	const State = packed struct {
 		waitingThreads: u15 = 0,
@@ -675,16 +674,16 @@ pub const GarbageCollection = struct { // MARK: GarbageCollection
 		const old: State = @bitCast(sharedState.fetchAdd(@bitCast(State{.totalThreads = 1}), .monotonic));
 		_ = old.totalThreads + 1; // Assert no overflow
 		threadCycle = old.cycle;
-		lastSyncPointTime = main.timestamp();
+		lastSyncPointTime = @import("root").timestamp();
 		for (&lists) |*list| {
-			list.* = .initCapacity(main.globalAllocator, 1024);
+			list.* = .initCapacity(@import("root").globalAllocator, 1024);
 		}
 		if (old.waitingThreads == 0) {
 			startNewCycle();
 		}
 	}
 
-	fn freeItemsFromList(list: *main.List(FreeItem)) void {
+	fn freeItemsFromList(list: *@import("../utils.zig").List(FreeItem)) void {
 		while (list.popOrNull()) |item| {
 			item.freeFunction(item.ptr);
 		}
@@ -694,7 +693,7 @@ pub const GarbageCollection = struct { // MARK: GarbageCollection
 		const old: State = @bitCast(sharedState.fetchSub(@bitCast(State{.totalThreads = 1}), .monotonic));
 		_ = old.totalThreads - 1; // Assert no overflow
 		if (old.cycle != threadCycle) removeThreadFromWaiting();
-		const newTime = main.timestamp();
+		const newTime = @import("root").timestamp();
 		if (lastSyncPointTime.durationTo(newTime).toSeconds() > 20) {
 			if (!build_options.isTaggedRelease) {
 				std.log.err("No sync point executed in {} ms for thread. Did you forget to add a sync point in the thread's main loop?", .{lastSyncPointTime.durationTo(newTime).toMilliseconds()});
@@ -703,7 +702,7 @@ pub const GarbageCollection = struct { // MARK: GarbageCollection
 		}
 		for (&lists) |*list| {
 			freeItemsFromList(list);
-			list.deinit(main.globalAllocator);
+			list.deinit(@import("root").globalAllocator);
 		}
 	}
 
@@ -731,7 +730,7 @@ pub const GarbageCollection = struct { // MARK: GarbageCollection
 
 	/// Must be called when no objects originating from other threads are held on the current function stack
 	pub fn syncPoint() void {
-		const newTime = main.timestamp();
+		const newTime = @import("root").timestamp();
 		if (lastSyncPointTime.durationTo(newTime).toSeconds() > 20) {
 			std.log.err("No sync point executed in {} ms. Did you forget to add a sync point in the thread's main loop", .{lastSyncPointTime.durationTo(newTime).toMilliseconds()});
 			std.debug.dumpCurrentStackTrace(.{});
@@ -746,7 +745,7 @@ pub const GarbageCollection = struct { // MARK: GarbageCollection
 	}
 
 	pub fn deferredFree(item: FreeItem) void {
-		lists[threadCycle].append(main.globalAllocator, item);
+		lists[threadCycle].append(@import("root").globalAllocator, item);
 	}
 
 	/// Waits until all deferred frees have been completed.
@@ -754,11 +753,11 @@ pub const GarbageCollection = struct { // MARK: GarbageCollection
 		const startCycle = threadCycle;
 		while (threadCycle == startCycle) {
 			syncPoint();
-			main.io.sleep(.fromMilliseconds(1), .awake) catch {};
+			@import("root").io.sleep(.fromMilliseconds(1), .awake) catch {};
 		}
 		while (threadCycle != startCycle) {
 			syncPoint();
-			main.io.sleep(.fromMilliseconds(1), .awake) catch {};
+			@import("root").io.sleep(.fromMilliseconds(1), .awake) catch {};
 		}
 	}
 };
@@ -827,7 +826,7 @@ pub fn PowerOfTwoPoolAllocator(minSize: comptime_int, maxSize: comptime_int, max
 
 		arena: NeverFailingArenaAllocator,
 		buckets: [bucketCount]Bucket = @splat(.{}),
-		mutex: main.utils.Mutex = .{},
+		mutex: @import("../utils.zig").Mutex = .{},
 
 		pub fn init(backingAllocator: NeverFailingAllocator) Self {
 			return .{.arena = .init(backingAllocator)};

@@ -2,7 +2,7 @@ const std = @import("std");
 const Atomic = std.atomic.Value;
 const builtin = @import("builtin");
 
-const main = @import("main");
+const root = @import("root");
 const blocks = main.blocks;
 const Block = blocks.Block;
 const chunk = main.chunk;

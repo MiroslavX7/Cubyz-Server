@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const main = @import("main");
+const root = @import("root");
 const settings = main.settings;
 const files = main.files;
 const vec = main.vec;

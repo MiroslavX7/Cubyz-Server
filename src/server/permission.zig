@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const server = main.server;
 const User = server.User;
 const NeverFailingAllocator = main.heap.NeverFailingAllocator;

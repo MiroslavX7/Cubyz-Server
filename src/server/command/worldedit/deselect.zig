@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const Source = main.server.command.Source;
 
 pub const description = "Clears pos1 and pos2 of selection.";

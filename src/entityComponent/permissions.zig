@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const Entity = main.entity.Entity;
 const utils = main.utils;
 const BinaryReader = utils.BinaryReader;

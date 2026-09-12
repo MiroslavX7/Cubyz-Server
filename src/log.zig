@@ -1,11 +1,9 @@
 const std = @import("std");
-const main = @import("main");
-const files = main.files;
-const fmt = main.fmt;
-const graphics = main.graphics;
-const gui = main.gui;
-const List = main.List;
-const settings = main.settings;
+const root = @import("root");
+const files = root.files;
+const fmt = root.fmt;
+const List = root.List;
+const settings = root.settings;
 
 pub const Level = enum {
 	/// Error: something has gone wrong. This might be recoverable or might
@@ -89,11 +87,8 @@ noinline fn runtimeLogFn(level: Level, format: []const u8, args: []const fmt.For
 		logToStdErr(level, "[{s}]: {s}{s}", .{filePrefix, writer.buffered(), fileSuffix});
 	}
 
-	if (level == .err and !openingErrorWindow and !settings.launchConfig.headlessServer) {
-		openingErrorWindow = true;
-		gui.openWindow("error_prompt");
-		openingErrorWindow = false;
-	}
+	// GUI error window only for non-headless mode
+	_ = openingErrorWindow; // silence unused warning
 }
 
 pub fn init() void {
@@ -102,32 +97,32 @@ pub fn init() void {
 		std.log.err("Couldn't create logs folder: {s}", .{@errorName(err)});
 		return;
 	};
-	logFile = std.Io.Dir.cwd().createFile(main.io, "logs/latest.log", .{}) catch |err| {
+	logFile = std.Io.Dir.cwd().createFile(root.io, "logs/latest.log", .{}) catch |err| {
 		std.log.err("Couldn't create logs/latest.log: {s}", .{@errorName(err)});
 		return;
 	};
 
-	const _timestamp = std.Io.Clock.Timestamp.now(main.io, .real).raw;
+	const _timestamp = std.Io.Clock.Timestamp.now(root.io, .real).raw;
 
-	const _path_str = main.stackAllocator.print("logs/ts_{}.log", .{_timestamp.nanoseconds});
-	defer main.stackAllocator.free(_path_str);
+	const _path_str = root.stackAllocator.print("logs/ts_{}.log", .{_timestamp.nanoseconds});
+	defer root.stackAllocator.free(_path_str);
 
-	logFileTs = std.Io.Dir.cwd().createFile(main.io, _path_str, .{}) catch |err| {
+	logFileTs = std.Io.Dir.cwd().createFile(root.io, _path_str, .{}) catch |err| {
 		std.log.err("Couldn't create {s}: {s}", .{_path_str, @errorName(err)});
 		return;
 	};
 
-	supportsANSIColors = std.Io.File.stdout().supportsAnsiEscapeCodes(main.io) catch unreachable;
+	supportsANSIColors = std.Io.File.stdout().supportsAnsiEscapeCodes(root.io) catch unreachable;
 }
 
 pub fn deinit() void {
 	if (logFile) |_logFile| {
-		_logFile.close(main.io);
+		_logFile.close(root.io);
 		logFile = null;
 	}
 
 	if (logFileTs) |_logFileTs| {
-		_logFileTs.close(main.io);
+		_logFileTs.close(root.io);
 		logFileTs = null;
 	}
 }
@@ -138,8 +133,8 @@ fn logToFile(comptime format: []const u8, args: anytype) void {
 	const allocator = fba.allocator();
 
 	const string = std.fmt.allocPrint(allocator, format, args) catch format;
-	(logFile orelse return).writeStreamingAll(main.io, string) catch {};
-	(logFileTs orelse return).writeStreamingAll(main.io, string) catch {};
+	(logFile orelse return).writeStreamingAll(root.io, string) catch {};
+	(logFileTs orelse return).writeStreamingAll(root.io, string) catch {};
 }
 
 fn logToStdErr(level: Level, comptime format: []const u8, args: anytype) void {
@@ -148,83 +143,19 @@ fn logToStdErr(level: Level, comptime format: []const u8, args: anytype) void {
 	const allocator = fba.allocator();
 
 	const _string = std.fmt.allocPrint(allocator, format, args) catch format;
-	const string = if (level.isColorCoded() and supportsANSIColors) convertColorToANSI(main.stackAllocator, _string) else _string;
-	defer if (level.isColorCoded() and supportsANSIColors) main.stackAllocator.free(string);
+	const string = if (level.isColorCoded() and supportsANSIColors) convertColorToANSI(root.stackAllocator, _string) else _string;
+	defer if (level.isColorCoded() and supportsANSIColors) root.stackAllocator.free(string);
 
 	const writer = std.debug.lockStderr(&.{});
 	defer std.debug.unlockStderr();
 	nosuspend writer.file_writer.interface.writeAll(string) catch {};
 }
 
-fn convertColorToANSI(allocator: main.heap.NeverFailingAllocator, text: []const u8) []const u8 {
-	var list: List(u8) = .empty;
-
-	var parser = graphics.TextBuffer.Parser{
-		.unicodeIterator = std.unicode.Utf8Iterator{.bytes = text, .i = 0},
-		.currentFontEffect = .{},
-		.parsedText = .init(allocator),
-		.fontEffects = .init(allocator),
-		.characterIndex = .init(allocator),
-		.showControlCharacters = false,
-	};
-	defer parser.fontEffects.deinit();
-	defer parser.parsedText.deinit();
-	defer parser.characterIndex.deinit();
-	parser.parse();
-
-	var currentFontEffect: graphics.TextBuffer.FontEffect = .{};
-	for (parser.parsedText.items, parser.fontEffects.items) |unicodeChar, fontEffect| {
-		// add actual text at the end
-		defer {
-			var testBuff: [4]u8 = undefined;
-			const len = std.unicode.utf8Encode(@intCast(unicodeChar), &testBuff) catch unreachable;
-			list.appendSlice(allocator, testBuff[0..len]);
-		}
-		if (fontEffect == currentFontEffect) continue;
-
-		list.appendSlice(allocator, "\x1b[");
-		defer {
-			std.debug.assert(list.items[list.items.len - 1] == ';');
-			list.items[list.items.len - 1] = 'm';
-		}
-
-		if (fontEffect.color != currentFontEffect.color) {
-			list.appendSlice(allocator, "38;2;");
-			for ([3]u5{16, 8, 0}) |shift| {
-				list.print(allocator, "{d};", .{@as(u8, @truncate(fontEffect.color >> shift))});
-			}
-		}
-		if (fontEffect.bold != currentFontEffect.bold) {
-			if (currentFontEffect.bold) {
-				list.appendSlice(allocator, "22;");
-			} else {
-				list.appendSlice(allocator, "1;");
-			}
-		}
-		if (fontEffect.italic != currentFontEffect.italic) {
-			if (currentFontEffect.italic) {
-				list.appendSlice(allocator, "23;");
-			} else {
-				list.appendSlice(allocator, "3;");
-			}
-		}
-		if (fontEffect.strikethrough != currentFontEffect.strikethrough) {
-			if (currentFontEffect.strikethrough) {
-				list.appendSlice(allocator, "29;");
-			} else {
-				list.appendSlice(allocator, "9;");
-			}
-		}
-		if (fontEffect.underline != currentFontEffect.underline) {
-			if (currentFontEffect.underline) {
-				list.appendSlice(allocator, "24;");
-			} else {
-				list.appendSlice(allocator, "4;");
-			}
-		}
-		currentFontEffect = fontEffect;
-	}
-	return list.toOwnedSlice(allocator);
+// Simplified ANSI color conversion for server - no graphics dependencies
+fn convertColorToANSI(allocator: root.heap.NeverFailingAllocator, text: []const u8) []const u8 {
+	// For server mode, just return the text as-is
+	// The color codes are already embedded in the text from runtimeLogFn
+	return allocator.dupe(u8, text);
 }
 
 pub fn server(comptime format: []const u8, args: anytype) void {

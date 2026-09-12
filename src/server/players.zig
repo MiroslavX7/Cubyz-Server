@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const ZonElement = main.ZonElement;
 const sync = main.sync;
 

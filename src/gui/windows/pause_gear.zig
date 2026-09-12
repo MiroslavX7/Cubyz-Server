@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const Texture = main.graphics.Texture;
 const Vec2f = main.vec.Vec2f;
 

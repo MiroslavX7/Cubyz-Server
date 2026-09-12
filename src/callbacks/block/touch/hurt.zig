@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 
 dps: f32,
 damageType: main.game.DamageType,

@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const Degrees = main.rotation.Degrees;
 const Source = main.server.command.Source;
 

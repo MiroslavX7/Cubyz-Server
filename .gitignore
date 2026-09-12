@@ -1,5 +1,5 @@
 ```
-# Build artifacts
+# Zig build artifacts
 zig-cache/
 zig-out/
 *.o
@@ -16,12 +16,11 @@ deps/
 # Logs
 *.log
 
-# Environment
-.env
-.env.local
-*.env.*
+# Temporary files
+*.tmp
+*.temp
 
-# Editors
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
@@ -30,4 +29,9 @@ deps/
 # OS
 .DS_Store
 Thumbs.db
+
+# Environment
+.env
+.env.local
+*.env.*
 ```

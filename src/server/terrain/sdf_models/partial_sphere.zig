@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const Array3D = main.utils.Array3D;
 const NeverFailingAllocator = main.heap.NeverFailingAllocator;
 const sdf = main.server.terrain.sdf;

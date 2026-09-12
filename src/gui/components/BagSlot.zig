@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const BagInventory = main.items.Inventory.BagInventory;
 const graphics = main.graphics;
 const draw = graphics.draw;

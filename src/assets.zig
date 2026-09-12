@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const main = @import("main");
+const root = @import("root");
 const blocks = @import("blocks.zig");
 const items = @import("items.zig");
 const migrations = @import("migrations.zig");
