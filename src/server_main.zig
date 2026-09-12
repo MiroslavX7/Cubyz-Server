@@ -43,7 +43,7 @@ pub fn main() !void {
 
     // Initialize configuration
     var server_config = try config_module.ServerConfig.init(allocator, config_path);
-    defer server_config.deinit();
+    defer server_config.deinit(allocator);
 
     // Override port if specified in command line
     if (custom_port) |port| {

@@ -72,10 +72,11 @@ pub const ServerConfig = struct {
 var configInitialized: bool = false;
 
 /// Initialize configuration from file
-pub fn init() void {
-    if (configInitialized) return;
+pub fn init(allocator: std.mem.Allocator, custom_path: ?[]const u8) !ServerConfig {
+    var config = ServerConfig{};
     
-    const zon: ZonElement = main.files.cwd().readToZon(main.stackAllocator, "serverConfig.zon") catch |err| blk: {
+    const config_file_path = custom_path orelse "serverConfig.zon";
+    const zon: ZonElement = main.files.cwd().readToZon(main.stackAllocator, config_file_path) catch |err| blk: {
         if (err != error.FileNotFound) {
             std.log.err("Could not read serverConfig.zon: {s}", .{@errorName(err)});
         }
@@ -93,46 +94,42 @@ pub fn init() void {
                 const ChildType = @typeInfo(DeclType).optional.child;
                 if (ChildType == []const u8) {
                     if (zon.get([]const u8, decl.name)) |value| {
-                        @field(ServerConfig, decl.name) = main.globalArena.dupe(u8, value);
+                        @field(config, decl.name) = allocator.dupe(u8, value) catch return error.OutOfMemory;
                     }
                 } else {
-                    @field(ServerConfig, decl.name) = zon.get(ChildType, decl.name);
+                    @field(config, decl.name) = zon.get(ChildType, decl.name);
                 }
             } else if (DeclType == []const u8) {
-                @field(ServerConfig, decl.name) = main.globalArena.dupe(u8, zon.get([]const u8, decl.name) orelse @field(ServerConfig, decl.name));
+                @field(config, decl.name) = allocator.dupe(u8, zon.get([]const u8, decl.name) orelse @field(ServerConfig, decl.name)) catch return error.OutOfMemory;
             } else {
-                @field(ServerConfig, decl.name) = zon.get(DeclType, decl.name) orelse @field(ServerConfig, decl.name);
+                @field(config, decl.name) = zon.get(DeclType, decl.name) orelse @field(ServerConfig, decl.name);
             }
         }
     }
     
-    configInitialized = true;
+    return config;
 }
 
 /// Deinitialize configuration (free allocated memory)
-pub fn deinit() void {
-    if (!configInitialized) return;
-    
+pub fn deinit(self: *ServerConfig, allocator: std.mem.Allocator) void {
     inline for (@typeInfo(ServerConfig).@"struct".decls) |decl| {
         const is_const = @typeInfo(@TypeOf(&@field(ServerConfig, decl.name))).pointer.is_const;
         if (!is_const) {
             const DeclType = @TypeOf(@field(ServerConfig, decl.name));
             if (DeclType == []const u8) {
-                if (@field(ServerConfig, decl.name).len > 0) {
-                    main.globalArena.free(@field(ServerConfig, decl.name));
+                if (@field(self, decl.name).len > 0) {
+                    allocator.free(@field(self, decl.name));
                 }
             } else if (@typeInfo(DeclType) == .optional) {
                 const ChildType = @typeInfo(DeclType).optional.child;
                 if (ChildType == []const u8) {
-                    if (@field(ServerConfig, decl.name)) |value| {
-                        main.globalArena.free(value);
+                    if (@field(self, decl.name)) |value| {
+                        allocator.free(value);
                     }
                 }
             }
         }
     }
-    
-    configInitialized = false;
 }
 
 /// Save current configuration to file
