@@ -146,3 +146,33 @@ pub fn main() !void {
     server.startFromExistingThread(worldName, null, .multiplayer);
     heap.GarbageCollection.waitForFreeCompletion();
 }
+
+// Export all necessary modules so they can be accessed via @import("main").module_name
+pub const io = io;
+pub const timestamp = timestamp;
+pub const initThreadLocals = initThreadLocals;
+pub const random = std.crypto.random;
+pub const List = utils.List;
+pub const ListManaged = utils.ListManaged;
+pub const NeverFailingAllocator = heap.NeverFailingAllocator;
+pub const ErrorHandlingAllocator = heap.ErrorHandlingAllocator;
+pub const vec = vec;
+pub const systems = systems;
+pub const tag = @import("tag.zig");
+pub const blocks = blocks;
+pub const chunk = chunk;
+pub const network = network;
+pub const items = items;
+pub const utils = utils;
+pub const settings = settings;
+pub const entityModel = entityModel;
+pub const blueprint = blueprint;
+pub const sync = sync;
+pub const game = struct {
+    pub const Gamemode = enum { creative, survival };
+};
+pub const models = models;
+pub const block_entity = block_entity;
+pub const renderer = struct {
+    pub const Frustum = struct {};
+};

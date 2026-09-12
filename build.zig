@@ -347,6 +347,8 @@ pub fn build(b: *std.Build) !void {
 		.use_llvm = if (sanitizeThread orelse false) true else null,
 	});
 	server_exe.root_module.addOptions("build_options", options);
+	// Make 'main' module point to server_main so all 'main.' imports resolve to server_main's exports
+	server_exe.root_module.addImport("main", serverModule);
 	
 	// Server doesn't need graphics libraries - only link basic system libs
 	if (target.result.os.tag == .windows) {
