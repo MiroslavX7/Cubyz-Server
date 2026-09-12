@@ -3,9 +3,9 @@ zig-cache/
 zig-out/
 *.o
 *.obj
-*.exe
-*.dll
-*.so
 *.a
-*.out
+*.lib
+*.so
+*.dylib
+*.dll
 ```
