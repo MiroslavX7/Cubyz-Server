@@ -49,7 +49,7 @@ However, both of them lost interest at some point, and now Cubyz is maintained b
 
 ## Compiling the Dedicated Server
 
-This fork includes support for running Cubyz as a dedicated server. Here's how to compile and run it:
+This fork includes support for running Cubyz as a dedicated server with configuration file support. Here's how to compile and run it:
 
 ### Prerequisites
 - Zig compiler (version compatible with this project)
@@ -64,52 +64,61 @@ zig build
 The compiled executable will be in `zig-out/bin/`.
 
 #### Build the Dedicated Server
+The server is built together with the client. To run in server mode, use the `--headless` flag.
+
+For Linux:
 ```bash
 zig build -Dtarget=x86_64-linux
 ```
-Or for Windows:
+
+For Windows:
 ```bash
 zig build -Dtarget=x86_64-windows
 ```
 
-#### Run the Server
-```bash
-./zig-out/bin/Cubyz --headless
-```
+### Running the Server
+
+1. **Copy the configuration file** (optional, defaults will be used if missing):
+   ```bash
+   cp serverConfig.zon.example serverConfig.zon
+   ```
+
+2. **Edit `serverConfig.zon`** to customize your server settings (port, max players, MOTD, game rules, etc.)
+
+3. **Start the server**:
+   ```bash
+   # On Linux
+   ./zig-out/bin/Cubyz --headless
+   
+   # On Windows
+   .\zig-out\bin\Cubyz.exe --headless
+   ```
 
 ### Server Configuration
 
-1. Copy the example configuration file:
-```bash
-cp serverConfig.zon.example serverConfig.zon
-```
+The server reads configuration from `serverConfig.zon` in the current directory. If the file is missing or contains errors, the server will:
+- Display an error message
+- Wait for you to press any key
+- Continue with default values
 
-2. Edit `serverConfig.zon` to customize your server settings (port, max players, MOTD, etc.)
-
-3. Start the server:
-```bash
-./zig-out/bin/Cubyz --headless --config=serverConfig.zon
-```
+See `serverConfig.zon.example` for all available options and their descriptions.
 
 ### Server Commands
 
 Once the server is running, you can use these commands in the terminal:
 - `/help` - Show available commands
-- `/config <key>` - Get a configuration value
-- `/config <key> <value>` - Set a configuration value
-- `/config list` - List all configuration keys
-- `/config save` - Save current configuration to file
-- `/config reload` - Reload configuration from file
 - `/stop` - Stop the server
-- `/restart` - Restart the server
+- `/gamemode <mode>` - Change game mode
+- `/tp <player>` - Teleport to player
+- `/kick <player>` - Kick a player
+- And many more...
 
 ### Command Line Options
 
+- `--headless` - Run in headless (no graphics) server mode
 - `--port=<number>` - Override server port from config
-- `--config=<path>` - Path to config file (default: serverConfig.zon)
-- `--help` - Show help message
 
-For more information about converting Cubyz to a dedicated server, see [Server Refactoring Guide](docs/server/SERVER_REFACTOR.md).
+For more information about the server architecture, see the documentation files below.
 
 # Contributing
 ### Code
@@ -123,8 +132,6 @@ Check out the [Content Guidelines](https://github.com/PixelGuys/Cubyz/blob/maste
 
 ## Documentation
 
-- [Server Refactoring Guide](docs/server/SERVER_REFACTOR.md) - How to convert Cubyz into a dedicated server
-- [GitHub for Beginners](docs/GITHUB_FOR_BEGINNERS.md) - Git/GitHub basics (bilingual: English/Russian)
 - [Contributing Guidelines](docs/CONTRIBUTING.md)
 - [Game Design Principles](docs/GAME_DESIGN_PRINCIPLES.md)
 - [Content Suggestions](docs/CONTENT_SUGGESTIONS.md)
