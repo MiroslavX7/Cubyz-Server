@@ -75,12 +75,12 @@ pub fn init() void {
     logFileTs = null;
     
     // Try to create logs directory and files, but don't fail if it doesn't work
-    std.fs.cwd().makePath("logs") catch {
+    std.process.cwd().makePath("logs") catch {
         std.log.err("Couldn't create logs folder", .{});
         return;
     };
     
-    logFile = std.fs.cwd().createFile("logs/latest.log", .{}) catch |err| {
+    logFile = std.process.cwd().createFile("logs/latest.log", .{}) catch |err| {
         std.log.err("Couldn't create logs/latest.log: {s}", .{@errorName(err)});
         return;
     };
@@ -89,12 +89,12 @@ pub fn init() void {
     const _path_str = std.fmt.allocPrint(std.heap.page_allocator, "logs/ts_{}.log", .{_timestamp}) catch return;
     defer std.heap.page_allocator.free(_path_str);
 
-    logFileTs = std.fs.cwd().createFile(_path_str, .{}) catch |err| {
+    logFileTs = std.process.cwd().createFile(_path_str, .{}) catch |err| {
         std.log.err("Couldn't create {s}: {s}", .{ _path_str, @errorName(err) });
         return;
     };
 
-    supportsANSIColors = std.io.getStdOut().supportsAnsiEscapeCodes() catch false;
+    supportsANSIColors = std.process.stdout().supportsAnsiEscapeCodes() catch false;
 }
 
 pub fn deinit() void {
@@ -117,14 +117,14 @@ fn logToFile(comptime format: []const u8, args: anytype) void {
     const allocator = fba.allocator();
 
     const string = std.fmt.allocPrint(allocator, format, args) catch format;
-    logFile.?.writeAll(string) catch {};
+    logFile.?.writer().writeAll(string) catch {};
     if (logFileTs) |file| {
-        file.writeAll(string) catch {};
+        file.writer().writeAll(string) catch {};
     }
 }
 
 fn logToStdErr(comptime format: []const u8, args: anytype) void {
-    const writer = std.io.getStdErr().writer();
+    const writer = std.process.stderr().writer();
     writer.print(format, args) catch {};
 }
 

@@ -64,7 +64,7 @@ fn hasMatchingTag(tags: []const root.Tag, target: []const u8) bool {
 }
 
 fn initContent() void {
-	const root = VerticalList.init(.{padding, padding}, 300, 0);
+	const vertical_list = VerticalList.init(.{padding, padding}, 300, 0);
 	{
 		const list = VerticalList.init(.{0, padding + padding}, 48, 0);
 		const row = HorizontalList.init();
@@ -76,7 +76,7 @@ fn initContent() void {
 		row.add(searchInput);
 		list.add(row);
 		list.finish(.center);
-		root.add(list);
+		vertical_list.add(list);
 	}
 	{
 		const list = VerticalList.init(.{0, padding}, 144, 0);
