@@ -1,4 +1,5 @@
 pub const clear = @import("clear.zig");
+pub const config = @import("config.zig");
 pub const gamemode = @import("gamemode.zig");
 pub const help = @import("help.zig");
 pub const invite = @import("invite.zig");
