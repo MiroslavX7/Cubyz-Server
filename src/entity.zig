@@ -1,6 +1,6 @@
 const std = @import("std");
-const main = @import("main.zig");
-const vec = main.vec;
+const root = @import("root");
+const vec = root.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
@@ -37,7 +37,7 @@ const EntityComponentVTable = struct {
 var componentList: []?EntityComponentVTable = undefined;
 
 pub fn initComponents() void {
-	var tmpComponentList: main.List(?EntityComponentVTable) = .empty;
+	var tmpComponentList: root.List(?EntityComponentVTable) = .empty;
 	inline for (@typeInfo(components).@"struct".decls) |decl| {
 		@field(components, decl.name).client.init();
 		const componentId = @field(components, decl.name).entityComponentID;

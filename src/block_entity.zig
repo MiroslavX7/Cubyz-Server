@@ -1,17 +1,17 @@
 const std = @import("std");
 
-const main = @import("main.zig");
+const root = @import("root");
 const Block = root.blocks.Block;
 const Chunk = root.chunk.Chunk;
 const ChunkPosition = root.chunk.ChunkPosition;
 const getIndex = root.chunk.getIndex;
-const graphics = main.graphics;
-const server = main.server;
+const graphics = root.graphics;
+const server = root.server;
 const User = server.User;
-const mesh_storage = main.renderer.mesh_storage;
+const mesh_storage = root.renderer.mesh_storage;
 const BinaryReader = root.utils.BinaryReader;
 const BinaryWriter = root.utils.BinaryWriter;
-const vec = main.vec;
+const vec = root.vec;
 const Mat4f = vec.Mat4f;
 const Vec3d = vec.Vec3d;
 const Vec3f = vec.Vec3f;
@@ -93,7 +93,7 @@ pub const BlockEntity = enum(u32) { // MARK: BlockEntity
 	noValue = std.math.maxInt(u32),
 	_,
 
-	var freeIndexList: main.List(BlockEntity) = .empty;
+	var freeIndexList: root.List(BlockEntity) = .empty;
 	var nextIndex: BlockEntity = @enumFromInt(0);
 	var mutex: root.utils.Mutex = .{};
 
@@ -211,7 +211,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 	pub const @"cubyz:chest" = struct { // MARK: cubyz:chest
 		pub const inventorySize = 20;
 		const StorageServer = BlockEntityDataStorage(struct {
-			invId: main.items.Inventory.InventoryId,
+			invId: root.items.Inventory.InventoryId,
 		});
 
 		pub fn init() void {
@@ -224,7 +224,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			StorageServer.reset();
 		}
 
-		fn onInventoryUpdateCallback(source: main.items.Inventory.Source) void {
+		fn onInventoryUpdateCallback(source: root.items.Inventory.Source) void {
 			const pos = source.blockInventory;
 			const simChunk = root.server.world.?.getSimulationChunkAndIncreaseRefCount(pos[0], pos[1], pos[2]) orelse return;
 			defer simChunk.decreaseRefCount();
@@ -234,7 +234,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			ch.setChanged();
 		}
 
-		const inventoryCallbacks = main.items.Inventory.Callbacks{
+		const inventoryCallbacks = root.items.Inventory.Callbacks{
 			.onUpdateCallback = &onInventoryUpdateCallback,
 		};
 
@@ -246,21 +246,21 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 
 			const data = StorageServer.getOrPut(pos, chunk);
 			std.debug.assert(!data.foundExisting);
-			data.valuePtr.invId = main.items.Inventory.server.createExternallyManagedInventory(inventorySize, .{.blockInventory = pos}, reader, inventoryCallbacks);
+			data.valuePtr.invId = root.items.Inventory.server.createExternallyManagedInventory(inventorySize, .{.blockInventory = pos}, reader, inventoryCallbacks);
 		}
 
 		pub fn onUnloadServer(entity: BlockEntity) void {
 			StorageServer.mutex.lock();
 			const data = StorageServer.removeAtIndex(entity).?;
 			StorageServer.mutex.unlock();
-			main.items.Inventory.server.destroyExternallyManagedInventory(data.invId);
+			root.items.Inventory.server.destroyExternallyManagedInventory(data.invId);
 		}
 		pub fn onStoreServerToDisk(entity: BlockEntity, writer: *BinaryWriter) void {
 			StorageServer.mutex.lock();
 			defer StorageServer.mutex.unlock();
 			const data = StorageServer.getByIndex(entity) orelse return;
 
-			const inv = main.items.Inventory.server.getInventoryFromId(data.invId);
+			const inv = root.items.Inventory.server.getInventoryFromId(data.invId);
 			var isEmpty: bool = true;
 			for (inv._items) |item| {
 				if (item.amount != 0) isEmpty = false;
@@ -275,7 +275,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			switch (event) {
 				.remove => {
 					const chestComponent = StorageServer.remove(pos, chunk) orelse return;
-					main.items.Inventory.server.destroyAndDropExternallyManagedInventory(chestComponent.invId, pos);
+					root.items.Inventory.server.destroyAndDropExternallyManagedInventory(chestComponent.invId, pos);
 				},
 				.update => {
 					StorageServer.mutex.lock();
@@ -283,7 +283,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 					const data = StorageServer.getOrPut(pos, chunk);
 					if (data.foundExisting) return;
 					var reader = BinaryReader.init(&.{});
-					data.valuePtr.invId = main.items.Inventory.server.createExternallyManagedInventory(inventorySize, .{.blockInventory = pos}, &reader, inventoryCallbacks);
+					data.valuePtr.invId = root.items.Inventory.server.createExternallyManagedInventory(inventorySize, .{.blockInventory = pos}, &reader, inventoryCallbacks);
 				},
 			}
 		}
@@ -299,7 +299,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 		});
 		pub const StorageClient = BlockEntityDataStorage(struct {
 			text: []const u8,
-			renderedTexture: ?main.graphics.Texture = null,
+			renderedTexture: ?root.graphics.Texture = null,
 			blockPos: Vec3i,
 			block: root.blocks.Block,
 
@@ -312,7 +312,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				}
 			}
 		});
-		var textureDeinitList: main.List(graphics.Texture) = .empty;
+		var textureDeinitList: root.List(graphics.Texture) = .empty;
 		var textureDeinitLock: root.utils.Mutex = .{};
 		var pipeline: graphics.Pipeline = undefined;
 		var uniforms: struct {
@@ -331,7 +331,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 		pub fn init() void {
 			StorageServer.init();
 			StorageClient.init();
-			if (!main.settings.launchConfig.headlessServer) {
+			if (!root.settings.launchConfig.headlessServer) {
 				pipeline = graphics.Pipeline.init(
 					"assets/cubyz/shaders/block_entity/sign.vert",
 					"assets/cubyz/shaders/block_entity/sign.frag",
@@ -351,7 +351,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				texture.deinit();
 			}
 			textureDeinitList.deinit(root.globalAllocator);
-			if (!main.settings.launchConfig.headlessServer) {
+			if (!root.settings.launchConfig.headlessServer) {
 				pipeline.deinit();
 			}
 			StorageServer.deinit();
@@ -451,7 +451,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 
 		pub fn updateTextFromClient(pos: Vec3i, newText: []const u8) void {
 			{
-				const mesh = main.renderer.mesh_storage.getMesh(.initFromWorldPos(pos, 1)) orelse return;
+				const mesh = root.renderer.mesh_storage.getMesh(.initFromWorldPos(pos, 1)) orelse return;
 				mesh.mutex.lock();
 				defer mesh.mutex.unlock();
 				const localPos = mesh.chunk.getLocalBlockPos(pos);
@@ -474,7 +474,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				};
 			}
 
-			root.network.protocols.blockEntityUpdate.sendClientDataUpdateToServer(main.game.world.?.conn, pos);
+			root.network.protocols.blockEntityUpdate.sendClientDataUpdateToServer(root.game.world.?.conn, pos);
 		}
 
 		pub fn renderAll(ambientLight: Vec3f) void {
@@ -514,7 +514,7 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 			c.glBindFramebuffer(c.GL_FRAMEBUFFER, @bitCast(oldFramebufferBinding));
 
 			pipeline.bind(null);
-			main.renderer.chunk_meshing.vao.bind();
+			root.renderer.chunk_meshing.vao.bind();
 
 			c.glUniform3f(uniforms.ambientLight, ambientLight[0], ambientLight[1], ambientLight[2]);
 
@@ -525,8 +525,8 @@ pub const BlockEntityTypes = struct { // MARK: BlockEntityTypes
 				signData.renderedTexture.?.bindTo(0);
 
 				c.glUniform1i(uniforms.quadIndex, @intFromEnum(quad));
-				const mesh = main.renderer.mesh_storage.getMesh(root.chunk.ChunkPosition.initFromWorldPos(signData.blockPos, 1)) orelse continue :outer;
-				const light: [4]u32 = main.renderer.lighting.getLight(mesh, signData.blockPos -% Vec3i{mesh.pos.wx, mesh.pos.wy, mesh.pos.wz}, 0, quad);
+				const mesh = root.renderer.mesh_storage.getMesh(root.chunk.ChunkPosition.initFromWorldPos(signData.blockPos, 1)) orelse continue :outer;
+				const light: [4]u32 = root.renderer.lighting.getLight(mesh, signData.blockPos -% Vec3i{mesh.pos.wx, mesh.pos.wy, mesh.pos.wz}, 0, quad);
 				c.glUniform4ui(uniforms.lightData, light[0], light[1], light[2], light[3]);
 				c.glUniform3i(uniforms.chunkPos, signData.blockPos[0] & ~root.chunk.chunkMask, signData.blockPos[1] & ~root.chunk.chunkMask, signData.blockPos[2] & ~root.chunk.chunkMask);
 				c.glUniform3i(uniforms.blockPos, signData.blockPos[0] & root.chunk.chunkMask, signData.blockPos[1] & root.chunk.chunkMask, signData.blockPos[2] & root.chunk.chunkMask);
