@@ -1,21 +1,33 @@
-compiler/
-logs/
-zig-out/
-zig-pkg/
+```
+# Build artifacts
 zig-cache/
-.zig-cache/
-serverAssets/
-gamecontrollerdb.txt
-gamecontrollerdb.stamp
-launchConfig.zon
+zig-out/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
 
-test.png
+# Dependencies
+deps/
 
-/mods/*
-!/mods/cubyz
+# Logs
+*.log
 
-/assets/*
-!/assets/cubyz
-!/assets/backgrounds/default_background.png
-/assets/cubyz/music
-/assets/cubyz/fonts
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+```

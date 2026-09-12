@@ -265,8 +265,19 @@ pub fn build(b: *std.Build) !void {
 		.install_dir = .{.custom = ".."},
 	});
 
+	// Main client module (with graphics)
 	const mainModule = b.addModule("main", .{
 		.root_source_file = b.path("src/main.zig"),
+		.target = target,
+		.optimize = optimize,
+		.link_libc = true,
+		.link_libcpp = true,
+		.sanitize_thread = sanitizeThread,
+	});
+
+	// Server-only module (no graphics dependencies)
+	const serverModule = b.addModule("server_main", .{
+		.root_source_file = b.path("src/server_main.zig"),
 		.target = target,
 		.optimize = optimize,
 		.link_libc = true,
@@ -328,6 +339,36 @@ pub fn build(b: *std.Build) !void {
 
 	const run_step = b.step("run", "Run the app");
 	run_step.dependOn(&run_cmd.step);
+
+	// Dedicated server executable (no graphics dependencies)
+	const server_exe = b.addExecutable(.{
+		.name = "CubyzServer",
+		.root_module = serverModule,
+		.use_llvm = if (sanitizeThread orelse false) true else null,
+	});
+	server_exe.root_module.addOptions("build_options", options);
+	
+	// Server doesn't need graphics libraries - only link basic system libs
+	if (target.result.os.tag == .windows) {
+		server_exe.root_module.linkSystemLibrary("bcrypt", .{});
+		server_exe.root_module.linkSystemLibrary("ws2_32", .{});
+	} else if (target.result.os.tag == .linux) {
+		server_exe.root_module.linkSystemLibrary("pthread", .{});
+	} else if (target.result.os.tag == .macos) {
+		server_exe.root_module.linkFramework("CoreFoundation", .{});
+	}
+
+	const installServer = b.addInstallArtifact(server_exe, .{});
+	b.getInstallStep().dependOn(&installServer.step);
+
+	const run_server_cmd = b.addRunArtifact(server_exe);
+	run_server_cmd.step.dependOn(b.getInstallStep());
+	if (b.args) |args| {
+		run_server_cmd.addArgs(args);
+	}
+
+	const run_server_step = b.step("run-server", "Run the dedicated server");
+	run_server_step.dependOn(&run_server_cmd.step);
 
 	const dependencyWithTestRunner = b.lazyDependency("cubyz_test_runner", .{
 		.target = target,
