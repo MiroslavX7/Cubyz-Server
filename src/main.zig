@@ -468,39 +468,36 @@ fn getOrCreateWorldName() []const u8 {
 	};
 	defer savesDir.close();
 
+	// First pass: check if any worlds exist and collect them
+	var worldList = List([]const u8).initCapacity(globalAllocator, 16);
+	defer {
+		for (worldList.items) |world| {
+			globalAllocator.free(world);
+		}
+		worldList.deinit(globalAllocator);
+	}
+
 	var iterator = savesDir.iterate();
-	var hasWorlds = false;
-	while (iterator.next()) |maybeEntry| {
-		const entry = maybeEntry catch break;
+	while (true) {
+		const maybeEntry = iterator.next(io) catch break;
+		const entry = maybeEntry orelse break;
 		if (entry.kind == .directory) {
-			hasWorlds = true;
-			break;
+			worldList.addOne(globalAllocator).* = globalAllocator.dupe(u8, entry.name);
 		}
 	}
 
-	if (hasWorlds) {
-		// List available worlds and prompt user
+	if (worldList.items.len > 0) {
+		// List available worlds
 		std.log.info("Available worlds in saves/:", .{});
-		var worldIndex: usize = 0;
-		var firstWorld: ?[]const u8 = null;
-		
-		iterator.reset();
-		while (iterator.next()) |maybeEntry| {
-			const entry = maybeEntry catch break;
-			if (entry.kind == .directory) {
-				std.log.info("  [{d}] {s}", .{ worldIndex, entry.name });
-				if (firstWorld == null) {
-					firstWorld = globalAllocator.dupe(u8, entry.name);
-				}
-				worldIndex += 1;
-			}
+		for (worldList.items, 0..) |worldName, index| {
+			std.log.info("  [{d}] {s}", .{ index, worldName });
 		}
 
-		if (firstWorld) |fw| {
-			std.log.info("No world specified in launchConfig.zon. Using first available world: {s}", .{fw});
-			std.log.info("To change this, edit launchConfig.zon and set autoEnterWorld to your desired world name.", .{});
-			return fw;
-		}
+		// Use first world by default
+		const firstWorld = worldList.items[0];
+		std.log.info("No world specified in launchConfig.zon. Using first available world: {s}", .{firstWorld});
+		std.log.info("To change this, edit launchConfig.zon and set autoEnterWorld to your desired world name.", .{});
+		return globalAllocator.dupe(u8, firstWorld);
 	}
 
 	// No worlds exist - create a default world
