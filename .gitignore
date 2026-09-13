@@ -8,4 +8,14 @@ zig-out/
 *.so
 *.a
 *.out
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+.env
+.env.local
+.env.*
+.vscode/
+.idea/
 ```

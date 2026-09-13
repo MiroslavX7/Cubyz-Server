@@ -75,13 +75,8 @@ pub fn main() !void {
     std.log.info("Starting Cubyz dedicated server version {s}", .{settings.version.version});
 
     // Initialize environment
-    const args = std.process.argsAlloc(globalAllocator) catch |err| {
-        std.log.err("Failed to allocate memory for command line arguments: {s}", .{@errorName(err)});
-        std.posix.exit(1);
-    };
-    defer std.process.argsFree(globalAllocator, args);
-    var args_iter = args.iterator();
-    _ = args_iter.next(); // Skip program name
+    var args_iter = std.process.args();
+    _ = args_iter.skip(); // Skip program name
     settings.environment.init(&args_iter);
 
     // Initialize launch configuration (creates file if not exists)
