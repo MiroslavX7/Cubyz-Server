@@ -1,6 +1,5 @@
 ```
 zig-cache/
-zig-out/
 *.o
 *.obj
 *.exe
@@ -15,7 +14,7 @@ Thumbs.db
 *.swp
 .env
 .env.local
-.env.*
+*.env.*
 .vscode/
 .idea/
 ```

@@ -23,8 +23,8 @@ pub const Level = enum {
     }
 };
 
-var logFile: ?@TypeOf(std.fs.cwd().openFile("", .{})) = undefined;
-var logFileTs: ?@TypeOf(std.fs.cwd().openFile("", .{})) = undefined;
+var logFile: ?std.fs.File = undefined;
+var logFileTs: ?std.fs.File = undefined;
 var supportsANSIColors: bool = undefined;
 
 pub fn logFn(
@@ -124,7 +124,7 @@ fn logToFile(comptime format: []const u8, args: anytype) void {
 }
 
 fn logToStdErr(comptime format: []const u8, args: anytype) void {
-    const stderr = std.io.getStdErr();
+    const stderr = std.io.stderr;
     const writer = stderr.writer();
     writer.print(format, args) catch {};
 }
