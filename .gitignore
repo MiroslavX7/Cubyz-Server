@@ -1,6 +1,11 @@
 ```
 # Compiler and build artifacts
 compiler/
+.zig-cache/
+zig-out/
+build/
+*.exe
+Cubyz.exe
 
 # Dependencies and package directories
 zig/
