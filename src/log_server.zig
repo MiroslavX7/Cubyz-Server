@@ -23,8 +23,8 @@ pub const Level = enum {
     }
 };
 
-var logFile: ?anytype = undefined;
-var logFileTs: ?anytype = undefined;
+var logFile: ?std.fs.File = undefined;
+var logFileTs: ?std.fs.File = undefined;
 var supportsANSIColors: bool = undefined;
 
 pub fn logFn(
