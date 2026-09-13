@@ -339,9 +339,6 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	settings.environment.init(args.environ);
 	settings.launchConfig.init();
 
-	// Force headless mode for dedicated server
-	const headless = true;
-
 	{
 		const homePath = args.environ.getAlloc(stackAllocator.allocator, if (builtin.os.tag == .windows) "USERPROFILE" else "HOME") catch |err| {
 			std.log.err("Failed to get environment variable for home path: {s}", .{@errorName(err)});
