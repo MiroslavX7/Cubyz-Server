@@ -329,6 +329,16 @@ pub fn build(b: *std.Build) !void {
 	const run_step = b.step("run", "Run the app");
 	run_step.dependOn(&run_cmd.step);
 
+	// Dedicated server build step
+	const server_run_cmd = b.addRunArtifact(exe);
+	server_run_cmd.step.dependOn(&installExe.step);
+	if (b.args) |args| {
+		server_run_cmd.addArgs(args);
+	}
+
+	const server_step = b.step("server", "Run the dedicated server (headless mode)");
+	server_step.dependOn(&server_run_cmd.step);
+
 	const dependencyWithTestRunner = b.lazyDependency("cubyz_test_runner", .{
 		.target = target,
 		.optimize = optimize,
