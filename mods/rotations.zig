@@ -1,0 +1,21 @@
+// MARK: cubyz
+pub const @"cubyz:branch" = @import("cubyz/rotations/branch.zig");
+pub const @"cubyz:carpet" = @import("cubyz/rotations/carpet.zig");
+pub const @"cubyz:decayable" = @import("cubyz/rotations/decayable.zig");
+pub const @"cubyz:direction" = @import("cubyz/rotations/direction.zig");
+pub const @"cubyz:fence" = @import("cubyz/rotations/fence.zig");
+pub const @"cubyz:hanging" = @import("cubyz/rotations/hanging.zig");
+pub const @"cubyz:log" = @import("cubyz/rotations/log.zig");
+pub const @"cubyz:no_rotation" = @import("cubyz/rotations/no_rotation.zig");
+pub const @"cubyz:ore" = @import("cubyz/rotations/ore.zig");
+pub const @"cubyz:planar" = @import("cubyz/rotations/planar.zig");
+pub const @"cubyz:sign" = @import("cubyz/rotations/sign.zig");
+pub const @"cubyz:stairs" = @import("cubyz/rotations/stairs.zig");
+pub const @"cubyz:texture_pile" = @import("cubyz/rotations/texture_pile.zig");
+pub const @"cubyz:torch" = @import("cubyz/rotations/torch.zig");
+
+const main = @import("main");
+test "abc" {
+	@setEvalBranchQuota(1000000);
+	main.refAllDeclsRecursiveExceptCImports(@This());
+}

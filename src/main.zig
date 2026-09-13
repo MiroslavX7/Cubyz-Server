@@ -303,6 +303,7 @@ pub fn exitToMenu() void {
 
 /// Dedicated server entry point. Runs a headless server without GUI or local player.
 /// The server accepts commands from stdin and manages multiplayer connections.
+/// Automatically creates configuration files and world folders if they don't exist.
 pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	defer heap.allocators.deinit();
 	defer heap.GarbageCollection.assertAllThreadsStopped();
@@ -337,8 +338,8 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	}
 
 	settings.environment.init(args.environ);
-	settings.launchConfig.init();
 
+	// Initialize home path and files module first
 	{
 		const homePath = args.environ.getAlloc(stackAllocator.allocator, if (builtin.os.tag == .windows) "USERPROFILE" else "HOME") catch |err| {
 			std.log.err("Failed to get environment variable for home path: {s}", .{@errorName(err)});
@@ -348,6 +349,41 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 		files.init(homePath);
 	}
 	defer files.deinit();
+
+	// Ensure cubyzDir exists
+	const cubyzDirPath = files.cubyzDirStr();
+	std.log.info("Server working directory: {s}", .{cubyzDirPath});
+
+	// Create saves directory if it doesn't exist
+	const savesPath = "saves";
+	if (!files.cubyzDir().hasDir(savesPath)) {
+		std.log.info("Creating saves directory...", .{});
+		files.cubyzDir().makePath(savesPath) catch |err| {
+			std.log.err("Failed to create saves directory: {s}", .{@errorName(err)});
+			@panic("Cannot create saves directory");
+		};
+	}
+
+	// Check if launchConfig.zon exists, create default if missing
+	const launchConfigPath = "launchConfig.zon";
+	if (!files.cubyzDir().hasFile(launchConfigPath)) {
+		std.log.info("launchConfig.zon not found. Creating default configuration...", .{});
+		const defaultConfig = 
+			\\.{
+			\\    .cubyzDir = "",
+			\\    .autoEnterWorld = "world",
+			\\    .headlessServer = true,
+			\\    // .preferredAuthenticationAlgorithm = .ed25519, // Uncomment and change this if you own a server in an outdated game version where the default algorithm got compromised.
+			\\}
+		;
+		files.cubyzDir().write(launchConfigPath, defaultConfig) catch |err| {
+			std.log.err("Failed to create launchConfig.zon: {s}", .{@errorName(err)});
+			@panic("Cannot create launchConfig.zon");
+		};
+		std.log.info("Default launchConfig.zon created with autoEnterWorld=\"world\"", .{});
+	}
+
+	settings.launchConfig.init();
 
 	settings.init();
 	defer settings.deinit();
@@ -404,10 +440,127 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 
 	server.terrain.globalInit();
 
+	// Determine world name to load
+	const worldName = getOrCreateWorldName();
+	defer globalAllocator.free(worldName);
+
+	std.log.info("Starting server with world: {s}", .{worldName});
+
 	// Start the dedicated server without a local player
 	// Pass null for the local player parameter to disable automatic local player connection
-	server.startFromExistingThread(settings.launchConfig.autoEnterWorld, null, .multiplayer);
+	server.startFromExistingThread(worldName, null, .multiplayer);
 	heap.GarbageCollection.waitForFreeCompletion();
+}
+
+/// Determines which world to load. Creates a new world folder if none exists.
+fn getOrCreateWorldName() []const u8 {
+	const configuredWorld = settings.launchConfig.autoEnterWorld;
+
+	// If a world is specified in config, use it (will be created by ServerWorld.init if missing)
+	if (configuredWorld.len > 0) {
+		return globalAllocator.dupe(u8, configuredWorld);
+	}
+
+	// No world specified in config - check for existing worlds
+	const savesDir = files.cubyzDir().openIterableDir("saves") catch |err| {
+		std.log.err("Cannot open saves directory: {s}", .{@errorName(err)});
+		@panic("Cannot access saves directory");
+	};
+	defer savesDir.close();
+
+	var iterator = savesDir.iterate();
+	var hasWorlds = false;
+	while (iterator.next()) |maybeEntry| {
+		const entry = maybeEntry catch break;
+		if (entry.kind == .directory) {
+			hasWorlds = true;
+			break;
+		}
+	}
+
+	if (hasWorlds) {
+		// List available worlds and prompt user
+		std.log.info("Available worlds in saves/:", .{});
+		var worldIndex: usize = 0;
+		var firstWorld: ?[]const u8 = null;
+		
+		iterator.reset();
+		while (iterator.next()) |maybeEntry| {
+			const entry = maybeEntry catch break;
+			if (entry.kind == .directory) {
+				std.log.info("  [{d}] {s}", .{ worldIndex, entry.name });
+				if (firstWorld == null) {
+					firstWorld = globalAllocator.dupe(u8, entry.name);
+				}
+				worldIndex += 1;
+			}
+		}
+
+		if (firstWorld) |fw| {
+			std.log.info("No world specified in launchConfig.zon. Using first available world: {s}", .{fw});
+			std.log.info("To change this, edit launchConfig.zon and set autoEnterWorld to your desired world name.", .{});
+			return fw;
+		}
+	}
+
+	// No worlds exist - create a default world
+	const defaultWorldName = "world";
+	std.log.info("No worlds found. Creating default world '{s}'...", .{defaultWorldName});
+	
+	// Create world folder structure
+	const worldPath = globalAllocator.print("saves/{s}", .{defaultWorldName});
+	defer globalAllocator.free(worldPath);
+	
+	files.cubyzDir().makePath(worldPath) catch |err| {
+		std.log.err("Failed to create world directory: {s}", .{@errorName(err)});
+		@panic("Cannot create world directory");
+	};
+
+	// Create basic world configuration
+	const arena = stackAllocator.createArena();
+	defer stackAllocator.destroyArena(arena);
+	
+	const worldInfo = ZonElement.initObject(arena);
+	worldInfo.put("version", @as(u32, 3));
+	worldInfo.put("name", defaultWorldName);
+	worldInfo.put("lastUsedTime", std.Io.Clock.Timestamp.now(io, .real).raw.toMilliseconds());
+	
+	// Generate a random seed
+	const worldSeed = std.crypto.random.int(u64);
+	std.log.info("Generated world seed: {d}", .{worldSeed});
+	
+	const generatorSettings = ZonElement.initObject(arena);
+	generatorSettings.put("seed", worldSeed);
+	generatorSettings.put("generatorType", "default");
+	worldInfo.put("generatorSettings", generatorSettings);
+	
+	const worldSettings = ZonElement.initObject(arena);
+	worldSettings.put("defaultGamemode", "creative");
+	worldSettings.put("allowCheats", true);
+	worldSettings.put("testingMode", false);
+	worldSettings.put("whitelistEnabled", false);
+	worldSettings.put("seed", worldSeed);
+	worldInfo.put("settings", worldSettings);
+	worldInfo.put("spawn", [_]i32{ 0, 0, 0 });
+	worldInfo.put("biomeChecksum", @as(i64, 0));
+	
+	const worldInfoPath = globalAllocator.print("saves/{s}/world.zig.zon", .{defaultWorldName});
+	defer globalAllocator.free(worldInfoPath);
+	
+	files.cubyzDir().writeZon(worldInfoPath, worldInfo) catch |err| {
+		std.log.err("Failed to create world config: {s}", .{@errorName(err)});
+		@panic("Cannot create world configuration");
+	};
+
+	// Create assets folder
+	const assetsPath = globalAllocator.print("saves/{s}/assets", .{defaultWorldName});
+	defer globalAllocator.free(assetsPath);
+	files.cubyzDir().makePath(assetsPath) catch {};
+
+	std.log.info("Default world '{s}' created successfully!", .{defaultWorldName});
+	std.log.info("To configure this world, edit launchConfig.zon or modify files in saves/{s}/", .{defaultWorldName});
+
+	return globalAllocator.dupe(u8, defaultWorldName);
 }
 
 pub fn clientMain() void { // MARK: clientMain()

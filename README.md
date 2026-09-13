@@ -9,23 +9,37 @@ This project includes a dedicated server build that runs headless (without GUI) 
 
 ### Running the Dedicated Server
 
-1. Create a `launchConfig.zon` file in the working directory:
+The server automatically creates necessary configuration files and world folders if they don't exist:
+
+1. **First Run**: Simply run the server - it will automatically:
+   - Create `launchConfig.zon` with default settings if missing
+   - Create the `saves/` directory if missing
+   - Create a default world named "world" if no worlds exist
+   - List available worlds if multiple exist (uses the first one by default)
+
+2. **Configuration** (optional): Edit `launchConfig.zon` to customize:
    ```zon
    .{
        .headlessServer = true,
-       .autoEnterWorld = "my_world",
+       .autoEnterWorld = "my_world",  // Leave empty to choose from existing worlds
        .cubyzDir = ".",
    }
    ```
 
-2. Run the server using the build script or Zig directly:
+3. **Run the server**:
    ```bash
    # Using Zig build system (recommended)
    zig build server
    
-   # Or using the run script with headless config
-   zig build run
+   # Or using the run script
+   ./run_linux.sh    # Linux
+   run_windows.bat   # Windows
    ```
+
+4. **Server Behavior**:
+   - If `autoEnterWorld` is set: loads that world (creates if missing)
+   - If `autoEnterWorld` is empty and worlds exist: uses the first available world
+   - If no worlds exist: creates a new world named "world" with random seed
 
 The server will start without creating a local player connection, allowing only remote players to connect.
 
@@ -34,6 +48,7 @@ The server will start without creating a local player connection, allowing only 
 - **Terminal Control**: Enter commands directly in the terminal (prefix with `/` for commands)
 - **Multiplayer Support**: Accepts incoming connections from remote players
 - **Lightweight**: Minimal resource usage compared to running the full client
+- **Auto-Setup**: Automatically creates configuration files and worlds on first run
 
 > **Future Plans**: A universal API for custom UI integration may be added in future versions.
 

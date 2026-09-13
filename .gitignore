@@ -1,10 +1,41 @@
-```zig
+```
+# Zig build artifacts
+.zig-cache/
 zig-cache/
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.out
+
+# Dependencies
+zig-packages/
+zig-local-cache/
+
+# Compiler artifacts
+compiler/zig/.git/
+compiler/zig/lib/
+compiler/zig/doc/
+compiler/zig/zig
+
+# Build outputs
+zig-out/
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
 ```
