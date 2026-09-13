@@ -1,6 +1,42 @@
 # Cubyz
 Cubyz is a 3D voxel sandbox game (inspired by Minecraft).
 
+> **Note:** This project is developed with the assistance of Large Language Models (LLM).
+
+## Dedicated Server
+
+This project includes a dedicated server build that runs headless (without GUI) and accepts multiplayer connections. The server can be controlled via terminal commands entered through stdin.
+
+### Running the Dedicated Server
+
+1. Create a `launchConfig.zon` file in the working directory:
+   ```zon
+   .{
+       .headlessServer = true,
+       .autoEnterWorld = "my_world",
+       .cubyzDir = ".",
+   }
+   ```
+
+2. Run the server using the build script or Zig directly:
+   ```bash
+   # Using Zig build system (recommended)
+   zig build server
+   
+   # Or using the run script with headless config
+   zig build run
+   ```
+
+The server will start without creating a local player connection, allowing only remote players to connect.
+
+### Server Features
+- **Headless Operation**: No GUI, graphics, or audio initialization
+- **Terminal Control**: Enter commands directly in the terminal (prefix with `/` for commands)
+- **Multiplayer Support**: Accepts incoming connections from remote players
+- **Lightweight**: Minimal resource usage compared to running the full client
+
+> **Future Plans**: A universal API for custom UI integration may be added in future versions.
+
 Cubyz has a bunch of interesting/unique features such as:
 - Level of Detail (→ This enables far view distances.)
 - 3D Chunks (→ There is no height or depth limit.)

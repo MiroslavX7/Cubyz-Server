@@ -301,6 +301,8 @@ pub fn exitToMenu() void {
 	shouldExitToMenu.store(true, .monotonic);
 }
 
+/// Dedicated server entry point. Runs a headless server without GUI or local player.
+/// The server accepts commands from stdin and manages multiplayer connections.
 pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	defer heap.allocators.deinit();
 	defer heap.GarbageCollection.assertAllThreadsStopped();
@@ -321,26 +323,24 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 		_ = argIterator.skip();
 		if (argIterator.next() != null) {
 			std.log.info(
-				\\Cubyz does not accept any command line arguments.
-				\\All launch-time configuration is done through the "launchConfig.zon" file in the game's working directory. See that file for the available options.
+				\\Cubyz dedicated server does not accept any command line arguments.
+				\\All launch-time configuration is done through the "launchConfig.zon" file in the server's working directory. See that file for the available options.
 			, .{});
 			std.process.exit(0);
 		}
 	}
 
-	std.log.info("Starting game with version {s}", .{settings.version.version});
+	std.log.info("Starting Cubyz dedicated server version {s}", .{settings.version.version});
 
 	if (builtin.os.tag == .windows) {
-		std.log.warn("Cubyz detected it's running on Windows. For optimal performance and reduced power usage please install Linux.", .{});
+		std.log.warn("Cubyz server detected it's running on Windows. For optimal performance and reduced power usage please install Linux.", .{});
 	}
 
 	settings.environment.init(args.environ);
 	settings.launchConfig.init();
 
-	const headless = settings.launchConfig.headlessServer;
-
-	if (!headless) gui.initWindowList();
-	defer if (!headless) gui.deinitWindowList();
+	// Force headless mode for dedicated server
+	const headless = true;
 
 	{
 		const homePath = args.environ.getAlloc(stackAllocator.allocator, if (builtin.os.tag == .windows) "USERPROFILE" else "HOME") catch |err| {
@@ -361,22 +361,14 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	file_monitor.init();
 	defer file_monitor.deinit();
 
-	if (!headless) Window.init();
-	defer if (!headless) Window.deinit();
-
-	if (!headless) graphics.init();
-	defer if (!headless) graphics.deinit();
-
-	if (!headless) audio.init() catch std.log.err("Failed to initialize audio. Continuing the game without sounds.", .{});
-	defer if (!headless) audio.deinit();
+	// Skip all GUI, graphics, audio, and client-side initialization
+	// Only initialize server-required components
 
 	utils.initDynamicIntArrayStorage();
 	defer utils.deinitDynamicIntArrayStorage();
 
 	rotation.init();
 	defer rotation.deinit();
-
-	callbacks.init();
 
 	block_entity.init();
 	defer block_entity.deinit();
@@ -387,43 +379,38 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	items.globalInit();
 	defer items.globalDeinit();
 
-	if (!headless) sync.client.init();
-	defer if (!headless) sync.client.deinit();
-
-	if (!headless) itemdrop.ItemDropRenderer.init();
-	defer if (!headless) itemdrop.ItemDropRenderer.deinit();
+	// Skip client sync
+	// Skip item drop renderer (client-side only)
 
 	assets.init();
 
-	if (!headless) blocks.meshes.init();
-	defer if (!headless) blocks.meshes.deinit();
-
-	if (!headless) renderer.init();
-	defer if (!headless) renderer.deinit();
+	// Skip block meshes (client-side rendering)
+	// Skip renderer (client-side rendering)
 
 	network.init() catch @panic("Failed to initialize network");
 	defer network.deinit();
 
-	if (!headless) systems.client.init();
-	defer if (!headless) systems.client.deinit();
+	// Initialize server-side systems
+	systems.server.init();
+	defer systems.server.deinit();
 
-	if (!headless) entity.client.init();
-	defer if (!headless) entity.client.deinit();
+	entity.server.init();
+	defer entity.server.deinit();
 
-	if (!headless) gui.init();
-	defer if (!headless) gui.deinit();
+	items.Inventory.server.init();
+	defer items.Inventory.server.deinit();
 
-	if (!headless) particles.ParticleManager.init();
-	defer if (!headless) particles.ParticleManager.deinit();
+	sync.server.init();
+	defer sync.server.deinit();
+
+	// Skip client GUI and particles
 
 	server.terrain.globalInit();
 
-	if (headless) {
-		server.startFromExistingThread(settings.launchConfig.autoEnterWorld, null, .multiplayer);
-		heap.GarbageCollection.waitForFreeCompletion();
-	} else {
-		clientMain();
-	}
+	// Start the dedicated server without a local player
+	// Pass null for the local player parameter to disable automatic local player connection
+	server.startFromExistingThread(settings.launchConfig.autoEnterWorld, null, .multiplayer);
+	heap.GarbageCollection.waitForFreeCompletion();
 }
 
 pub fn clientMain() void { // MARK: clientMain()
