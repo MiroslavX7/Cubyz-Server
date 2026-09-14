@@ -1,37 +1,26 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const main = @import("main");
 
-var lineBuffer: [1024]u8 = undefined;
-var lineLen: usize = 0;
+var readBuffer: [100_000]u8 = undefined;
 
 var running: bool = true;
 
 pub fn update() void {
     if (!running) return;
-
-    // Читаем по одному байту из stdin через std.Io.File
-    var byte_buf: [1]u8 = undefined;
-
-    const stdin_file = std.Io.File.stdin();
-    const n = stdin_file.read(main.io, &byte_buf) catch return;
-    if (n == 0) return; // Нет данных или EOF
-
-    const byte = byte_buf[0];
-
-    if (byte == '\n' or byte == '\r') {
-        if (lineLen > 0) {
-            processInput(lineLen);
-            lineLen = 0;
-        }
-    } else if (lineLen < lineBuffer.len - 1) {
-        lineBuffer[lineLen] = byte;
-        lineLen += 1;
+    if (builtin.os.tag == .windows) {
+        std.log.warn("Console per stdin is currently not supported on windows", .{});
+        running = false;
+        return;
     }
-}
-
-fn processInput(len: usize) void {
-    const msg = std.mem.trim(u8, lineBuffer[0..len], "\n\r");
+    const result = readFromStdin();
+    if (result == readBuffer.len) {
+        std.log.warn("Input exceeded {} character limit", .{readBuffer.len});
+        while (readFromStdin() != 0) {}
+        return;
+    }
+    const msg = std.mem.trim(u8, readBuffer[0..result], "\n");
     if (msg.len == 0) return;
     if (!std.unicode.utf8ValidateSlice(msg)) {
         std.log.err("Server message contains invalid UTF-8 characters.", .{});
@@ -39,9 +28,26 @@ fn processInput(len: usize) void {
     }
     if (msg[0] == '/') {
         main.server.command.execute(msg[1..], .server);
-    } else if (mem.eql(u8, msg, "stop") or mem.eql(u8, msg, "exit") or mem.eql(u8, msg, "quit")) {
+    } else if (std.mem.eql(u8, msg, "stop") or std.mem.eql(u8, msg, "exit") or std.mem.eql(u8, msg, "quit")) {
         main.server.command.execute("stop", .server);
     } else {
         main.server.sendMessage("<Server> {s}", .{msg});
     }
+}
+
+fn readFromStdin() usize {
+    const result = main.io.operateTimeout(.{ .file_read_streaming = .{
+        .data = &.{ &readBuffer },
+        .file = std.Io.File.stdin(),
+    } }, .{ .duration = .{ .raw = .zero, .clock = .awake } }) catch |err| {
+        if (err == error.Timeout) return 0;
+        std.log.err("Error while reading from stdin: {t}", .{err});
+        running = false;
+        return 0;
+    };
+    return result.file_read_streaming catch |err| {
+        std.log.err("Error while reading from stdin: {t}", .{err});
+        running = false;
+        return 0;
+    };
 }
