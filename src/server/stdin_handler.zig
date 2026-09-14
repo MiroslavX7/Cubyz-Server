@@ -43,31 +43,33 @@ fn processInput(result: usize) void {
 }
 
 fn simpleReadFromStdin() usize {
-	// Простое чтение stdin для Windows без использования таймаутов
-	const result = main.io.operate(.{.file_read_streaming = .{
+	// Простое неблокирующее чтение stdin для Windows
+	const stdin_file = std.Io.File.stdin();
+	const result = main.io.operate(.{.file_read_nonblocking = .{
 		.data = &.{&readBuffer},
-		.file = std.Io.File.stdin(),
+		.file = stdin_file,
 	}}) catch |err| {
 		std.log.err("Error reading stdin on Windows: {t}", .{err});
 		return 0;
 	};
-	return result.file_read_streaming catch |err| {
+	return result.file_read_nonblocking catch |err| {
 		std.log.err("Error reading stdin on Windows: {t}", .{err});
 		return 0;
 	};
 }
 
 fn readFromStdin() usize {
-	const result = main.io.operateTimeout(.{.file_read_streaming = .{
+	const stdin_file = std.Io.File.stdin();
+	const result = main.io.operateTimeout(.{.file_read_nonblocking = .{
 		.data = &.{&readBuffer},
-		.file = std.Io.File.stdin(),
+		.file = stdin_file,
 	}}, .{.duration = .{.raw = .zero, .clock = .awake}}) catch |err| {
 		if (err == error.Timeout) return 0;
 		std.log.err("Error while reading from stdin: {t}", .{err});
 		running = false;
 		return 0;
 	};
-	return result.file_read_streaming catch |err| {
+	return result.file_read_nonblocking catch |err| {
 		std.log.err("Error while reading from stdin: {t}", .{err});
 		running = false;
 		return 0;

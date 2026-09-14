@@ -1,5 +1,5 @@
-```
-# Build artifacts
+```zig
+# Zig build artifacts
 zig-cache/
 zig-out/
 *.o
@@ -7,8 +7,8 @@ zig-out/
 *.a
 *.lib
 *.so
-*.dll
 *.dylib
+*.dll
 
 # Dependencies
 deps/
@@ -28,11 +28,6 @@ deps/
 .idea/
 *.swp
 *.swo
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
 
 # OS
 .DS_Store
