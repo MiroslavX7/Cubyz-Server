@@ -3,11 +3,12 @@ const fs = std.fs;
 const mem = std.mem;
 const Allocator = mem.Allocator;
 const files = @import("files.zig");
+const main = @import("main.zig");
 
 pub const ServerConfig = struct {
     max_players: u32 = 20,
     bind_address: []const u8 = "0.0.0.0",
-    port: u16 = 25565,
+    port: u16 = 16141,
     world_name: []const u8 = "world",
     view_distance: u8 = 16,
     server_name: []const u8 = "Cubyz Server",
@@ -24,10 +25,9 @@ pub const ServerConfig = struct {
         // 1. Попытка загрузить из файла server.properties
         const cwd = files.cwd();
         if (cwd.openFile("server.properties")) |file| {
-            defer file.close();
-            var reader = file.reader();
+            defer file.close(main.io);
             var buf: [4096]u8 = undefined;
-            const len = try reader.readAll(&buf);
+            const len = try std.Io.File.readPositionalAll(file, main.io, &buf, 0);
             const content = buf[0..len];
             
             var lines = mem.splitScalar(u8, content, '\n');
@@ -87,7 +87,7 @@ pub const ServerConfig = struct {
         return config;
     }
 
-    fn saveDefault(dir: fs.Dir) !void {
+    fn saveDefault(dir: files.Dir) !void {
         const content = 
             \\# Cubyz Server Configuration
             \\# Maximum number of players allowed on the server
@@ -97,7 +97,7 @@ pub const ServerConfig = struct {
             \\bind_address=0.0.0.0
             \\
             \\# Server port
-            \\port=25565
+            \\port=16141
             \\
             \\# Name of the world folder (inside saves/)
             \\world_name=world
@@ -121,8 +121,6 @@ pub const ServerConfig = struct {
             \\generate_spawn=true
             \\
         ;
-        var file = try dir.createFile("server.properties", .{});
-        defer file.close();
-        try file.writeAll(content);
+        try dir.write("server.properties", content);
     }
 };
