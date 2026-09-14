@@ -1,20 +1,19 @@
 ```
-# Build artifacts
+# Zig build artifacts
 zig-cache/
 zig-out/
 *.o
 *.obj
-*.exe
-*.dll
-*.so
 *.a
-*.out
+*.lib
+*.so
+*.dylib
+*.dll
 
 # Dependencies
-.zig-cache/
 deps/
 
-# Logs and temporary files
+# Logs and temp files
 *.log
 *.tmp
 *.swp
@@ -22,7 +21,7 @@ deps/
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
 # Editors
 .vscode/
@@ -30,10 +29,10 @@ deps/
 *.swp
 *.swo
 
-# Coverage and testing
-.coverage
+# Coverage
 coverage/
 htmlcov/
+.coverage
 
 # OS generated files
 .DS_Store
