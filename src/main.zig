@@ -524,7 +524,7 @@ fn getOrCreateWorldName() []const u8 {
 	
 	// Generate a random seed
 	var worldSeed: u64 = undefined;
-	worldSeed = main.random.nextInt(u64, &main.seed);
+	worldSeed = random.nextInt(u64, &seed);
 	std.log.info("Generated world seed: {d}", .{worldSeed});
 	
 	const generatorSettings = ZonElement.initObject(arena);
