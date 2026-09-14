@@ -97,7 +97,7 @@ pub const TerrainGenerationProfile = struct {
 		self.mapFragmentGenerator.init(generator);
 
 		generator = settings.getChild("climateGenerator");
-		self.climateGenerator = try ClimateMap.ClimateMapGenerator.getGeneratorById(generator.get([]const u8, "id") orelse "cubyz:polar_circles");
+		self.climateGenerator = try ClimateMap.ClimateMapGenerator.getGeneratorById(generator.get([]const u8, "id") orelse "cubyz:noise_based_voronoi");
 		self.climateGenerator.init(generator);
 
 		generator = settings.getChild("caveBiomeGenerators");
