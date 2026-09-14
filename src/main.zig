@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 
 pub const gui = @import("gui/gui.zig");
 pub const server = @import("server/server.zig");
+pub const config = @import("config.zig");
 
 pub const audio = @import("audio.zig");
 pub const argparse = @import("argparse.zig");
@@ -315,6 +316,9 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	log.init();
 	defer log.deinit();
 
+	// Declare serverConfig at function scope to be accessible throughout main
+	var serverConfig: config.ServerConfig = undefined;
+
 	argCheck: {
 		var argIterator = args.args.iterateAllocator(stackAllocator.allocator) catch |err| {
 			std.log.err("Failed to read command line arguments: {s}", .{@errorName(err)});
@@ -322,13 +326,32 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 		};
 		defer argIterator.deinit();
 		_ = argIterator.skip();
-		if (argIterator.next() != null) {
-			std.log.info(
-				\\Cubyz dedicated server does not accept any command line arguments.
-				\\All launch-time configuration is done through the "launchConfig.zon" file in the server's working directory. See that file for the available options.
-			, .{});
-			std.process.exit(0);
+		
+		// Collect all arguments for config parsing (skip first arg which is program name)
+		var argList = std.ArrayList([]const u8).initCapacity(stackAllocator.allocator, 16) catch unreachable;
+		while (argIterator.next()) |arg| {
+			argList.appendAssumeCapacity(arg);
 		}
+		const argSlice = argList.items;
+		
+		if (argSlice.len > 0) {
+			std.log.info("Command line arguments detected, processing for server configuration...", .{});
+		}
+		
+		// Load server configuration from server.properties or command line args
+		serverConfig = config.ServerConfig.load(argSlice) catch |err| {
+			std.log.err("Failed to load server configuration: {s}", .{@errorName(err)});
+			@panic("Cannot load server configuration");
+		};
+
+		std.log.info("Server Configuration:", .{});
+		std.log.info("  Max Players: {d}", .{serverConfig.max_players});
+		std.log.info("  Port: {d}", .{serverConfig.port});
+		std.log.info("  World Name: {s}", .{serverConfig.world_name});
+		std.log.info("  View Distance: {d} chunks", .{serverConfig.view_distance});
+		std.log.info("  Server Name: {s}", .{serverConfig.server_name});
+		std.log.info("  Allow Unsupported Clients: {any}", .{serverConfig.allow_unsupported_clients});
+		std.log.info("  PvP: {any}", .{serverConfig.pvp});
 	}
 
 	std.log.info("Starting Cubyz dedicated server version {s}", .{settings.version.version});
@@ -440,8 +463,8 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 
 	server.terrain.globalInit();
 
-	// Determine world name to load
-	const worldName = getOrCreateWorldName();
+	// Determine world name to load (config file takes precedence, then server.properties)
+	const worldName = getOrCreateWorldNameWithConfig(serverConfig.world_name);
 	defer globalAllocator.free(worldName);
 
 	std.log.info("Starting server with world: {s}", .{worldName});
@@ -453,15 +476,22 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 }
 
 /// Determines which world to load. Creates a new world folder if none exists.
-fn getOrCreateWorldName() []const u8 {
-	const configuredWorld = settings.launchConfig.autoEnterWorld;
-
-	// If a world is specified in config, use it (will be created by ServerWorld.init if missing)
-	if (configuredWorld.len > 0) {
-		return globalAllocator.dupe(u8, configuredWorld);
+/// Uses the world name from server.properties/config if provided.
+fn getOrCreateWorldNameWithConfig(configWorldName: []const u8) []const u8 {
+	// 1. If config specifies a world, use it
+	if (configWorldName.len > 0) {
+		std.log.info("Using world from configuration: {s}", .{configWorldName});
+		return ensureWorldExists(configWorldName);
 	}
 
-	// No world specified in config - check for existing worlds
+	// 2. Fall back to launchConfig.zon setting
+	const configuredWorld = settings.launchConfig.autoEnterWorld;
+	if (configuredWorld.len > 0) {
+		std.log.info("Using world from launchConfig.zon: {s}", .{configuredWorld});
+		return ensureWorldExists(configuredWorld);
+	}
+
+	// 3. No world specified - check for existing worlds
 	var savesDir = files.cubyzDir().openIterableDir("saves") catch |err| {
 		std.log.err("Cannot open saves directory: {s}", .{@errorName(err)});
 		@panic("Cannot access saves directory");
@@ -495,19 +525,36 @@ fn getOrCreateWorldName() []const u8 {
 
 		// Use first world by default
 		const firstWorld = worldList.items[0];
-		std.log.info("No world specified in launchConfig.zon. Using first available world: {s}", .{firstWorld});
-		std.log.info("To change this, edit launchConfig.zon and set autoEnterWorld to your desired world name.", .{});
+		std.log.info("No world specified in configuration. Using first available world: {s}", .{firstWorld});
+		std.log.info("To change this, edit server.properties or launchConfig.zon", .{});
 		return globalAllocator.dupe(u8, firstWorld);
 	}
 
-	// No worlds exist - create a default world
-	const defaultWorldName = "world";
-	std.log.info("No worlds found. Creating default world '{s}'...", .{defaultWorldName});
+	// No worlds exist - create a default world with warning
+	std.log.warn("No worlds found in saves/ directory!", .{});
+	std.log.warn("Do you want to generate a new default world?", .{});
+	std.log.warn("Press Ctrl+C to stop server or wait 5 seconds to continue with world generation...", .{});
 	
-	// Create world folder structure
-	const worldPath = globalAllocator.print("saves/{s}", .{defaultWorldName});
+	// Simple delay to allow user to cancel (in future could be interactive)
+	io.sleep(.fromSeconds(5), .awake) catch {};
+	
+	const defaultWorldName = "world";
+	std.log.info("Creating default world '{s}'...", .{defaultWorldName});
+	return ensureWorldExists(defaultWorldName);
+}
+
+/// Ensures a world folder exists, creating it if necessary
+fn ensureWorldExists(worldName: []const u8) []const u8 {
+	const worldPath = globalAllocator.print("saves/{s}", .{worldName});
 	defer globalAllocator.free(worldPath);
 	
+	// Check if world already exists
+	if (files.cubyzDir().hasDir(worldPath)) {
+		std.log.info("World '{s}' already exists.", .{worldName});
+		return globalAllocator.dupe(u8, worldName);
+	}
+
+	// Create world folder structure
 	files.cubyzDir().makePath(worldPath) catch |err| {
 		std.log.err("Failed to create world directory: {s}", .{@errorName(err)});
 		@panic("Cannot create world directory");
@@ -519,12 +566,12 @@ fn getOrCreateWorldName() []const u8 {
 	
 	const worldInfo = ZonElement.initObject(arena);
 	worldInfo.put("version", @as(u32, 3));
-	worldInfo.put("name", defaultWorldName);
+	worldInfo.put("name", worldName);
 	worldInfo.put("lastUsedTime", std.Io.Clock.Timestamp.now(io, .real).raw.toMilliseconds());
 	
 	// Generate a random seed
-	var worldSeed: u64 = undefined;
-	worldSeed = random.nextInt(u64, &seed);
+	var worldSeed: i128 = undefined;
+	worldSeed = @intCast(random.nextInt(u64, &seed));
 	std.log.info("Generated world seed: {d}", .{worldSeed});
 	
 	const generatorSettings = ZonElement.initObject(arena);
@@ -542,7 +589,7 @@ fn getOrCreateWorldName() []const u8 {
 	worldInfo.put("spawn", [_]i32{ 0, 0, 0 });
 	worldInfo.put("biomeChecksum", @as(i64, 0));
 	
-	const worldInfoPath = globalAllocator.print("saves/{s}/world.zig.zon", .{defaultWorldName});
+	const worldInfoPath = globalAllocator.print("saves/{s}/world.zig.zon", .{worldName});
 	defer globalAllocator.free(worldInfoPath);
 	
 	files.cubyzDir().writeZon(worldInfoPath, worldInfo) catch |err| {
@@ -551,14 +598,17 @@ fn getOrCreateWorldName() []const u8 {
 	};
 
 	// Create assets folder
-	const assetsPath = globalAllocator.print("saves/{s}/assets", .{defaultWorldName});
+	const assetsPath = globalAllocator.print("saves/{s}/assets", .{worldName});
 	defer globalAllocator.free(assetsPath);
 	files.cubyzDir().makePath(assetsPath) catch {};
 
-	std.log.info("Default world '{s}' created successfully!", .{defaultWorldName});
-	std.log.info("To configure this world, edit launchConfig.zon or modify files in saves/{s}/", .{defaultWorldName});
+	std.log.info("World '{s}' created successfully!", .{worldName});
+	return globalAllocator.dupe(u8, worldName);
+}
 
-	return globalAllocator.dupe(u8, defaultWorldName);
+/// Legacy function kept for compatibility
+fn getOrCreateWorldName() []const u8 {
+	return getOrCreateWorldNameWithConfig("");
 }
 
 pub fn clientMain() void { // MARK: clientMain()

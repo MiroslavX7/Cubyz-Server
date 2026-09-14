@@ -201,7 +201,8 @@ pub const ZonElement = union(enum) { // MARK: ZonElement
 	}
 
 	fn createElementFromRandomType(value: anytype, allocator: std.mem.Allocator) ZonElement {
-		switch (@typeInfo(@TypeOf(value))) {
+		const type_info = @typeInfo(@TypeOf(value));
+		switch (type_info) {
 			.void => return .null,
 			.null => return .null,
 			.bool => return .{.bool = value},
@@ -234,7 +235,7 @@ pub const ZonElement = union(enum) { // MARK: ZonElement
 				}
 			},
 			.vector => {
-				const len = @typeInfo(@TypeOf(value)).vector.len;
+				const len = type_info.vector.len;
 				const result = initArray(main.heap.NeverFailingAllocator{.allocator = allocator, .IAssertThatTheProvidedAllocatorCantFail = {}});
 				result.array.ensureCapacity(len);
 				inline for (0..len) |i| {
@@ -248,8 +249,10 @@ pub const ZonElement = union(enum) { // MARK: ZonElement
 			else => {
 				if (@TypeOf(value) == ZonElement) {
 					return value;
+				} else if (@TypeOf(value) == i128) {
+					return .{.int = value};
 				} else {
-					@compileError("Unknown value type.");
+					@compileError("Unknown value type: " ++ @typeName(@TypeOf(value)));
 				}
 			},
 		}
