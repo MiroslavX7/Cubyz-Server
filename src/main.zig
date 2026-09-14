@@ -462,7 +462,7 @@ fn getOrCreateWorldName() []const u8 {
 	}
 
 	// No world specified in config - check for existing worlds
-	const savesDir = files.cubyzDir().openIterableDir("saves") catch |err| {
+	var savesDir = files.cubyzDir().openIterableDir("saves") catch |err| {
 		std.log.err("Cannot open saves directory: {s}", .{@errorName(err)});
 		@panic("Cannot access saves directory");
 	};
