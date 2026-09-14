@@ -44,23 +44,17 @@ fn processInput(result: usize) void {
 
 fn simpleReadFromStdin() usize {
 	// Простое чтение stdin для Windows без использования таймаутов
-	const stdin_file = std.Io.File.stdin();
-	var line_buffer: [1024]u8 = undefined;
-	
-	// Читаем данные из stdin напрямую в буфер
-	const bytes_read = stdin_file.read(main.io, &line_buffer) catch |err| {
-		if (err == error.EndOfStream) return 0;
+	const result = main.io.operate(.{.file_read_streaming = .{
+		.data = &.{&readBuffer},
+		.file = std.Io.File.stdin(),
+	}}) catch |err| {
 		std.log.err("Error reading stdin on Windows: {t}", .{err});
 		return 0;
 	};
-	
-	if (bytes_read == 0) return 0;
-	
-	// Копируем прочитанные данные в основной буфер ввода
-	if (bytes_read > readBuffer.len) bytes_read = readBuffer.len;
-	@memcpy(readBuffer[0..bytes_read], line_buffer[0..bytes_read]);
-	
-	return bytes_read;
+	return result.file_read_streaming catch |err| {
+		std.log.err("Error reading stdin on Windows: {t}", .{err});
+		return 0;
+	};
 }
 
 fn readFromStdin() usize {
