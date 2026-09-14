@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
+const fs = std.fs;
 
 const main = @import("main");
 
@@ -12,7 +13,7 @@ var running: bool = true;
 pub fn update() void {
     if (!running) return;
     
-    const stdin = main.io.getStdIn();
+    const stdin = fs.stdio.getStdIn();
     var reader = stdin.reader();
     
     // Читаем по одному байту неблокирующим образом (насколько это возможно)
