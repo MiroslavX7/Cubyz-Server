@@ -5,73 +5,63 @@ const mem = std.mem;
 const main = @import("main");
 
 var readBuffer: [100_000]u8 = undefined;
+var lineBuffer: [1024]u8 = undefined;
 
 var running: bool = true;
 
 pub fn update() void {
-	if (!running) return;
-	if (builtin.os.tag == .windows) {
-		// На Windows используем простой опрос stdin без таймаутов
-		const result = simpleReadFromStdin();
-		if (result == 0) return;
-		processInput(result);
-		return;
-	}
-	const result = readFromStdin();
-	if (result == readBuffer.len) {
-		std.log.warn("Input exceeded {} character limit", .{readBuffer.len});
-		while (readFromStdin() != 0) {}
-		return;
-	}
-	processInput(result);
+    if (!running) return;
+    
+    // Используем простой blocking read с таймаутом через отдельный подход
+    // Читаем по одному байту, проверяя доступность
+    const stdin = std.io.getStdIn();
+    var reader = stdin.reader();
+    
+    // Проверяем, есть ли данные для чтения (неблокирующая проверка)
+    // В Zig нет прямого API для этого, поэтому используем простой подход:
+    // пытаемся прочитать с очень маленьким буфером
+    
+    var byte_buf: [1]u8 = undefined;
+    
+    // Пытаемся прочитать первый байт
+    const first_byte = reader.read(&byte_buf) catch |err| {
+        std.log.err("Error reading stdin: {}", .{err});
+        return;
+    };
+    
+    if (first_byte == 0) return; // Нет данных
+    
+    // Есть данные, читаем остальную строку
+    var total_read: usize = 0;
+    readBuffer[0] = byte_buf[0];
+    total_read = 1;
+    
+    // Читаем остальные символы до новой строки
+    while (total_read < readBuffer.len) {
+        const n = reader.read(&byte_buf) catch break;
+        if (n == 0) break;
+        
+        readBuffer[total_read] = byte_buf[0];
+        total_read += 1;
+        
+        if (byte_buf[0] == '\n') break;
+    }
+    
+    processInput(total_read);
 }
 
 fn processInput(result: usize) void {
-	const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
-	if (msg.len == 0) return;
-	if (!std.unicode.utf8ValidateSlice(msg)) {
-		std.log.err("Server message contains invalid UTF-8 characters.", .{});
-		return;
-	}
-	if (msg[0] == '/') {
-		main.server.command.execute(msg[1..], .server);
-	} else if (mem.eql(u8, msg, "stop") or mem.eql(u8, msg, "exit") or mem.eql(u8, msg, "quit")) {
-		main.server.command.execute("stop", .server);
-	} else {
-		main.server.sendMessage("<Server> {s}", .{msg});
-	}
-}
-
-fn simpleReadFromStdin() usize {
-	// Простое неблокирующее чтение stdin для Windows
-	const stdin_file = std.Io.File.stdin();
-	const result = main.io.operate(.{.file_read_nonblocking = .{
-		.data = &.{&readBuffer},
-		.file = stdin_file,
-	}}) catch |err| {
-		std.log.err("Error reading stdin on Windows: {t}", .{err});
-		return 0;
-	};
-	return result.file_read_nonblocking catch |err| {
-		std.log.err("Error reading stdin on Windows: {t}", .{err});
-		return 0;
-	};
-}
-
-fn readFromStdin() usize {
-	const stdin_file = std.Io.File.stdin();
-	const result = main.io.operateTimeout(.{.file_read_nonblocking = .{
-		.data = &.{&readBuffer},
-		.file = stdin_file,
-	}}, .{.duration = .{.raw = .zero, .clock = .awake}}) catch |err| {
-		if (err == error.Timeout) return 0;
-		std.log.err("Error while reading from stdin: {t}", .{err});
-		running = false;
-		return 0;
-	};
-	return result.file_read_nonblocking catch |err| {
-		std.log.err("Error while reading from stdin: {t}", .{err});
-		running = false;
-		return 0;
-	};
+    const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
+    if (msg.len == 0) return;
+    if (!std.unicode.utf8ValidateSlice(msg)) {
+        std.log.err("Server message contains invalid UTF-8 characters.", .{});
+        return;
+    }
+    if (msg[0] == '/') {
+        main.server.command.execute(msg[1..], .server);
+    } else if (mem.eql(u8, msg, "stop") or mem.eql(u8, msg, "exit") or mem.eql(u8, msg, "quit")) {
+        main.server.command.execute("stop", .server);
+    } else {
+        main.server.sendMessage("<Server> {s}", .{msg});
+    }
 }
