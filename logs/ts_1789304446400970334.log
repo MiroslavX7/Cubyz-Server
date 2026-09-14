@@ -1,0 +1,2 @@
+[info]: Cubyz dedicated server does not accept any command line arguments.
+All launch-time configuration is done through the "launchConfig.zon" file in the server's working directory. See that file for the available options.
