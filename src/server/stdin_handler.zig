@@ -44,7 +44,7 @@ fn processInput(result: usize) void {
 
 fn simpleReadFromStdin() usize {
 	// Простое чтение stdin для Windows без использования таймаутов
-	const stdin = std.io.getStdIn();
+	const stdin = std.io.stdin;
 	var reader = stdin.reader();
 	var line: [1024]u8 = undefined;
 	return reader.readUntilDelimiter(&line, '\n') catch |err| {
