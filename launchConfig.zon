@@ -1,6 +1,6 @@
 .{
     .cubyzDir = "",
-    .autoEnterWorld = "",
+    .autoEnterWorld = "world",
     .headlessServer = true,
     // .preferredAuthenticationAlgorithm = .ed25519, // Uncomment and change this if you own a server in an outdated game version where the default algorithm got compromised.
 }
