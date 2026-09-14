@@ -4,54 +4,39 @@ const mem = std.mem;
 
 const main = @import("main");
 
-var readBuffer: [100_000]u8 = undefined;
 var lineBuffer: [1024]u8 = undefined;
+var lineLen: usize = 0;
 
 var running: bool = true;
 
 pub fn update() void {
     if (!running) return;
     
-    // Используем простой blocking read с таймаутом через отдельный подход
-    // Читаем по одному байту, проверяя доступность
-    const stdin = std.io.getStdIn();
+    const stdin = main.io.getStdIn();
     var reader = stdin.reader();
     
-    // Проверяем, есть ли данные для чтения (неблокирующая проверка)
-    // В Zig нет прямого API для этого, поэтому используем простой подход:
-    // пытаемся прочитать с очень маленьким буфером
-    
+    // Читаем по одному байту неблокирующим образом (насколько это возможно)
     var byte_buf: [1]u8 = undefined;
     
-    // Пытаемся прочитать первый байт
-    const first_byte = reader.read(&byte_buf) catch |err| {
-        std.log.err("Error reading stdin: {}", .{err});
-        return;
-    };
+    // Пытаемся прочитать один байт
+    const n = reader.read(&byte_buf) catch return;
+    if (n == 0) return; // Нет данных
     
-    if (first_byte == 0) return; // Нет данных
+    const byte = byte_buf[0];
     
-    // Есть данные, читаем остальную строку
-    var total_read: usize = 0;
-    readBuffer[0] = byte_buf[0];
-    total_read = 1;
-    
-    // Читаем остальные символы до новой строки
-    while (total_read < readBuffer.len) {
-        const n = reader.read(&byte_buf) catch break;
-        if (n == 0) break;
-        
-        readBuffer[total_read] = byte_buf[0];
-        total_read += 1;
-        
-        if (byte_buf[0] == '\n') break;
+    if (byte == '\n' or byte == '\r') {
+        if (lineLen > 0) {
+            processInput(lineLen);
+            lineLen = 0;
+        }
+    } else if (lineLen < lineBuffer.len - 1) {
+        lineBuffer[lineLen] = byte;
+        lineLen += 1;
     }
-    
-    processInput(total_read);
 }
 
-fn processInput(result: usize) void {
-    const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
+fn processInput(len: usize) void {
+    const msg = std.mem.trim(u8, lineBuffer[0..len], "\n\r");
     if (msg.len == 0) return;
     if (!std.unicode.utf8ValidateSlice(msg)) {
         std.log.err("Server message contains invalid UTF-8 characters.", .{});
