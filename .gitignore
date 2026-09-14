@@ -1,7 +1,14 @@
-```
+```zig
 # Zig build artifacts
 zig-cache/
 zig-out/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
 
 # Dependencies
 deps/
@@ -19,4 +26,10 @@ deps/
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 ```
