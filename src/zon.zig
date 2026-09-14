@@ -237,9 +237,9 @@ pub const ZonElement = union(enum) { // MARK: ZonElement
 			.vector => {
 				const len = type_info.vector.len;
 				const result = initArray(main.heap.NeverFailingAllocator{.allocator = allocator, .IAssertThatTheProvidedAllocatorCantFail = {}});
-				result.array.ensureCapacity(len);
+				result.array.ensureTotalCapacity(len);
 				inline for (0..len) |i| {
-					result.array.appendAssumeCapacity(createElementFromRandomType(value[i], allocator));
+					try result.array.append(createElementFromRandomType(value[i], allocator));
 				}
 				return result;
 			},
