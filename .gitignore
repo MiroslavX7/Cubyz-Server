@@ -1,52 +1,10 @@
-```zig
-# Zig build artifacts
+```
 zig-cache/
-zig-out/
 *.o
 *.obj
-*.a
-*.lib
-*.so
-*.dylib
+*.exe
 *.dll
-
-# Dependencies
-deps/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Build systems
-build/
-dist/
-target/
-.gradle/
-.mypy_cache/
-.pytest_cache/
-node_modules/
-venv/
-.venv/
-__pycache__/
+*.so
+*.a
+*.out
 ```
