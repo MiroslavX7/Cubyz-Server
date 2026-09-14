@@ -1,40 +1,60 @@
 ```
-# Build artifacts
-zig-cache/
-zig-out/
+# Zig package cache
+zig-pkg/
+
+# Build artifacts and temporary files
 *.o
 *.obj
 *.a
 *.lib
 *.so
 *.dll
+*.dylib
 *.exe
+*.out
+
+# Build directories
+build/
+dist/
+target/
 
 # Dependencies
+node_modules/
+vendor/
 deps/
 
-# Logs and temp files
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Cache directories
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
 *.log
 *.tmp
-*.swp
 
-# Environment
+# Configuration and environment
 .env
 .env.local
-*.env.*
+.env.*
 
-# Editors
+# Editors and IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
+# OS-specific
+.DS_Store
+Thumbs.db
 
-# Compression artifacts
+# Compression and archives
 *.zip
 *.gz
 *.tar
@@ -57,4 +77,5 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
 ```
