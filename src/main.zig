@@ -523,7 +523,8 @@ fn getOrCreateWorldName() []const u8 {
 	worldInfo.put("lastUsedTime", std.Io.Clock.Timestamp.now(io, .real).raw.toMilliseconds());
 	
 	// Generate a random seed
-	const worldSeed = std.crypto.random.int(u64);
+	var worldSeed: u64 = undefined;
+	worldSeed = main.random.nextInt(u64, &main.seed);
 	std.log.info("Generated world seed: {d}", .{worldSeed});
 	
 	const generatorSettings = ZonElement.initObject(arena);
