@@ -1,7 +1,14 @@
 ```
-# Zig build artifacts and cache
+# Build artifacts
 zig-cache/
 zig-out/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
 
 # Dependencies
 deps/
@@ -9,42 +16,25 @@ deps/
 # Logs and temp files
 *.log
 *.tmp
+*.swp
 
 # Environment
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# OS-specific
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# OS
 .DS_Store
 Thumbs.db
-
-# Archives
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
-
 ```
