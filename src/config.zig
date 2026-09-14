@@ -8,7 +8,7 @@ const main = @import("main.zig");
 pub const ServerConfig = struct {
     max_players: u32 = 20,
     bind_address: []const u8 = "0.0.0.0",
-    port: u16 = 16141,
+    port: u16 = 47649,
     world_name: []const u8 = "world",
     view_distance: u8 = 16,
     server_name: []const u8 = "Cubyz Server",
@@ -97,7 +97,7 @@ pub const ServerConfig = struct {
             \\bind_address=0.0.0.0
             \\
             \\# Server port
-            \\port=16141
+            \\port=47649
             \\
             \\# Name of the world folder (inside saves/)
             \\world_name=world
