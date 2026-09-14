@@ -470,8 +470,8 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 	std.log.info("Starting server with world: {s}", .{worldName});
 
 	// Start the dedicated server without a local player
-	// Pass null for the local player parameter to disable automatic local player connection
-	server.startFromExistingThread(worldName, null, .multiplayer);
+	// Pass the port from config to use the configured port instead of random/default
+	server.startFromExistingThread(worldName, serverConfig.port, .multiplayer);
 	heap.GarbageCollection.waitForFreeCompletion();
 }
 
