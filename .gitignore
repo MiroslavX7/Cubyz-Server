@@ -1,17 +1,17 @@
-```zig
+```
 # Zig build artifacts
 zig-cache/
 zig-out/
-*.o
-*.obj
-*.a
-*.lib
-*.so
-*.dylib
-*.dll
 
 # Dependencies
-deps/
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.egg-info/
+build/
+dist/
+target/
 
 # Logs and temp files
 *.log
@@ -32,4 +32,29 @@ deps/
 # OS
 .DS_Store
 Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# MyPy
+.mypy_cache/
+
+# Pytest
+.pytest_cache/
+
+# Gradle
+.gradle/
+
+# Compiled files
+*.pyc
+*.class
+*.o
+*.exe
+*.dll
+*.so
+*.a
+*.obj
+*.out
 ```

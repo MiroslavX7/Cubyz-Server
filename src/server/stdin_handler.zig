@@ -1,7 +1,4 @@
 const std = @import("std");
-const builtin = @import("builtin");
-const mem = std.mem;
-const os = std.os;
 
 const main = @import("main");
 
@@ -13,11 +10,11 @@ var running: bool = true;
 pub fn update() void {
     if (!running) return;
 
-    // Читаем по одному байту через низкоуровневый os API
+    // Читаем по одному байту из stdin через std.Io.File
     var byte_buf: [1]u8 = undefined;
 
-    // Пытаемся прочитать один байт из stdin
-    const n = os.read(os.std_in, &byte_buf) catch return;
+    const stdin_file = std.Io.File.stdin();
+    const n = stdin_file.read(main.io, &byte_buf) catch return;
     if (n == 0) return; // Нет данных или EOF
 
     const byte = byte_buf[0];
