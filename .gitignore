@@ -4,20 +4,24 @@ zig-cache/
 zig-out/
 *.o
 *.obj
-*.exe
-*.dll
-*.so
 *.a
-*.out
+*.lib
+*.so
+*.dll
+*.dylib
 
 # Dependencies
-.zig-cache/
-zig-cache/
+deps/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
+
+# Environment
+.env
+.env.local
+*.env.*
 
 # Editors
 .vscode/
@@ -25,8 +29,12 @@ zig-cache/
 *.swp
 *.swo
 
-# Environment
-.env
-.env.local
-*.env.*
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
 ```
