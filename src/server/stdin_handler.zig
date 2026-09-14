@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
-const fs = std.fs;
+const os = std.os;
 
 const main = @import("main");
 
@@ -12,19 +12,16 @@ var running: bool = true;
 
 pub fn update() void {
     if (!running) return;
-    
-    const stdin = fs.stdio.getStdIn();
-    var reader = stdin.reader();
-    
-    // Читаем по одному байту неблокирующим образом (насколько это возможно)
+
+    // Читаем по одному байту через низкоуровневый os API
     var byte_buf: [1]u8 = undefined;
-    
-    // Пытаемся прочитать один байт
-    const n = reader.read(&byte_buf) catch return;
-    if (n == 0) return; // Нет данных
-    
+
+    // Пытаемся прочитать один байт из stdin
+    const n = os.read(os.std_in, &byte_buf) catch return;
+    if (n == 0) return; // Нет данных или EOF
+
     const byte = byte_buf[0];
-    
+
     if (byte == '\n' or byte == '\r') {
         if (lineLen > 0) {
             processInput(lineLen);
