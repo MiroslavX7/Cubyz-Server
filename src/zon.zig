@@ -237,11 +237,30 @@ pub const ZonElement = union(enum) { // MARK: ZonElement
 			.vector => {
 				const len = type_info.vector.len;
 				const result = initArray(main.heap.NeverFailingAllocator{.allocator = allocator, .IAssertThatTheProvidedAllocatorCantFail = {}});
-				result.array.ensureTotalCapacity(len);
+				result.array.ensureCapacity(len);
 				inline for (0..len) |i| {
-					try result.array.append(createElementFromRandomType(value[i], allocator));
+					result.array.append(createElementFromRandomType(value[i], allocator));
 				}
 				return result;
+			},
+			.array => |arr_info| {
+				if (arr_info.child == f64 and arr_info.len == 3) {
+					const result = initArray(main.heap.NeverFailingAllocator{.allocator = allocator, .IAssertThatTheProvidedAllocatorCantFail = {}});
+					result.array.ensureCapacity(3);
+					inline for (0..3) |i| {
+						result.array.append(createElementFromRandomType(value[i], allocator));
+					}
+					return result;
+				} else if (arr_info.child == i32 and arr_info.len == 3) {
+					const result = initArray(main.heap.NeverFailingAllocator{.allocator = allocator, .IAssertThatTheProvidedAllocatorCantFail = {}});
+					result.array.ensureCapacity(3);
+					inline for (0..3) |i| {
+						result.array.append(createElementFromRandomType(value[i], allocator));
+					}
+					return result;
+				} else {
+					@compileError("Unsupported array type: " ++ @typeName(@TypeOf(value)));
+				}
 			},
 			.@"enum" => {
 				return createElementFromRandomType(@tagName(value), allocator);
