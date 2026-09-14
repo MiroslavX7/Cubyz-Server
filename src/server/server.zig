@@ -732,7 +732,8 @@ pub fn startFromExistingThread(name: []const u8, port: ?u16, mode: ServerWorld.M
 	const worldName: []const u8 = main.globalAllocator.dupe(u8, name);
 	defer main.globalAllocator.free(worldName);
 
-	connectionManager = ConnectionManager.init(main.settings.defaultPort, .{.allowNewConnections = mode == .multiplayer}) catch |err| {
+	const actualPort = port orelse main.settings.defaultPort;
+	connectionManager = ConnectionManager.init(actualPort, .{.allowNewConnections = mode == .multiplayer}) catch |err| {
 		std.log.err("Couldn't create socket: {s}", .{@errorName(err)});
 		@panic("Could not open Server.");
 	}; // TODO Configure the second argument in the server settings.
