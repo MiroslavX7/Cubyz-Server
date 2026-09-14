@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const mem = std.mem;
 
 const main = @import("main");
 
@@ -10,8 +11,10 @@ var running: bool = true;
 pub fn update() void {
 	if (!running) return;
 	if (builtin.os.tag == .windows) {
-		std.log.warn("Console per stdin is currently not supported on windows", .{});
-		running = false;
+		// На Windows используем простой опрос stdin без таймаутов
+		const result = simpleReadFromStdin();
+		if (result == 0) return;
+		processInput(result);
 		return;
 	}
 	const result = readFromStdin();
@@ -20,7 +23,11 @@ pub fn update() void {
 		while (readFromStdin() != 0) {}
 		return;
 	}
-	const msg = std.mem.trim(u8, readBuffer[0..result], "\n");
+	processInput(result);
+}
+
+fn processInput(result: usize) void {
+	const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
 	if (msg.len == 0) return;
 	if (!std.unicode.utf8ValidateSlice(msg)) {
 		std.log.err("Server message contains invalid UTF-8 characters.", .{});
@@ -28,9 +35,23 @@ pub fn update() void {
 	}
 	if (msg[0] == '/') {
 		main.server.command.execute(msg[1..], .server);
+	} else if (mem.eql(u8, msg, "stop") or mem.eql(u8, msg, "exit") or mem.eql(u8, msg, "quit")) {
+		main.server.command.execute("stop", .server);
 	} else {
 		main.server.sendMessage("<Server> {s}", .{msg});
 	}
+}
+
+fn simpleReadFromStdin() usize {
+	// Простое чтение stdin для Windows без использования таймаутов
+	const stdin = std.io.getStdIn();
+	var reader = stdin.reader();
+	var line: [1024]u8 = undefined;
+	return reader.readUntilDelimiter(&line, '\n') catch |err| {
+		if (err == error.EndOfStream) return 0;
+		std.log.err("Error reading stdin on Windows: {t}", .{err});
+		return 0;
+	};
 }
 
 fn readFromStdin() usize {
