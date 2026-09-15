@@ -730,8 +730,8 @@ const Parser = struct { // MARK: Parser
 		std.log.err("Error in line {}: {s}", .{lineNumber, msg});
 		std.log.err("{s}", .{chars[lineStart..lineEnd]});
 		// Mark the position using dynamic ArrayList instead of fixed buffer
-		var message = std.ArrayList(u8).init(allocator);
-		defer message.deinit();
+		var message = std.ArrayList(u8).initCapacity(allocator, 512) catch return;
+		defer message.deinit(allocator);
 		
 		i = lineStart;
 		while (i < index and i < chars.len) : (i += 1) {
@@ -740,12 +740,12 @@ const Parser = struct { // MARK: Parser
 				continue;
 			}
 			if (chars[i] == '\t') {
-				message.append('\t') catch return;
+				message.append(allocator, '\t') catch return;
 			} else {
-				message.append(' ') catch return;
+				message.append(allocator, ' ') catch return;
 			}
 		}
-		message.append('^') catch return;
+		message.append(allocator, '^') catch return;
 		std.log.err("{s}", .{message.items});
 	}
 
