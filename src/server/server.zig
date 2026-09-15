@@ -759,6 +759,9 @@ pub fn startFromExistingThread(name: []const u8, port: ?u16, mode: ServerWorld.M
 		init(worldName, port, mode);
 		defer deinit();
 
+		// Initialize stdin handler for non-blocking input
+		stdin_handler.init();
+
 		running.store(true, .release);
 		while (running.load(.monotonic)) {
 			main.heap.GarbageCollection.syncPoint();
