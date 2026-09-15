@@ -1,46 +1,35 @@
 const std = @import("std");
-const atomic = std.atomic;
 const builtin = @import("builtin");
-const posix = std.posix;
-const linux = std.os.linux;
+const windows = std.os.windows;
 
-pub var shutdown_requested: atomic.Value(bool) = atomic.Value(bool).init(false);
+pub var shutdown_requested: std.atomic.Value(bool) = std.atomic.Value(bool).init(false);
 
 pub fn init() void {
     if (comptime builtin.target.os.tag == .windows) {
-        // Windows: заглушка, обработка Ctrl+C будет через консольный ввод
-        // В Zig 0.16 нет прямого доступа к SetConsoleCtrlHandler
+        const HandlerRoutine = *const fn (ctrl_type: u32) callconv(.winapi) u32;
+        var handler: HandlerRoutine = struct {
+            fn handle(ctrl_type: u32) callconv(.winapi) u32 {
+                _ = ctrl_type;
+                shutdown_requested.store(true, .seq_cst);
+                return 1;
+            }
+        }.handle;
+        _ = windows.kernel32.SetConsoleCtrlHandler(@ptrCast(&handler), true);
     } else {
-        // Unix: устанавливаем обработчики сигналов
+        const posix = std.posix;
         const sigaction = posix.Sigaction{
-            .handler = .{ .handler = @ptrCast(@alignCast(unixSignalHandlerWrapper)) },
-            .mask = empty_sigset(),
+            .handler = .{ .handler = @ptrCast(&unixSignalHandlerWrapper) },
+            .mask = posix.sigemptyset(),
             .flags = 0,
         };
-        posix.sigaction(posix.SIG.INT, &sigaction, null) catch {};
-        posix.sigaction(posix.SIG.TERM, &sigaction, null) catch {};
+        posix.sigaction(posix.SIG.INT, &sigaction, null);
+        posix.sigaction(posix.SIG.TERM, &sigaction, null);
     }
-}
-
-fn empty_sigset() posix.Sigset {
-    var set: posix.Sigset = undefined;
-    @memset(&set, 0);
-    return set;
 }
 
 fn unixSignalHandlerWrapper(sig: c_int) callconv(.c) void {
     _ = sig;
     shutdown_requested.store(true, .seq_cst);
-}
-
-fn unixSignalHandler(_: c_int) callconv(.c) void {
-    shutdown_requested.store(true, .seq_cst);
-}
-
-fn windowsCtrlHandler(ctrl_type: u32) callconv(.c) i32 {
-    _ = ctrl_type;
-    shutdown_requested.store(true, .seq_cst);
-    return 1; // TRUE - обработали
 }
 
 pub fn isShutdownRequested() bool {
