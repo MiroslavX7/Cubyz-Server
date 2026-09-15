@@ -648,6 +648,9 @@ fn deinit() void {
 
 	command.deinit();
 
+	// Cleanup stdin handler
+	stdin_handler.deinit();
+
 	main.heap.allocators.destroyWorldArena();
 }
 
@@ -763,7 +766,7 @@ pub fn startFromExistingThread(name: []const u8, port: ?u16, mode: ServerWorld.M
 		stdin_handler.init();
 
 		running.store(true, .release);
-		while (running.load(.monotonic)) {
+		while (running.load(.monotonic) and !main.signal_handler.isShutdownRequested()) {
 			main.heap.GarbageCollection.syncPoint();
 			const newTime = main.timestamp();
 			if (lastTime.durationTo(newTime).nanoseconds < updateTime.nanoseconds) {
