@@ -5,30 +5,44 @@ const main = @import("main");
 
 var readBuffer: [100_000]u8 = undefined;
 var running: bool = true;
+var stdinThread: ?std.Thread = null;
 
 pub fn init() void {
-    // Nothing special needed
+    // Start stdin handler in a separate thread on non-Windows platforms
+    if (builtin.os.tag != .windows) {
+        stdinThread = std.Thread.spawn(.{}, runStdinLoop, .{}) catch |err| {
+            std.log.err("Failed to spawn stdin thread: {s}", .{@errorName(err)});
+        };
+    } else {
+        // Windows console input is not supported in Zig's std.Io
+        // Show warning and disable stdin handling on Windows
+        std.log.warn("Console stdin is currently not supported on Windows", .{});
+        running = false;
+    }
 }
 
 pub fn update() void {
+    // This function is now a no-op on non-Windows as stdin runs in its own thread
+    // On Windows, it just returns immediately
     if (!running) return;
-    
-    // Windows console input is not supported in Zig's std.Io
-    // Show warning and disable stdin handling on Windows
-    if (builtin.os.tag == .windows) {
-        std.log.warn("Console stdin is currently not supported on Windows", .{});
-        running = false;
-        return;
+}
+
+fn runStdinLoop() void {
+    while (running) {
+        const result = readFromStdin();
+        if (result == 0) {
+            // No data available, sleep briefly to avoid busy-waiting
+            std.time.sleep(10 * std.time.ns_per_ms);
+            continue;
+        }
+        if (result == readBuffer.len) {
+            std.log.warn("Input exceeded {} character limit", .{readBuffer.len});
+            while (readFromStdin() != 0) {}
+            continue;
+        }
+        const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
+        processLine(msg);
     }
-    
-    const result = readFromStdin();
-    if (result == readBuffer.len) {
-        std.log.warn("Input exceeded {} character limit", .{readBuffer.len});
-        while (readFromStdin() != 0) {}
-        return;
-    }
-    const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
-    processLine(msg);
 }
 
 fn readFromStdin() usize {
