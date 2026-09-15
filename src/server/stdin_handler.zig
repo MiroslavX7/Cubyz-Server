@@ -6,13 +6,20 @@ const signal_handler = @import("signal_handler.zig");
 
 var readBuffer: [100_000]u8 = undefined;
 var running: bool = true;
+var stdin_thread: ?std.Thread = null;
 
 pub fn init() void {
-    _ = std.Thread.spawn(.{}, runStdinLoop, .{});
+    stdin_thread = std.Thread.spawn(.{}, runStdinLoop, .{}) catch |err| {
+        std.log.err("Failed to start stdin thread: {}", .{err});
+        return;
+    };
 }
 
 pub fn deinit() void {
     running = false;
+    if (stdin_thread) |thread| {
+        thread.join();
+    }
 }
 
 pub fn update() void {
@@ -22,7 +29,7 @@ pub fn update() void {
 fn runStdinLoop() void {
     var buffer_pos: usize = 0;
     const stdin_file = std.Io.File.stdin();
-    var reader = stdin_file.reader();
+    var reader = stdin_file.reader(main.io, &.{});
     
     while (running and !signal_handler.isShutdownRequested()) {
         const byte = reader.readByte() catch {
