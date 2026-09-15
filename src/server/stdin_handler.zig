@@ -10,6 +10,11 @@ var lineLen: usize = 0;
 
 var running: bool = true;
 
+// No init needed - readStreaming already handles non-blocking with WouldBlock error
+pub fn init() void {
+    // stdin is already handled in non-blocking mode via readStreaming error handling
+}
+
 pub fn update() void {
     if (!running) return;
 
@@ -96,7 +101,7 @@ fn processLine(msg: []const u8) void {
     if (msg[0] == '/') {
         main.server.command.execute(msg[1..], .server);
     } else if (mem.eql(u8, msg, "stop") or mem.eql(u8, msg, "exit") or mem.eql(u8, msg, "quit")) {
-        main.server.command.execute("stop", .server);
+        main.server.command.execute("server stop", .server);
     } else {
         main.server.sendMessage("<Server> {s}", .{msg});
     }
