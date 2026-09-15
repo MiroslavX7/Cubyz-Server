@@ -29,7 +29,9 @@ pub fn update() void {
 
 fn runStdinLoop() void {
     var buffer_pos: usize = 0;
-    const stdin_reader = std.io.getStdIn().reader();
+    const stdin_file = std.Io.File.stdin();
+    var read_buf: [1024]u8 = undefined;
+    const stdin_reader = stdin_file.reader(main.io, &read_buf);
     
     while (running and !signal_handler.isShutdownRequested()) {
         var byte_buf: [1]u8 = undefined;

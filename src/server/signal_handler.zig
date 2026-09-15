@@ -1,20 +1,19 @@
 const std = @import("std");
 const atomic = std.atomic;
-const os = std.os;
 const builtin = @import("builtin");
 const posix = std.posix;
-const windows = std.os.windows;
+const linux = std.os.linux;
 
 pub var shutdown_requested: atomic.Value(bool) = atomic.Value(bool).init(false);
 
 pub fn init() void {
     if (comptime builtin.target.os.tag == .windows) {
-        // Windows: используем SetConsoleCtrlHandler
-        _ = windows.SetConsoleCtrlHandler(windowsCtrlHandler, true);
+        // Windows: заглушка, обработка Ctrl+C будет через консольный ввод
+        // В Zig 0.16 нет прямого доступа к SetConsoleCtrlHandler
     } else {
         // Unix: устанавливаем обработчики сигналов
         const sigaction = posix.Sigaction{
-            .handler = .{ .handler = unixSignalHandlerWrapper },
+            .handler = .{ .handler = @ptrCast(@alignCast(unixSignalHandlerWrapper)) },
             .mask = empty_sigset(),
             .flags = 0,
         };
@@ -29,7 +28,7 @@ fn empty_sigset() posix.Sigset {
     return set;
 }
 
-fn unixSignalHandlerWrapper(sig: i32) callconv(.c) void {
+fn unixSignalHandlerWrapper(sig: c_int) callconv(.c) void {
     _ = sig;
     shutdown_requested.store(true, .seq_cst);
 }
