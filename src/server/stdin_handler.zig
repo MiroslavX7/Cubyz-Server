@@ -2,62 +2,68 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const main = @import("main");
-const signal_handler = @import("signal_handler.zig");
 
 var readBuffer: [100_000]u8 = undefined;
 var running: bool = true;
-var stdin_thread: ?std.Thread = null;
+var stdinThread: ?std.Thread = null;
 
 pub fn init() void {
-    stdin_thread = std.Thread.spawn(.{}, runStdinLoop, .{}) catch |err| {
-        std.log.err("Failed to start stdin thread: {}", .{err});
+    // В Zig 0.16.0 spawn - это функция, возвращающая !std.Thread
+    stdinThread = std.Thread.spawn(.{}, runStdinLoop, .{}) catch |err| {
+        std.log.err("Failed to spawn stdin thread: {s}", .{@errorName(err)});
+        running = false;
         return;
     };
 }
 
 pub fn deinit() void {
     running = false;
-    if (stdin_thread) |thread| {
+    if (stdinThread) |thread| {
         thread.join();
     }
 }
 
 pub fn update() void {
-    if (!running) return;
+    // No-op - stdin runs in its own thread
 }
 
 fn runStdinLoop() void {
-    var buffer_pos: usize = 0;
-    const stdin_file = std.Io.File.stdin();
-    var reader = stdin_file.reader(main.io, &.{});
-    
-    while (running and !signal_handler.isShutdownRequested()) {
-        const byte = reader.readByte() catch {
-            std.Thread.sleep(10 * std.time.ns_per_ms);
-            continue;
-        };
-        
-        if (buffer_pos >= readBuffer.len - 1) {
-            std.log.warn("Input exceeded {} character limit, clearing buffer", .{readBuffer.len});
-            buffer_pos = 0;
-            // Clear remaining input until newline
-            while (reader.readByte() catch break) |b| {
-                if (b == '\n') break;
-            }
+    while (running) {
+        const result = readFromStdin();
+        if (result == 0) {
+            // В Zig 0.16.0 используем main.io.sleep() вместо std.time.sleep()
+            main.io.sleep(.fromMilliseconds(10), .awake) catch {};
             continue;
         }
-        
-        if (byte == '\n' or byte == '\r') {
-            if (buffer_pos > 0) {
-                const msg = std.mem.trim(u8, readBuffer[0..buffer_pos], " \t\n\r");
-                processLine(msg);
-                buffer_pos = 0;
-            }
-        } else {
-            readBuffer[buffer_pos] = byte;
-            buffer_pos += 1;
+        if (result == readBuffer.len) {
+            std.log.warn("Input exceeded {} character limit", .{readBuffer.len});
+            // Очистка буфера stdin при переполнении
+            while (readFromStdin() != 0) {}
+            continue;
         }
+        const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
+        processLine(msg);
     }
+}
+
+fn readFromStdin() usize {
+    // Используем существующий API main.io из проекта
+    const result = main.io.operateTimeout(.{
+        .file_read_streaming = .{
+            .data = &.{&readBuffer},
+            .file = std.Io.File.stdin(),
+        }
+    }, .{.duration = .{.raw = .zero, .clock = .awake}}) catch |err| {
+        if (err == error.Timeout) return 0;
+        std.log.err("Error while reading from stdin: {t}", .{err});
+        running = false;
+        return 0;
+    };
+    return result.file_read_streaming catch |err| {
+        std.log.err("Error while reading from stdin: {t}", .{err});
+        running = false;
+        return 0;
+    };
 }
 
 fn processLine(msg: []const u8) void {
@@ -68,6 +74,7 @@ fn processLine(msg: []const u8) void {
         return;
     }
     
+    // Check for stop commands first (with or without slash)
     if (std.mem.eql(u8, msg, "stop") or std.mem.eql(u8, msg, "/stop") or
         std.mem.eql(u8, msg, "quit") or std.mem.eql(u8, msg, "/quit") or
         std.mem.eql(u8, msg, "exit") or std.mem.eql(u8, msg, "/exit")) {
@@ -76,6 +83,7 @@ fn processLine(msg: []const u8) void {
         return;
     }
     
+    // Handle /server stop command (original format)
     if (std.mem.startsWith(u8, msg, "/server ")) {
         const args = msg["/server ".len..];
         if (std.mem.eql(u8, std.mem.trim(u8, args, " \t\r\n"), "stop")) {

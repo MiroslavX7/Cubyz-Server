@@ -5,10 +5,10 @@ pub var shutdown_requested: std.atomic.Value(bool) = std.atomic.Value(bool).init
 
 pub fn init() void {
     if (comptime builtin.target.os.tag == .windows) {
-        const windows = std.os.windows;
         const HandlerRoutine = *const fn (ctrl_type: u32) callconv(.winapi) u32;
         
-        var handler: HandlerRoutine = struct {
+        // Используем const вместо var
+        const handler: HandlerRoutine = struct {
             fn handle(ctrl_type: u32) callconv(.winapi) u32 {
                 _ = ctrl_type;
                 shutdown_requested.store(true, .seq_cst);
@@ -16,7 +16,14 @@ pub fn init() void {
             }
         }.handle;
         
-        _ = windows.SetConsoleCtrlHandler(@ptrCast(&handler), true);
+        // Прямой вызов kernel32 с правильным callconv
+        const kernel32 = struct {
+            extern "kernel32" fn SetConsoleCtrlHandler(
+                HandlerRoutine: ?HandlerRoutine,
+                Add: bool,
+            ) callconv(.winapi) bool;
+        };
+        _ = kernel32.SetConsoleCtrlHandler(handler, true);
     } else {
         const posix = std.posix;
         const sigaction = posix.Sigaction{
