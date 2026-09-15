@@ -98,10 +98,17 @@ fn updateUnix() void {
 fn processLine(msg: []const u8) void {
     if (msg.len == 0) return;
 
+    // Check for stop commands first (with or without slash)
+    if (mem.eql(u8, msg, "stop") or mem.eql(u8, msg, "/stop") or
+        mem.eql(u8, msg, "quit") or mem.eql(u8, msg, "/quit") or
+        mem.eql(u8, msg, "exit") or mem.eql(u8, msg, "/exit")) {
+        main.server.stop(.stop);
+        running = false;
+        return;
+    }
+
     if (msg[0] == '/') {
         main.server.command.execute(msg[1..], .server);
-    } else if (mem.eql(u8, msg, "stop") or mem.eql(u8, msg, "exit") or mem.eql(u8, msg, "quit")) {
-        main.server.command.execute("server stop", .server);
     } else {
         main.server.sendMessage("<Server> {s}", .{msg});
     }
