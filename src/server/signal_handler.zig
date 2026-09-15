@@ -1,45 +1,53 @@
 const std = @import("std");
 const atomic = std.atomic;
 const os = std.os;
+const builtin = @import("builtin");
+const posix = std.posix;
+const windows = std.os.windows;
 
 pub var shutdown_requested: atomic.Value(bool) = atomic.Value(bool).init(false);
 
 pub fn init() void {
-    if (comptime std.Target.current.os.tag == .windows) {
+    if (comptime builtin.target.os.tag == .windows) {
         // Windows: используем SetConsoleCtrlHandler
-        _ = os.windows.SetConsoleCtrlHandler(windowsCtrlHandler, true);
+        _ = windows.SetConsoleCtrlHandler(windowsCtrlHandler, true);
     } else {
         // Unix: устанавливаем обработчики сигналов
-        const sigaction = os.Sigaction{
-            .handler = .{ .handler = unixSignalHandler },
-            .mask = empty_sigset,
+        const sigaction = posix.Sigaction{
+            .handler = .{ .handler = unixSignalHandlerWrapper },
+            .mask = empty_sigset(),
             .flags = 0,
         };
-        os.sigaction(os.SIG.INT, &sigaction, null) catch {};
-        os.sigaction(os.SIG.TERM, &sigaction, null) catch {};
+        posix.sigaction(posix.SIG.INT, &sigaction, null) catch {};
+        posix.sigaction(posix.SIG.TERM, &sigaction, null) catch {};
     }
 }
 
-fn empty_sigset() os.Sigset {
-    var set: os.Sigset = undefined;
+fn empty_sigset() posix.Sigset {
+    var set: posix.Sigset = undefined;
     @memset(&set, 0);
     return set;
 }
 
-fn unixSignalHandler(_: c_int) callconv(.C) void {
-    shutdown_requested.store(true, .SeqCst);
+fn unixSignalHandlerWrapper(sig: i32) callconv(.c) void {
+    _ = sig;
+    shutdown_requested.store(true, .seq_cst);
 }
 
-fn windowsCtrlHandler(ctrl_type: u32) callconv(.C) i32 {
+fn unixSignalHandler(_: c_int) callconv(.c) void {
+    shutdown_requested.store(true, .seq_cst);
+}
+
+fn windowsCtrlHandler(ctrl_type: u32) callconv(.c) i32 {
     _ = ctrl_type;
-    shutdown_requested.store(true, .SeqCst);
+    shutdown_requested.store(true, .seq_cst);
     return 1; // TRUE - обработали
 }
 
 pub fn isShutdownRequested() bool {
-    return shutdown_requested.load(.SeqCst);
+    return shutdown_requested.load(.seq_cst);
 }
 
 pub fn reset() void {
-    shutdown_requested.store(false, .SeqCst);
+    shutdown_requested.store(false, .seq_cst);
 }
