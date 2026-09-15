@@ -4,7 +4,7 @@ const builtin = @import("builtin");
 pub const gui = @import("gui/gui.zig");
 pub const server = @import("server/server.zig");
 pub const config = @import("config.zig");
-const signal_handler = @import("server/signal_handler.zig");
+pub const signal_handler = @import("server/signal_handler.zig");
 
 pub const audio = @import("audio.zig");
 pub const argparse = @import("argparse.zig");
