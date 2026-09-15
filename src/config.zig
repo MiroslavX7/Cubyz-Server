@@ -18,6 +18,35 @@ pub const ServerConfig = struct {
     generate_spawn: bool = true,
 
     const Self = @This();
+    
+    /// Валидация конфигурации
+    pub fn validate(self: *const Self) !void {
+        // Проверка порта (1024-65535)
+        if (self.port < 1024 or self.port > 65535) {
+            std.log.err("Invalid port: {}. Must be between 1024 and 65535", .{self.port});
+            return error.InvalidConfig;
+        }
+        
+        // Проверка max_players (1-1000)
+        if (self.max_players < 1 or self.max_players > 1000) {
+            std.log.err("Invalid max_players: {}. Must be between 1 and 1000", .{self.max_players});
+            return error.InvalidConfig;
+        }
+        
+        // Проверка view_distance (2-32)
+        if (self.view_distance < 2 or self.view_distance > 32) {
+            std.log.err("Invalid view_distance: {}. Must be between 2 and 32", .{self.view_distance});
+            return error.InvalidConfig;
+        }
+        
+        // Проверка server_name (1-100 символов)
+        if (self.server_name.len < 1 or self.server_name.len > 100) {
+            std.log.err("Invalid server_name length: {}. Must be between 1 and 100 characters", .{self.server_name.len});
+            return error.InvalidConfig;
+        }
+        
+        std.log.info("Configuration validated successfully", .{});
+    }
 
     pub fn load(args: [][]const u8) !Self {
         var config = Self{};
@@ -26,7 +55,7 @@ pub const ServerConfig = struct {
         const cwd = files.cwd();
         if (cwd.openFile("server.properties")) |file| {
             defer file.close(main.io);
-            var buf: [4096]u8 = undefined;
+            var buf: [65536]u8 = undefined; // Увеличен буфер до 64KB
             const len = try std.Io.File.readPositionalAll(file, main.io, &buf, 0);
             const content = buf[0..len];
             
@@ -49,6 +78,14 @@ pub const ServerConfig = struct {
                         config.allow_unsupported_clients = mem.eql(u8, value, "true");
                     } else if (mem.eql(u8, key, "pvp")) {
                         config.pvp = mem.eql(u8, value, "true");
+                    } else if (mem.eql(u8, key, "server_name")) {
+                        config.server_name = value;
+                    } else if (mem.eql(u8, key, "motd")) {
+                        config.motd = value;
+                    } else if (mem.eql(u8, key, "bind_address")) {
+                        config.bind_address = value;
+                    } else if (mem.eql(u8, key, "world_name")) {
+                        config.world_name = value;
                     }
                 }
             }
@@ -83,6 +120,9 @@ pub const ServerConfig = struct {
                 }
             }
         }
+        
+        // Валидация конфигурации
+        try config.validate();
 
         return config;
     }

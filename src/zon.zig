@@ -705,6 +705,10 @@ const Parser = struct { // MARK: Parser
 	}
 
 	fn printError(filePath: ?[]const u8, chars: []const u8, index: u32, msg: []const u8) void {
+		var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+		defer arena.deinit();
+		const allocator = arena.allocator();
+		
 		var lineNumber: u32 = 1;
 		var lineStart: u32 = 0;
 		var i: u32 = 0;
@@ -725,28 +729,24 @@ const Parser = struct { // MARK: Parser
 		}
 		std.log.err("Error in line {}: {s}", .{lineNumber, msg});
 		std.log.err("{s}", .{chars[lineStart..lineEnd]});
-		// Mark the position:
-		var message: [512]u8 = undefined;
+		// Mark the position using dynamic ArrayList instead of fixed buffer
+		var message = std.ArrayList(u8).init(allocator);
+		defer message.deinit();
+		
 		i = lineStart;
-		var outputI: u32 = 0;
 		while (i < index and i < chars.len) : (i += 1) {
 			if ((chars[i] & 128) != 0 and (chars[i] & 64) == 0) {
 				// Not the start of a utf8 character
 				continue;
 			}
 			if (chars[i] == '\t') {
-				message[outputI] = '\t';
+				message.append('\t') catch return;
 			} else {
-				message[outputI] = ' ';
-			}
-			outputI += 1;
-			if (outputI >= message.len) {
-				return; // 512 characters is too long for this output to be helpful.
+				message.append(' ') catch return;
 			}
 		}
-		message[outputI] = '^';
-		outputI += 1;
-		std.log.err("{s}", .{message[0..outputI]});
+		message.append('^') catch return;
+		std.log.err("{s}", .{message.items});
 	}
 
 	/// Assumes that the region starts with a non-space character.

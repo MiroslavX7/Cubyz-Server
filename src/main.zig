@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 pub const gui = @import("gui/gui.zig");
 pub const server = @import("server/server.zig");
 pub const config = @import("config.zig");
+const signal_handler = @import("server/signal_handler.zig");
 
 pub const audio = @import("audio.zig");
 pub const argparse = @import("argparse.zig");
@@ -469,9 +470,17 @@ pub fn main(args: std.process.Init.Minimal) void { // MARK: main()
 
 	std.log.info("Starting server with world: {s}", .{worldName});
 
+	// Initialize signal handler for graceful shutdown
+	signal_handler.init();
+
 	// Start the dedicated server without a local player
 	// Pass the port from config to use the configured port instead of random/default
 	server.startFromExistingThread(worldName, serverConfig.port, .multiplayer);
+	
+	// Check if shutdown was requested
+	if (signal_handler.isShutdownRequested()) {
+		std.log.info("Graceful shutdown completed", .{});
+	}
 	heap.GarbageCollection.waitForFreeCompletion();
 }
 

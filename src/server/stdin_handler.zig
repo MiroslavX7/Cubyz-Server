@@ -2,22 +2,26 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const main = @import("main");
+const signal_handler = @import("signal_handler.zig");
 
 var readBuffer: [100_000]u8 = undefined;
 var running: bool = true;
 var stdinThread: ?std.Thread = null;
 
 pub fn init() void {
-    // Start stdin handler in a separate thread on non-Windows platforms
-    if (builtin.os.tag != .windows) {
-        stdinThread = std.Thread.spawn(.{}, runStdinLoop, .{}) catch |err| {
-            std.log.err("Failed to spawn stdin thread: {s}", .{@errorName(err)});
-        };
-    } else {
-        // Windows console input is not supported in Zig's std.Io
-        // Show warning and disable stdin handling on Windows
-        std.log.warn("Console stdin is currently not supported on Windows", .{});
+    // Start stdin handler in a separate thread on all platforms
+    stdinThread = std.Thread.spawn(.{}, runStdinLoop, .{}) catch |err| {
+        std.log.err("Failed to spawn stdin thread: {s}", .{@errorName(err)});
         running = false;
+    };
+}
+
+pub fn deinit() void {
+    running = false;
+    if (stdinThread) |thread| {
+        // Ждём завершения потока ввода
+        // В будущем можно добавить таймаут
+        _ = thread;
     }
 }
 
@@ -28,18 +32,23 @@ pub fn update() void {
 }
 
 fn runStdinLoop() void {
-    while (running) {
+    while (running and !signal_handler.isShutdownRequested()) {
         const result = readFromStdin();
         if (result == 0) {
             // No data available, sleep briefly to avoid busy-waiting
             std.time.sleep(10 * std.time.ns_per_ms);
             continue;
         }
-        if (result == readBuffer.len) {
-            std.log.warn("Input exceeded {} character limit", .{readBuffer.len});
-            while (readFromStdin() != 0) {}
+        
+        // Проверка на переполнение буфера (лимит 100KB)
+        if (result >= readBuffer.len - 1) {
+            std.log.warn("Input exceeded {} character limit, clearing buffer", .{readBuffer.len});
+            // Очищаем stdin от оставшихся данных
+            var dummy: [1024]u8 = undefined;
+            while (std.io.getStdIn().reader().read(&dummy) catch break) |_| {}
             continue;
         }
+        
         const msg = std.mem.trim(u8, readBuffer[0..result], "\n\r");
         processLine(msg);
     }
